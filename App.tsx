@@ -17,8 +17,11 @@ import GroupView from './views/GroupView';
 import LegalView from './views/LegalView';
 import AdminView from './views/AdminView';
 import FeedbackDataView from './views/FeedbackDataView';
+import LandingView from './views/LandingView';
+import PaymentView from './views/PaymentView';
+import CreateMenuView from './views/CreateMenuView';
 
-export type ViewState = 'menu' | 'group' | 'favorites' | 'profile' | 'privacy' | 'terms' | 'cart' | 'orders' | 'qr-verify' | 'admin' | 'feedback' | 'feedback-data';
+export type ViewState = 'menu' | 'group' | 'favorites' | 'profile' | 'privacy' | 'terms' | 'cart' | 'orders' | 'qr-verify' | 'admin' | 'feedback' | 'feedback-data' | 'landing' | 'payment' | 'create-menu';
 
 export interface OrderInstance extends CartItem {
   orderId: string;
@@ -27,7 +30,7 @@ export interface OrderInstance extends CartItem {
 }
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<ViewState>('menu');
+  const [currentView, setCurrentView] = useState<ViewState>('landing');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -137,7 +140,8 @@ export default function App() {
       itemId: item.id,
       itemName: item.name,
       categoryName: item.cat_name,
-      quantity: item.quantity
+      quantity: item.quantity,
+      branch: 'Main' 
     }));
     
     setOrders(prev => [...prev, ...newOrders]);
@@ -164,6 +168,21 @@ export default function App() {
     if (isLoading) return <div className="flex items-center justify-center min-h-[80vh] font-black text-orange-600 animate-pulse uppercase tracking-widest text-xs">Initialising...</div>;
 
     switch (currentView) {
+      case 'landing': return (
+        <LandingView 
+          onStart={() => setCurrentView('menu')} 
+          onCreateMenu={() => setCurrentView('create-menu')} 
+        />
+      );
+      case 'create-menu': return (
+        <CreateMenuView 
+          onCancel={() => setCurrentView('landing')} 
+          onComplete={(config) => {
+            console.log("Creation Complete", config);
+            setCurrentView('admin');
+          }}
+        />
+      );
       case 'menu': return (
         <MenuView 
           popularItems={popularItems} categories={categories} filteredItems={filteredItems} 
@@ -178,8 +197,18 @@ export default function App() {
           onGoBack={() => setCurrentView('menu')}
         />
       );
+      case 'payment': return (
+        <PaymentView 
+          total={orders.reduce((sum, o) => sum + (o.price * o.quantity), 0)}
+          onClose={() => setCurrentView('orders')}
+          onSuccess={() => {
+            alert("Payment Successful! Your digital receipt has been sent.");
+            setCurrentView('feedback');
+          }}
+        />
+      );
       case 'qr-verify': return <QRVerifyView onVerify={finalizeOrder} onCancel={() => { setPendingSingleItem(null); setCurrentView(cart.length > 0 ? 'cart' : 'menu'); }} />;
-      case 'orders': return <OrdersView orders={orders} onPayNow={() => setCurrentView('feedback')} onGoToMenu={() => setCurrentView('menu')} />;
+      case 'orders': return <OrdersView orders={orders} onPayNow={() => setCurrentView('payment')} onGoToMenu={() => setCurrentView('menu')} />;
       case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => setCurrentView('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => setCurrentView('feedback')} />;
       case 'admin': return (
@@ -192,13 +221,14 @@ export default function App() {
         />
       );
       case 'group': return <GroupView />;
+      case 'favorites': return <MenuView popularItems={popularItems} categories={categories} filteredItems={popularItems} activeCategory="all" searchQuery="" onSearchChange={() => {}} onCategorySelect={() => {}} onItemSelect={setSelectedItem} />;
       case 'privacy': return <LegalView title="Privacy Policy" />;
       case 'terms': return <LegalView title="Terms & Agreement" />;
       default: return null;
     }
   };
 
-  const showNavbar = !['admin', 'feedback', 'feedback-data'].includes(currentView);
+  const showNavbar = !['admin', 'payment', 'landing', 'create-menu'].includes(currentView);
 
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
@@ -207,19 +237,21 @@ export default function App() {
       {showNavbar && <Navbar onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => setCurrentView('cart')} onLogoClick={() => setCurrentView('menu')} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
       <main className={showNavbar ? "min-h-[80vh]" : ""}>{renderView()}</main>
       
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 max-w-xl mx-auto z-40">
-        {[
-          { v: 'orders', i: 'fa-receipt', l: 'Orders' },
-          { v: 'feedback', i: 'fa-comment-dots', l: 'Feedback' },
-          { v: 'feedback-data', i: 'fa-database', l: 'Data' },
-          { v: 'admin', i: 'fa-user-gear', l: 'Admin' }
-        ].map(btn => (
-          <button key={btn.v} onClick={() => setCurrentView(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-indigo-600' : 'text-slate-300 hover:text-indigo-300'}`}>
-            <i className={`fa-solid ${btn.i} text-xl`}></i>
-            <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
-          </button>
-        ))}
-      </div>
+      {!['landing', 'admin', 'payment', 'create-menu'].includes(currentView) && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 max-w-xl mx-auto z-40">
+          {[
+            { v: 'menu', i: 'fa-house', l: 'Menu' },
+            { v: 'group', i: 'fa-users', l: 'Group' },
+            { v: 'favorites', i: 'fa-heart', l: 'Favorites' },
+            { v: 'orders', i: 'fa-receipt', l: 'Orders' }
+          ].map(btn => (
+            <button key={btn.v} onClick={() => setCurrentView(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}>
+              <i className={`fa-solid ${btn.i} text-xl`}></i>
+              <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

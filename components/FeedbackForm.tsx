@@ -19,7 +19,6 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
 
   const calculateAvg = () => {
     const vals = Object.values(scores);
-    // Fix: Explicitly cast values to number array to resolve arithmetic operation type error
     const sum = (vals as number[]).reduce((a, b) => a + b, 0);
     return (sum / vals.length).toFixed(1);
   };
@@ -84,64 +83,92 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white p-6 pb-20 animate-fade-in flex flex-col">
-      <header className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-800">EXPERIENCE</h1>
-          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">Submit your rating</p>
+    <div className="min-h-screen bg-white p-6 pb-32 animate-fade-in flex flex-col font-['Plus_Jakarta_Sans']">
+      {/* 1. Heading & 2. Subheading */}
+      <header className="mb-10 text-center">
+        <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-sm border border-emerald-100">
+          <i className="fa-solid fa-circle-check"></i>
         </div>
-        <div className="text-right">
-          <span className="text-3xl font-black text-indigo-600">{calculateAvg()}</span>
-          <div className="text-amber-400 flex text-[10px] justify-end">
-            {'★'.repeat(Math.round(Number(calculateAvg()))).padEnd(5, '☆')}
-          </div>
+        <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none uppercase italic">Thanks for <span className="text-orange-500">paying!</span></h1>
+        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3">We'd love to hear about your experience today.</p>
+        
+        <div className="mt-6 flex items-center justify-center gap-2">
+           <span className="text-4xl font-black text-indigo-600">{calculateAvg()}</span>
+           <div className="text-amber-400 flex text-lg">
+             {'★'.repeat(Math.round(Number(calculateAvg()))).padEnd(5, '☆')}
+           </div>
         </div>
       </header>
 
-      <div className="flex-1 space-y-8 overflow-y-auto no-scrollbar">
-        <div className="bg-slate-50 rounded-[2.5rem] p-6 h-[40vh] border border-slate-100 relative">
+      <div className="space-y-10">
+        {/* 3. Name & 4. Feedback */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Full Name (Optional)</label>
+            <input 
+              type="text" 
+              placeholder="e.g. John Doe" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full p-5 rounded-[2rem] bg-slate-50 border border-slate-100 font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" 
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Your Thoughts</label>
+            <textarea 
+              placeholder="Tell us about the food, the vibe, or the service..." 
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="w-full p-6 rounded-[2.5rem] bg-slate-50 border border-slate-100 font-bold text-sm h-32 outline-none resize-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
+            ></textarea>
+          </div>
+        </div>
+
+        {/* 5. Sliders */}
+        <div className="space-y-8 bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100">
+          <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] text-center mb-4 italic">Performance Matrix</h3>
+          <div className="grid grid-cols-1 gap-8">
+            {categories.map(cat => (
+              <div key={cat} className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase text-slate-800 tracking-widest">{cat}</label>
+                  <span className="text-indigo-600 font-black text-xs">{scores[cat].toFixed(1)}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="1" 
+                  max="5" 
+                  step="0.5" 
+                  value={scores[cat]} 
+                  onChange={(e) => setScores(prev => ({...prev, [cat]: parseFloat(e.target.value)}))}
+                  className="accent-indigo-600"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 6. Spider Graph */}
+        <div className="bg-white rounded-[3rem] p-6 h-[45vh] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-full bg-indigo-50/10 pointer-events-none group-hover:bg-indigo-50/20 transition-all"></div>
           <canvas ref={chartRef}></canvas>
         </div>
 
-        <div className="space-y-4">
-          <input 
-            type="text" 
-            placeholder="Name (Optional)" 
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold outline-none focus:ring-2 focus:ring-indigo-100" 
-          />
-          <textarea 
-            placeholder="Feedback thoughts..." 
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full p-5 rounded-2xl bg-slate-50 border-none font-bold text-sm h-24 outline-none resize-none focus:ring-2 focus:ring-indigo-100"
-          ></textarea>
+        {/* 7. Submit & 8. Cancel (Non-sticky) */}
+        <div className="space-y-4 pt-4">
+          <button 
+            onClick={handleSubmit} 
+            className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-95 transition-all hover:bg-indigo-600"
+          >
+            Submit Feedback
+          </button>
+          <button 
+            onClick={onCancel} 
+            className="w-full py-4 rounded-[2rem] font-black uppercase text-[10px] text-slate-300 hover:text-rose-500 tracking-widest transition-all"
+          >
+            Not Now, Maybe Later
+          </button>
         </div>
-
-        <div className="grid grid-cols-1 gap-6 pb-12">
-          {categories.map(cat => (
-            <div key={cat} className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{cat}</label>
-                <span className="text-indigo-600 font-black text-xs">{scores[cat].toFixed(1)}</span>
-              </div>
-              <input 
-                type="range" 
-                min="1" 
-                max="5" 
-                step="0.5" 
-                value={scores[cat]} 
-                onChange={(e) => setScores(prev => ({...prev, [cat]: parseFloat(e.target.value)}))}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md flex gap-4 max-w-xl mx-auto border-t border-slate-100 z-50">
-        <button onClick={onCancel} className="flex-1 py-5 rounded-3xl font-black uppercase text-xs text-slate-400 hover:bg-slate-50 transition-all">Cancel</button>
-        <button onClick={handleSubmit} className="flex-[2] bg-indigo-600 text-white py-5 rounded-3xl font-black uppercase tracking-widest text-xs shadow-xl shadow-indigo-100 active:scale-95 transition-all">Submit Feedback</button>
       </div>
     </div>
   );

@@ -29,27 +29,36 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
       <aside className={`fixed top-0 left-0 h-full w-72 bg-white z-[110] shadow-2xl transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-8 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
-            <h2 className="font-black text-2xl text-orange-600 tracking-tighter">FOODIE.</h2>
+            <h2 className="font-black text-2xl text-orange-600 tracking-tighter italic">FOODIE.</h2>
             <button onClick={onClose} className="p-2 text-slate-400 hover:text-orange-500 transition">
               <i className="fa-solid fa-xmark text-xl"></i>
             </button>
           </div>
           
           <nav className="space-y-1 flex-1 overflow-y-auto no-scrollbar">
-            {navItem('menu', 'fa-house', 'Menu')}
-            {navItem('orders', 'fa-receipt', 'My Orders')}
-            {navItem('group', 'fa-users', 'Group Order')}
-            {navItem('favorites', 'fa-heart', 'Favorites')}
-            {navItem('profile', 'fa-user', 'My Profile')}
+            <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Discovery</p>
+            {navItem('landing', 'fa-sparkles', 'Product Tour')}
+            {navItem('menu', 'fa-utensils', 'Main Menu')}
             
             <div className="my-6 border-t border-slate-100 pt-6 space-y-1">
-              <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Legal</p>
+              <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">My Account</p>
+              {navItem('orders', 'fa-clock-rotate-left', 'Order History')}
+              {navItem('favorites', 'fa-heart', 'Saved Favorites')}
+              {navItem('feedback', 'fa-comment-dots', 'Give Feedback')}
+            </div>
+
+            <div className="my-6 border-t border-slate-100 pt-6 space-y-1">
+              <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Support</p>
               {navItem('privacy', 'fa-shield-halved', 'Privacy Policy')}
-              {navItem('terms', 'fa-file-contract', 'Terms & Agreement')}
+              {navItem('terms', 'fa-file-contract', 'Terms & Conditions')}
             </div>
           </nav>
+
           <div className="mt-auto pt-6 border-t border-slate-100 text-center">
-            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">v2.1 Premium</p>
+            <button onClick={() => { onNavigate('admin'); onClose(); }} className="p-5 bg-indigo-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 transition flex items-center justify-center gap-2 w-full shadow-xl shadow-indigo-100">
+              <i className="fa-solid fa-user-lock"></i> Merchant Access
+            </button>
+            <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest mt-4">v2.5 Sharp Pro System</p>
           </div>
         </div>
       </aside>
