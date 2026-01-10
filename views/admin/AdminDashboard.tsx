@@ -4,7 +4,7 @@ import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
 import AdminQR from './AdminQR';
 import AdminSettings from './AdminSettings';
-import { MenuItem, Category } from '../../types';
+import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 
 type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings';
 
@@ -14,9 +14,12 @@ interface AdminDashboardProps {
   setMenuItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
   categories: Category[];
   setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
+  feedbacks: Feedback[];
+  setFeedbacks: React.Dispatch<React.SetStateAction<Feedback[]>>;
+  salesHistory: SalesRecord[];
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, setMenuItems, categories, setCategories }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('menu');
 
   const renderContent = () => {
@@ -29,7 +32,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, se
           setCats={setCategories} 
         />
       );
-      case 'analytics': return <AdminAnalytics />;
+      case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} menuItems={menuItems} />;
       case 'qr': return <AdminQR />;
       case 'settings': return <AdminSettings onLogout={onLogout} />;
     }
@@ -39,7 +42,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, se
     <div className="min-h-screen bg-slate-50 pb-20 animate-fade-in">
       <header className="bg-white border-b border-slate-100 sticky top-0 z-50 px-6">
         <div className="max-w-md mx-auto flex justify-between items-center h-16">
-          <h1 className="font-black text-lg italic tracking-tight">SHARP<span className="text-indigo-600">MENU</span></h1>
+          <h1 className="font-black text-lg italic tracking-tight uppercase">SHARP<span className="text-indigo-600">ADMIN</span></h1>
           <button onClick={onLogout} className="text-[10px] font-black uppercase text-slate-400">Exit</button>
         </div>
       </header>

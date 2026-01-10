@@ -26,3 +26,20 @@ export interface CartItem extends MenuItem {
   orderTo?: string;
   orderMode: OrderMode;
 }
+
+export interface Feedback {
+  id: string;
+  name: string;
+  scores: Record<string, number>;
+  note: string;
+  date: string;
+}
+
+export interface SalesRecord {
+  timestamp: string;
+  amount: number;
+  itemId: number;
+  itemName: string;
+  categoryName: string;
+  quantity: number;
+}

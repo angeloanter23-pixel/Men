@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MenuItem, CartItem, Category } from './types';
+import { MenuItem, CartItem, Category, Feedback, SalesRecord } from './types';
 
 // Components
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import DetailPanel from './components/DetailPanel';
+import FeedbackForm from './components/FeedbackForm';
 
 // Views
 import MenuView from './views/MenuView';
@@ -15,8 +16,9 @@ import QRVerifyView from './views/QRVerifyView';
 import GroupView from './views/GroupView';
 import LegalView from './views/LegalView';
 import AdminView from './views/AdminView';
+import FeedbackDataView from './views/FeedbackDataView';
 
-export type ViewState = 'menu' | 'group' | 'favorites' | 'profile' | 'privacy' | 'terms' | 'cart' | 'orders' | 'qr-verify' | 'admin';
+export type ViewState = 'menu' | 'group' | 'favorites' | 'profile' | 'privacy' | 'terms' | 'cart' | 'orders' | 'qr-verify' | 'admin' | 'feedback' | 'feedback-data';
 
 export interface OrderInstance extends CartItem {
   orderId: string;
@@ -33,47 +35,56 @@ export default function App() {
   
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [salesHistory, setSalesHistory] = useState<SalesRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
 
-  // Load Menu Data with LocalStorage Persistence
   useEffect(() => {
     const savedMenu = localStorage.getItem('foodie_menu_items');
     const savedCats = localStorage.getItem('foodie_categories');
+    const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
+    const savedSales = localStorage.getItem('foodie_sales_history');
 
     if (savedMenu && savedCats) {
       setMenuItems(JSON.parse(savedMenu));
       setCategories(JSON.parse(savedCats));
-      setIsLoading(false);
     } else {
       fetch('./data/menu.json')
         .then(res => res.json())
         .then(data => {
           setMenuItems(data.menuItems);
           setCategories(data.categories);
-          setIsLoading(false);
         })
-        .catch(err => {
-          console.error("Failed to load menu", err);
-          setIsLoading(false);
-        });
+        .catch(err => console.error("Failed to load menu", err));
     }
+
+    if (savedFeedbacks) {
+      setFeedbacks(JSON.parse(savedFeedbacks));
+    } else {
+      fetch('./data/feedback.json')
+        .then(res => res.json())
+        .then(data => setFeedbacks(data))
+        .catch(err => console.error("Failed to load feedbacks", err));
+    }
+
+    if (savedSales) {
+      setSalesHistory(JSON.parse(savedSales));
+    }
+    
+    setIsLoading(false);
   }, []);
 
-  // Persist changes to LocalStorage
   useEffect(() => {
-    if (menuItems.length > 0) {
-      localStorage.setItem('foodie_menu_items', JSON.stringify(menuItems));
-    }
-    if (categories.length > 0) {
-      localStorage.setItem('foodie_categories', JSON.stringify(categories));
-    }
-  }, [menuItems, categories]);
+    if (menuItems.length > 0) localStorage.setItem('foodie_menu_items', JSON.stringify(menuItems));
+    if (categories.length > 0) localStorage.setItem('foodie_categories', JSON.stringify(categories));
+    if (feedbacks.length > 0) localStorage.setItem('foodie_feedbacks', JSON.stringify(feedbacks));
+    if (salesHistory.length > 0) localStorage.setItem('foodie_sales_history', JSON.stringify(salesHistory));
+  }, [menuItems, categories, feedbacks, salesHistory]);
 
-  // Simulated status progression
   useEffect(() => {
     if (orders.length === 0) return;
     const interval = setInterval(() => {
@@ -100,25 +111,26 @@ export default function App() {
     const itemsToProcess = pendingSingleItem ? [pendingSingleItem] : cart;
     if (itemsToProcess.length === 0) { setCurrentView('menu'); return; }
 
+    const timestamp = new Date();
     const newOrders: OrderInstance[] = itemsToProcess.map((item, idx) => ({
       ...item,
-      orderId: `ORD-${Date.now()}-${idx}`,
+      orderId: `ORD-${timestamp.getTime()}-${idx}`,
       status: 'Pending',
-      timestamp: new Date()
+      timestamp
     }));
     
-    const friends = ['Sarah', 'Mark', 'Elena'];
-    const friendOrder: OrderInstance = {
-      ...menuItems[Math.floor(Math.random() * menuItems.length)],
-      quantity: 1,
-      orderMode: 'Dine-in',
-      orderTo: friends[Math.floor(Math.random() * friends.length)],
-      orderId: `ORD-F-${Date.now()}`,
-      status: 'Pending',
-      timestamp: new Date()
-    };
-
-    setOrders(prev => [...prev, ...newOrders, friendOrder]);
+    const newSales: SalesRecord[] = itemsToProcess.map(item => ({
+      timestamp: timestamp.toISOString(),
+      amount: item.price * item.quantity,
+      itemId: item.id,
+      itemName: item.name,
+      categoryName: item.cat_name,
+      quantity: item.quantity
+    }));
+    
+    setOrders(prev => [...prev, ...newOrders]);
+    setSalesHistory(prev => [...prev, ...newSales]);
+    
     if (pendingSingleItem) setPendingSingleItem(null); else setCart([]);
     setCurrentView('orders');
     setSelectedItem(null);
@@ -129,8 +141,15 @@ export default function App() {
     setCurrentView('qr-verify');
   };
 
+  const handleFeedbackSubmit = (feedback: Feedback) => {
+    setFeedbacks(prev => [feedback, ...prev]);
+    setOrders([]);
+    setCurrentView('feedback-data');
+    alert('Thank you for your feedback!');
+  };
+
   const renderView = () => {
-    if (isLoading) return <div className="flex items-center justify-center min-h-[80vh] font-black text-orange-600 animate-pulse uppercase tracking-widest text-xs">Loading Menu...</div>;
+    if (isLoading) return <div className="flex items-center justify-center min-h-[80vh] font-black text-orange-600 animate-pulse uppercase tracking-widest text-xs">Initialising...</div>;
 
     switch (currentView) {
       case 'menu': return (
@@ -148,25 +167,25 @@ export default function App() {
         />
       );
       case 'qr-verify': return <QRVerifyView onVerify={finalizeOrder} onCancel={() => { setPendingSingleItem(null); setCurrentView(cart.length > 0 ? 'cart' : 'menu'); }} />;
-      case 'orders': return <OrdersView orders={orders} onPayNow={() => alert('Secure payment processed!')} onGoToMenu={() => setCurrentView('menu')} />;
+      case 'orders': return <OrdersView orders={orders} onPayNow={() => setCurrentView('feedback')} onGoToMenu={() => setCurrentView('menu')} />;
+      case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => setCurrentView('menu')} />;
+      case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => setCurrentView('feedback')} />;
+      case 'admin': return (
+        <AdminView 
+          menuItems={menuItems} setMenuItems={setMenuItems} 
+          categories={categories} setCategories={setCategories} 
+          feedbacks={feedbacks} setFeedbacks={setFeedbacks}
+          salesHistory={salesHistory}
+        />
+      );
       case 'group': return <GroupView />;
       case 'privacy': return <LegalView title="Privacy Policy" />;
       case 'terms': return <LegalView title="Terms & Agreement" />;
-      case 'favorites': return <div className="p-6 text-center py-32 font-bold text-slate-300">No favorites yet.</div>;
-      case 'profile': return <div className="p-6 text-center py-32 font-bold text-slate-300">Profile view under construction.</div>;
-      case 'admin': return (
-        <AdminView 
-          menuItems={menuItems} 
-          setMenuItems={setMenuItems} 
-          categories={categories} 
-          setCategories={setCategories} 
-        />
-      );
       default: return null;
     }
   };
 
-  const showNavbar = currentView !== 'admin';
+  const showNavbar = !['admin', 'feedback', 'feedback-data'].includes(currentView);
 
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
@@ -177,19 +196,17 @@ export default function App() {
       
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 max-w-xl mx-auto z-40">
         {[
-          { v: 'menu', i: 'fa-house', l: 'Menu' },
           { v: 'orders', i: 'fa-receipt', l: 'Orders' },
-          { v: 'favorites', i: 'fa-heart', l: 'Hearts' },
+          { v: 'feedback', i: 'fa-comment-dots', l: 'Feedback' },
+          { v: 'feedback-data', i: 'fa-database', l: 'Data' },
           { v: 'admin', i: 'fa-user-gear', l: 'Admin' }
         ].map(btn => (
-          <button key={btn.v} onClick={() => setCurrentView(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}>
+          <button key={btn.v} onClick={() => setCurrentView(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-indigo-600' : 'text-slate-300 hover:text-indigo-300'}`}>
             <i className={`fa-solid ${btn.i} text-xl`}></i>
             <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
           </button>
         ))}
       </div>
-
-      <style>{` .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } `}</style>
     </div>
   );
 }

@@ -1,16 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
-import { MenuItem, Category } from '../types';
+import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 
 interface AdminViewProps {
   menuItems: MenuItem[];
   setMenuItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
   categories: Category[];
   setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
+  feedbacks: Feedback[];
+  setFeedbacks: React.Dispatch<React.SetStateAction<Feedback[]>>;
+  salesHistory: SalesRecord[];
 }
 
-const AdminView: React.FC<AdminViewProps> = ({ menuItems, setMenuItems, categories, setCategories }) => {
+const AdminView: React.FC<AdminViewProps> = ({ menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +50,9 @@ const AdminView: React.FC<AdminViewProps> = ({ menuItems, setMenuItems, categori
         setMenuItems={setMenuItems} 
         categories={categories} 
         setCategories={setCategories}
+        feedbacks={feedbacks}
+        setFeedbacks={setFeedbacks}
+        salesHistory={salesHistory}
       />
     );
   }
@@ -90,24 +96,6 @@ const AdminView: React.FC<AdminViewProps> = ({ menuItems, setMenuItems, categori
             Login
           </button>
         </form>
-
-        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">
-          <button type="button" className="hover:text-indigo-600">Forgot Password?</button>
-        </div>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100"></span></div>
-          <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest"><span className="bg-white px-2 text-slate-300">Mock Social Login</span></div>
-        </div>
-
-        <button 
-          type="button"
-          onClick={() => alert('Mock Google Login Activated')}
-          className="w-full bg-white border border-slate-200 text-slate-700 py-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-3 hover:bg-slate-50 transition-all"
-        >
-          <i className="fa-brands fa-google text-indigo-500"></i>
-          Login with Google
-        </button>
       </div>
     </div>
   );

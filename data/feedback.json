@@ -1,0 +1,31 @@
+
+[
+  {
+    "id": "fb-1",
+    "name": "James Wilson",
+    "scores": {
+      "Cleanliness": 5,
+      "Food Quality": 4.5,
+      "Speed": 4,
+      "Service": 5,
+      "Value": 4,
+      "Experience": 4.5
+    },
+    "note": "Exceptional service! The Wagyu burger was cooked to perfection. Highly recommend the ambiance.",
+    "date": "2024-06-12"
+  },
+  {
+    "id": "fb-2",
+    "name": "Sarah Chen",
+    "scores": {
+      "Cleanliness": 4,
+      "Food Quality": 5,
+      "Speed": 3.5,
+      "Service": 4,
+      "Value": 5,
+      "Experience": 4
+    },
+    "note": "Best adobo I've had in years. A bit of a wait, but worth it for the quality.",
+    "date": "2024-06-11"
+  }
+]
