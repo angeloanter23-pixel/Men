@@ -37,6 +37,7 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [salesHistory, setSalesHistory] = useState<SalesRecord[]>([]);
+  const [adminCreds, setAdminCreds] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(true);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -48,6 +49,7 @@ export default function App() {
     const savedCats = localStorage.getItem('foodie_categories');
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
     const savedSales = localStorage.getItem('foodie_sales_history');
+    const savedAdmin = localStorage.getItem('foodie_admin_creds');
 
     if (savedMenu && savedCats) {
       setMenuItems(JSON.parse(savedMenu));
@@ -74,6 +76,15 @@ export default function App() {
     if (savedSales) {
       setSalesHistory(JSON.parse(savedSales));
     }
+
+    if (savedAdmin) {
+      setAdminCreds(JSON.parse(savedAdmin));
+    } else {
+      fetch('./data/admin.json')
+        .then(res => res.json())
+        .then(data => setAdminCreds(data))
+        .catch(err => console.error("Failed to load admin", err));
+    }
     
     setIsLoading(false);
   }, []);
@@ -83,7 +94,8 @@ export default function App() {
     if (categories.length > 0) localStorage.setItem('foodie_categories', JSON.stringify(categories));
     if (feedbacks.length > 0) localStorage.setItem('foodie_feedbacks', JSON.stringify(feedbacks));
     if (salesHistory.length > 0) localStorage.setItem('foodie_sales_history', JSON.stringify(salesHistory));
-  }, [menuItems, categories, feedbacks, salesHistory]);
+    if (adminCreds.email) localStorage.setItem('foodie_admin_creds', JSON.stringify(adminCreds));
+  }, [menuItems, categories, feedbacks, salesHistory, adminCreds]);
 
   useEffect(() => {
     if (orders.length === 0) return;
@@ -175,7 +187,8 @@ export default function App() {
           menuItems={menuItems} setMenuItems={setMenuItems} 
           categories={categories} setCategories={setCategories} 
           feedbacks={feedbacks} setFeedbacks={setFeedbacks}
-          salesHistory={salesHistory}
+          salesHistory={salesHistory} setSalesHistory={setSalesHistory}
+          adminCreds={adminCreds} setAdminCreds={setAdminCreds}
         />
       );
       case 'group': return <GroupView />;

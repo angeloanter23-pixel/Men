@@ -42,4 +42,6 @@ export interface SalesRecord {
   itemName: string;
   categoryName: string;
   quantity: number;
+  branch: string;
+  tableNumber?: string;
 }

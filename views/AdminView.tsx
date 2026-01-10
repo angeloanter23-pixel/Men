@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 
@@ -11,30 +11,22 @@ interface AdminViewProps {
   feedbacks: Feedback[];
   setFeedbacks: React.Dispatch<React.SetStateAction<Feedback[]>>;
   salesHistory: SalesRecord[];
+  setSalesHistory: React.Dispatch<React.SetStateAction<SalesRecord[]>>;
+  adminCreds: any;
+  setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
 }
 
-const AdminView: React.FC<AdminViewProps> = ({ menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory }) => {
+const AdminView: React.FC<AdminViewProps> = ({ 
+  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds 
+}) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [creds, setCreds] = useState<any>(null);
-
-  useEffect(() => {
-    fetch('./data/admin.json')
-      .then(res => res.json())
-      .then(data => setCreds(data))
-      .catch(err => console.error("Could not load admin credentials", err));
-  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!creds) {
-      setError('System initializing, please wait...');
-      return;
-    }
-
-    if (email === creds.email && password === creds.password) {
+    if (email === adminCreds.email && password === adminCreds.password) {
       setIsAuthenticated(true);
       setError('');
     } else {
@@ -53,6 +45,9 @@ const AdminView: React.FC<AdminViewProps> = ({ menuItems, setMenuItems, categori
         feedbacks={feedbacks}
         setFeedbacks={setFeedbacks}
         salesHistory={salesHistory}
+        setSalesHistory={setSalesHistory}
+        adminCreds={adminCreds}
+        setAdminCreds={setAdminCreds}
       />
     );
   }
