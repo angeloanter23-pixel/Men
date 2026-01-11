@@ -164,6 +164,17 @@ export default function App() {
     alert('Thank you for your feedback!');
   };
 
+  const handleImportConfig = (config: any) => {
+    if (config.menu?.categories) setCategories(config.menu.categories);
+    if (config.menu?.items) setMenuItems(config.menu.items);
+    if (config.business?.name) {
+       // Optionally store business name in local storage for branding
+       localStorage.setItem('foodie_business_name', config.business.name);
+    }
+    alert('Configuration Imported Successfully!');
+    setCurrentView('menu');
+  };
+
   const renderView = () => {
     if (isLoading) return <div className="flex items-center justify-center min-h-[80vh] font-black text-orange-600 animate-pulse uppercase tracking-widest text-xs">Initialising...</div>;
 
@@ -172,13 +183,14 @@ export default function App() {
         <LandingView 
           onStart={() => setCurrentView('menu')} 
           onCreateMenu={() => setCurrentView('create-menu')} 
+          onImportMenu={handleImportConfig}
         />
       );
       case 'create-menu': return (
         <CreateMenuView 
           onCancel={() => setCurrentView('landing')} 
           onComplete={(config) => {
-            console.log("Creation Complete", config);
+            handleImportConfig(config);
             setCurrentView('admin');
           }}
         />

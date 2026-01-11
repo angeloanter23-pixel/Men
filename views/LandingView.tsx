@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface FAQItemProps {
   question: string;
@@ -25,10 +25,13 @@ const FAQItem: React.FC<FAQItemProps> = ({ question, answer }) => {
 interface LandingViewProps {
   onStart: () => void;
   onCreateMenu: () => void;
+  onImportMenu: (config: any) => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
+const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onImportMenu }) => {
   const [activeSlide, setActiveSlide] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const slides = [
     {
       title: "Real-time Synchronization",
@@ -57,6 +60,25 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
     return () => clearInterval(timer);
   }, [slides.length]);
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const config = JSON.parse(event.target?.result as string);
+        onImportMenu(config);
+      } catch (err) {
+        alert("Invalid configuration file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 animate-fade-in overflow-x-hidden font-['Plus_Jakarta_Sans']">
       
@@ -69,14 +91,14 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
         
         <div className="relative text-center space-y-8 z-10">
           <div className="inline-block bg-white/5 backdrop-blur-xl px-5 py-2 rounded-full border border-white/10 shadow-2xl">
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-orange-400">Transforming Hospitality</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-orange-400">Offline-Ready Ecosystem</span>
           </div>
           <h1 className="text-6xl font-black text-white leading-[0.9] tracking-tighter italic uppercase">
             SHARP<span className="text-orange-500">QR</span><br />
             <span className="text-indigo-400">REIMAGINED.</span>
           </h1>
           <p className="text-slate-400 text-base max-w-xs mx-auto leading-relaxed font-medium">
-            The ultimate digital menu ecosystem. Order, Manage, and Scale with speed.
+            The ultimate digital menu ecosystem. Works anywhere, anytime, without cloud dependency.
           </p>
           <div className="flex flex-col gap-4 items-center pt-6">
             <div className="flex gap-4 w-full justify-center">
@@ -87,7 +109,20 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
                 Create Menu
               </button>
             </div>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">No App Download Required</p>
+            
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept=".json" 
+              onChange={handleFileChange} 
+            />
+            <button 
+              onClick={handleImportClick}
+              className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] hover:text-white transition-colors"
+            >
+              Import Existing Menu JSON
+            </button>
           </div>
         </div>
 
@@ -179,42 +214,27 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
         </div>
       </section>
 
-      {/* Visual Break */}
-      <section className="py-12 px-6">
-        <div className="rounded-[3rem] overflow-hidden h-64 relative shadow-2xl group">
-           <img src="https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&q=80&w=800" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" alt="Gourmet Food" />
-           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent flex flex-col justify-end p-8">
-              <p className="text-white font-black text-2xl tracking-tighter uppercase italic leading-none">Designed for <br /><span className="text-orange-500">Fine Dining.</span></p>
-           </div>
-        </div>
-      </section>
-
       {/* FAQ */}
       <section className="py-20 px-8">
         <h2 className="text-3xl font-black text-slate-800 mb-10 uppercase tracking-tighter italic">COMMON <span className="text-indigo-600">QUERIES</span></h2>
         <div className="space-y-2">
            <FAQItem 
-             question="Is hardware installation required?" 
-             answer="None. You only need your existing Wi-Fi. Our cloud-based system runs on any modern smartphone or tablet browser." 
+             question="Does this require an internet connection?" 
+             answer="The system is designed for local-first usage. While a connection is needed to load the initial site, all menu data, ordering, and admin management can run strictly on your local browser's storage." 
            />
            <FAQItem 
-             question="Can we customize the look?" 
-             answer="Yes, every Sharp QR portal can be white-labeled with your restaurant's branding, colors, and typography." 
+             question="Is there a subscription fee?" 
+             answer="We offer one-time payment plans for lifetime local access, or annual plans for cloud synchronization features." 
            />
            <FAQItem 
-             question="How do we handle payments?" 
-             answer="The system generates secure payment links for GCash, Maya, or simulated barcodes for Cash-over-counter transactions." 
+             question="How do I back up my data?" 
+             answer="You can export your entire menu and branch configuration as a JSON file at any time from the Merchant Dashboard." 
            />
         </div>
       </section>
 
       <footer className="py-20 bg-slate-900 text-center px-8 border-t border-white/5 rounded-t-[4rem]">
          <h2 className="font-black text-3xl text-orange-600 tracking-tighter italic mb-6">FOODIE.</h2>
-         <div className="flex justify-center gap-6 mb-10 text-slate-500">
-           <i className="fa-brands fa-instagram text-xl"></i>
-           <i className="fa-brands fa-twitter text-xl"></i>
-           <i className="fa-brands fa-facebook text-xl"></i>
-         </div>
          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-10">© 2025 SHARP QR TECHNOLOGIES</p>
          <button onClick={onStart} className="w-full max-w-[300px] bg-white text-slate-900 py-6 rounded-[2.5rem] font-black uppercase text-xs tracking-[0.2em] shadow-2xl active:scale-95 transition-all mx-auto block">
             ENTER ECOSYSTEM
