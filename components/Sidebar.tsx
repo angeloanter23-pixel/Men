@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { ViewState } from '../App';
+// Fix: Import ViewState from types.ts as App.tsx is empty and not a module
+import { ViewState } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;

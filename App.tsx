@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MenuItem, CartItem, Category, Feedback, SalesRecord } from './types';
+import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
 import { menuItems as defaultMenuItems, categories as defaultCategories } from './data';
 
 // Components
@@ -21,8 +21,6 @@ import FeedbackDataView from './views/FeedbackDataView';
 import LandingView from './views/LandingView';
 import PaymentView from './views/PaymentView';
 import CreateMenuView from './views/CreateMenuView';
-
-export type ViewState = 'menu' | 'group' | 'favorites' | 'profile' | 'privacy' | 'terms' | 'cart' | 'orders' | 'qr-verify' | 'admin' | 'feedback' | 'feedback-data' | 'landing' | 'payment' | 'create-menu';
 
 export interface OrderInstance extends CartItem {
   orderId: string;
@@ -67,7 +65,6 @@ export default function App() {
     if (savedFeedbacks) {
       setFeedbacks(JSON.parse(savedFeedbacks));
     } else {
-      // Minimal default feedbacks
       setFeedbacks([
         {
           id: 'fb-1',
@@ -154,13 +151,13 @@ export default function App() {
 
   const handleSendToKitchenDirect = (item: CartItem) => {
     setPendingSingleItem({ ...item });
-    setCurrentView('qr-verify');
+    setCurrentView('qr-verify' as ViewState);
   };
 
   const handleFeedbackSubmit = (feedback: Feedback) => {
     setFeedbacks(prev => [feedback, ...prev]);
     setOrders([]);
-    setCurrentView('feedback-data');
+    setCurrentView('feedback-data' as ViewState);
     alert('Thank you for your feedback!');
   };
 
@@ -181,7 +178,7 @@ export default function App() {
       case 'landing': return (
         <LandingView 
           onStart={() => setCurrentView('menu')} 
-          onCreateMenu={() => setCurrentView('create-menu')} 
+          onCreateMenu={() => setCurrentView('create-menu' as ViewState)} 
           onImportMenu={handleImportConfig}
         />
       );
@@ -204,7 +201,7 @@ export default function App() {
       case 'cart': return (
         <CartView 
           cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))}
-          onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => setCurrentView('qr-verify')}
+          onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => setCurrentView('qr-verify' as ViewState)}
           onGoBack={() => setCurrentView('menu')}
         />
       );
@@ -219,7 +216,7 @@ export default function App() {
         />
       );
       case 'qr-verify': return <QRVerifyView onVerify={finalizeOrder} onCancel={() => { setPendingSingleItem(null); setCurrentView(cart.length > 0 ? 'cart' : 'menu'); }} />;
-      case 'orders': return <OrdersView orders={orders} onPayNow={() => setCurrentView('payment')} onGoToMenu={() => setCurrentView('menu')} />;
+      case 'orders': return <OrdersView orders={orders} onPayNow={() => setCurrentView('payment' as ViewState)} onGoToMenu={() => setCurrentView('menu')} />;
       case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => setCurrentView('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => setCurrentView('feedback')} />;
       case 'admin': return (
@@ -231,8 +228,6 @@ export default function App() {
           adminCreds={adminCreds} setAdminCreds={setAdminCreds}
         />
       );
-      case 'group': return <GroupView />;
-      case 'favorites': return <MenuView popularItems={popularItems} categories={categories} filteredItems={popularItems} activeCategory="all" searchQuery="" onSearchChange={() => {}} onCategorySelect={() => {}} onItemSelect={setSelectedItem} />;
       case 'privacy': return <LegalView title="Privacy Policy" />;
       case 'terms': return <LegalView title="Terms & Agreement" />;
       default: return null;
