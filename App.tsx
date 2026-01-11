@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord } from './types';
+import { menuItems as defaultMenuItems, categories as defaultCategories } from './data';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -40,7 +41,7 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [salesHistory, setSalesHistory] = useState<SalesRecord[]>([]);
-  const [adminCreds, setAdminCreds] = useState({ email: '', password: '' });
+  const [adminCreds, setAdminCreds] = useState({ email: 'admin@foodie.com', password: 'password123' });
   const [isLoading, setIsLoading] = useState(true);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -48,6 +49,7 @@ export default function App() {
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
 
   useEffect(() => {
+    // Load data from localStorage or fallback to data.ts constants
     const savedMenu = localStorage.getItem('foodie_menu_items');
     const savedCats = localStorage.getItem('foodie_categories');
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
@@ -58,22 +60,23 @@ export default function App() {
       setMenuItems(JSON.parse(savedMenu));
       setCategories(JSON.parse(savedCats));
     } else {
-      fetch('./data/menu.json')
-        .then(res => res.json())
-        .then(data => {
-          setMenuItems(data.menuItems);
-          setCategories(data.categories);
-        })
-        .catch(err => console.error("Failed to load menu", err));
+      setMenuItems(defaultMenuItems);
+      setCategories(defaultCategories);
     }
 
     if (savedFeedbacks) {
       setFeedbacks(JSON.parse(savedFeedbacks));
     } else {
-      fetch('./data/feedback.json')
-        .then(res => res.json())
-        .then(data => setFeedbacks(data))
-        .catch(err => console.error("Failed to load feedbacks", err));
+      // Minimal default feedbacks
+      setFeedbacks([
+        {
+          id: 'fb-1',
+          name: 'James Wilson',
+          scores: { Cleanliness: 5, "Food Quality": 5, Speed: 4, Service: 5, Value: 4, Experience: 5 },
+          note: "Offline mode works perfectly! Great UX.",
+          date: new Date().toISOString().split('T')[0]
+        }
+      ]);
     }
 
     if (savedSales) {
@@ -82,23 +85,20 @@ export default function App() {
 
     if (savedAdmin) {
       setAdminCreds(JSON.parse(savedAdmin));
-    } else {
-      fetch('./data/admin.json')
-        .then(res => res.json())
-        .then(data => setAdminCreds(data))
-        .catch(err => console.error("Failed to load admin", err));
     }
     
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    if (menuItems.length > 0) localStorage.setItem('foodie_menu_items', JSON.stringify(menuItems));
-    if (categories.length > 0) localStorage.setItem('foodie_categories', JSON.stringify(categories));
-    if (feedbacks.length > 0) localStorage.setItem('foodie_feedbacks', JSON.stringify(feedbacks));
-    if (salesHistory.length > 0) localStorage.setItem('foodie_sales_history', JSON.stringify(salesHistory));
-    if (adminCreds.email) localStorage.setItem('foodie_admin_creds', JSON.stringify(adminCreds));
-  }, [menuItems, categories, feedbacks, salesHistory, adminCreds]);
+    if (!isLoading) {
+      localStorage.setItem('foodie_menu_items', JSON.stringify(menuItems));
+      localStorage.setItem('foodie_categories', JSON.stringify(categories));
+      localStorage.setItem('foodie_feedbacks', JSON.stringify(feedbacks));
+      localStorage.setItem('foodie_sales_history', JSON.stringify(salesHistory));
+      localStorage.setItem('foodie_admin_creds', JSON.stringify(adminCreds));
+    }
+  }, [menuItems, categories, feedbacks, salesHistory, adminCreds, isLoading]);
 
   useEffect(() => {
     if (orders.length === 0) return;
@@ -168,7 +168,6 @@ export default function App() {
     if (config.menu?.categories) setCategories(config.menu.categories);
     if (config.menu?.items) setMenuItems(config.menu.items);
     if (config.business?.name) {
-       // Optionally store business name in local storage for branding
        localStorage.setItem('foodie_business_name', config.business.name);
     }
     alert('Configuration Imported Successfully!');
