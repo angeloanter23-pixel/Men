@@ -84,7 +84,6 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
 
   return (
     <div className="min-h-screen bg-white p-6 pb-32 animate-fade-in flex flex-col font-['Plus_Jakarta_Sans']">
-      {/* 1. Heading & 2. Subheading */}
       <header className="mb-10 text-center">
         <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-sm border border-emerald-100">
           <i className="fa-solid fa-circle-check"></i>
@@ -101,7 +100,6 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
       </header>
 
       <div className="space-y-10">
-        {/* 3. Name & 4. Feedback */}
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Full Name (Optional)</label>
@@ -124,7 +122,6 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
           </div>
         </div>
 
-        {/* 5. Sliders */}
         <div className="space-y-8 bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100">
           <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] text-center mb-4 italic">Performance Matrix</h3>
           <div className="grid grid-cols-1 gap-8">
@@ -148,13 +145,11 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
           </div>
         </div>
 
-        {/* 6. Spider Graph */}
         <div className="bg-white rounded-[3rem] p-6 h-[45vh] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-full bg-indigo-50/10 pointer-events-none group-hover:bg-indigo-50/20 transition-all"></div>
           <canvas ref={chartRef}></canvas>
         </div>
 
-        {/* 7. Submit & 8. Cancel (Non-sticky) */}
         <div className="space-y-4 pt-4">
           <button 
             onClick={handleSubmit} 

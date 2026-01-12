@@ -40,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
             <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Discovery</p>
             {navItem('landing', 'fa-sparkles', 'Product Tour')}
             {navItem('menu', 'fa-utensils', 'Main Menu')}
+            {navItem('test-supabase', 'fa-cloud', 'Test Supabase Menu')}
             
             <div className="my-6 border-t border-slate-100 pt-6 space-y-1">
               <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">My Account</p>

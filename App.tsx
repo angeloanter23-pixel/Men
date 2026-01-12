@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
 import { menuItems as defaultMenuItems, categories as defaultCategories } from './data';
@@ -21,6 +20,7 @@ import FeedbackDataView from './views/FeedbackDataView';
 import LandingView from './views/LandingView';
 import PaymentView from './views/PaymentView';
 import CreateMenuView from './views/CreateMenuView';
+import TestSupabaseView from './views/TestSupabaseView';
 
 export interface OrderInstance extends CartItem {
   orderId: string;
@@ -219,6 +219,7 @@ export default function App() {
       case 'orders': return <OrdersView orders={orders} onPayNow={() => setCurrentView('payment' as ViewState)} onGoToMenu={() => setCurrentView('menu')} />;
       case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => setCurrentView('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => setCurrentView('feedback')} />;
+      case 'test-supabase': return <TestSupabaseView />;
       case 'admin': return (
         <AdminView 
           menuItems={menuItems} setMenuItems={setMenuItems} 
