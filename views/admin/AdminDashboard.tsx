@@ -1,10 +1,10 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
 import AdminQR from './AdminQR';
 import AdminSettings from './AdminSettings';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
+import * as MenuService from '../../services/menuService';
 
 type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings';
 
@@ -25,8 +25,116 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const handleLoadConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        console.log("Config Import: File read successfully.");
+        const backup = JSON.parse(event.target?.result as string);
+        console.log("Config Import: Parsed JSON data:", backup);
+
+        if (confirm("Importing this configuration will overwrite current data and attempt to sync with the cloud database. Continue?")) {
+          setIsSyncing(true);
+          
+          // Determine the structure (supports both AdminSettings export and CreateMenu export formats)
+          const menuData = backup.menu?.items || backup.menu || [];
+          const categoryData = backup.menu?.categories || backup.categories || [];
+          const qrData = backup.business?.qrAssets || backup.qrAssets || [];
+          const bizName = backup.business?.name || backup.businessName || '';
+          const feedbackData = backup.feedbacks || [];
+          const salesData = backup.sales || backup.salesHistory || [];
+          const importedAdminCreds = backup.admin || backup.adminCreds || null;
+
+          console.log("Config Import: Extracted Menu Items:", menuData.length);
+          console.log("Config Import: Extracted Categories:", categoryData.length);
+          console.log("Config Import: Extracted QR Assets:", qrData.length);
+          console.log("Config Import: Extracted Feedbacks:", feedbackData.length);
+          console.log("Config Import: Extracted Sales History:", salesData.length);
+
+          // 1. Update Local State (Mandatory)
+          if (menuData.length) setMenuItems(menuData);
+          if (categoryData.length) setCategories(categoryData);
+          if (feedbackData.length) setFeedbacks(feedbackData);
+          if (salesData.length) setSalesHistory(salesData);
+          if (importedAdminCreds) setAdminCreds(importedAdminCreds);
+          if (bizName) {
+            localStorage.setItem('foodie_business_name', bizName);
+            console.log("Config Import: Business Name set to", bizName);
+          }
+
+          // 2. Sync to Supabase if session exists
+          const sessionRaw = localStorage.getItem('foodie_supabase_session');
+          if (sessionRaw) {
+            try {
+              const session = JSON.parse(sessionRaw);
+              const restaurantId = session.restaurant?.id;
+
+              if (restaurantId) {
+                console.log("Cloud Sync: Initiating data push to Supabase for restaurant:", restaurantId);
+                
+                // Sync Categories & Items
+                for (const cat of categoryData) {
+                  console.log(`Cloud Sync: Upserting Category: ${cat.name}`);
+                  const dbCat = await MenuService.upsertCategory({
+                    name: cat.name,
+                    restaurant_id: restaurantId,
+                  });
+                  
+                  // Sync items for this category
+                  const itemsInCat = menuData.filter((m: any) => m.cat_name === cat.name || m.category_id === cat.id);
+                  console.log(`Cloud Sync: Found ${itemsInCat.length} items for category ${cat.name}`);
+                  
+                  for (const item of itemsInCat) {
+                    console.log(`Cloud Sync: Upserting Item: ${item.name}`);
+                    await MenuService.upsertMenuItem({
+                      name: item.name,
+                      price: item.price,
+                      description: item.description,
+                      image_url: item.image_url,
+                      category_id: dbCat.id,
+                      pax: item.pax,
+                      serving_time: item.serving_time,
+                      is_popular: item.is_popular
+                    });
+                  }
+                }
+
+                // Sync QR Assets to Branches (If applicable)
+                if (qrData.length > 0) {
+                  console.log("Cloud Sync: Syncing QR Assets to Branches...");
+                  for (const qr of qrData) {
+                    const slug = `${bizName.toLowerCase().replace(/\s+/g, '')}-${qr.name.toLowerCase().replace(/\s+/g, '')}`;
+                    await MenuService.insertBranch(qr.name, slug, restaurantId);
+                  }
+                }
+                
+                console.log("Cloud Sync: Database tables updated successfully.");
+              }
+            } catch (syncErr) {
+              console.error("Cloud Sync Error:", syncErr);
+              alert("Local import successful, but Cloud Database sync failed. Check browser console for logs.");
+            }
+          }
+
+          alert("Configuration successfully loaded and synced to local workspace.");
+        }
+      } catch (err) {
+        console.error("Config Import Error:", err);
+        alert("Critical Error: Failed to parse configuration JSON. Check console for details.");
+      } finally {
+        setIsSyncing(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -77,6 +185,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, se
           {navItem('analytics', 'fa-chart-pie', 'Analytics')}
           {navItem('qr', 'fa-qrcode', 'QR Generator')}
           {navItem('settings', 'fa-gears', 'System Config')}
+          
+          <div className="pt-6 mt-4 border-t border-slate-800 space-y-2">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept=".json" 
+              onChange={handleLoadConfig} 
+            />
+            <button 
+              disabled={isSyncing}
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold text-indigo-400 hover:bg-indigo-500/10 transition-all ${isSyncing ? 'opacity-50 cursor-wait' : ''}`}
+            >
+              <i className={`fa-solid ${isSyncing ? 'fa-spinner animate-spin' : 'fa-file-import'}`}></i> 
+              {isSyncing ? 'Syncing DB...' : 'Load Config'}
+            </button>
+          </div>
         </nav>
 
         <div className="mt-auto pt-6 border-t border-slate-800">

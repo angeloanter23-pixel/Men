@@ -56,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
             </div>
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-slate-100 text-center">
+          <div className="mt-auto pt-6 border-t border-slate-100 text-center space-y-3">
             <button onClick={() => { onNavigate('admin'); onClose(); }} className="p-5 bg-indigo-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 transition flex items-center justify-center gap-2 w-full shadow-xl shadow-indigo-100">
               <i className="fa-solid fa-user-lock"></i> Merchant Access
             </button>

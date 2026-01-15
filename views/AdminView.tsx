@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
@@ -14,10 +13,11 @@ interface AdminViewProps {
   setSalesHistory: React.Dispatch<React.SetStateAction<SalesRecord[]>>;
   adminCreds: any;
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
+  onExit: () => void;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ 
-  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds 
+  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit 
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
@@ -37,7 +37,10 @@ const AdminView: React.FC<AdminViewProps> = ({
   if (isAuthenticated) {
     return (
       <AdminDashboard 
-        onLogout={() => setIsAuthenticated(false)} 
+        onLogout={() => {
+          setIsAuthenticated(false);
+          onExit();
+        }} 
         menuItems={menuItems} 
         setMenuItems={setMenuItems} 
         categories={categories} 
@@ -89,6 +92,14 @@ const AdminView: React.FC<AdminViewProps> = ({
             className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-100 active:scale-95 transition-all"
           >
             Login
+          </button>
+          
+          <button 
+            type="button"
+            onClick={onExit}
+            className="w-full text-slate-400 py-2 text-[10px] font-black uppercase tracking-widest hover:text-slate-600 transition-colors"
+          >
+            Back to Home
           </button>
         </form>
       </div>

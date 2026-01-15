@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
 import { menuItems as defaultMenuItems, categories as defaultCategories } from './data';
@@ -227,6 +228,7 @@ export default function App() {
           feedbacks={feedbacks} setFeedbacks={setFeedbacks}
           salesHistory={salesHistory} setSalesHistory={setSalesHistory}
           adminCreds={adminCreds} setAdminCreds={setAdminCreds}
+          onExit={() => setCurrentView('menu')}
         />
       );
       case 'privacy': return <LegalView title="Privacy Policy" />;
@@ -241,7 +243,7 @@ export default function App() {
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={setCurrentView} currentView={currentView} />
       <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
-      {showNavbar && <Navbar onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => setCurrentView('cart')} onLogoClick={() => setCurrentView('menu')} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
+      {showNavbar && <Navbar onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => setCurrentView('cart')} onLogoClick={() => setCurrentView('menu')} onImport={handleImportConfig} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
       <main className={showNavbar ? "min-h-[80vh]" : ""}>{renderView()}</main>
       
       {!['landing', 'admin', 'payment', 'create-menu'].includes(currentView) && (
