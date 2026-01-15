@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { ViewState } from '../types';
 
 interface NavbarProps {
+  logo: string | null;
   onMenuClick: () => void;
   onCartClick: () => void;
   onLogoClick: () => void;
@@ -11,6 +13,7 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
+  logo,
   onMenuClick, 
   onCartClick, 
   onLogoClick, 
@@ -23,7 +26,13 @@ const Navbar: React.FC<NavbarProps> = ({
         <i className="fa-solid fa-align-left text-xl text-slate-700"></i>
       </button>
       
-      <h1 className="font-black text-2xl tracking-tighter text-orange-600 cursor-pointer" onClick={onLogoClick}>FOODIE.</h1>
+      <div className="cursor-pointer flex items-center" onClick={onLogoClick}>
+        {logo ? (
+          <img src={logo} alt="Logo" className="h-10 w-auto object-contain max-w-[140px]" />
+        ) : (
+          <h1 className="font-black text-2xl tracking-tighter text-orange-600">FOODIE.</h1>
+        )}
+      </div>
       
       <div className="flex items-center gap-2">
         {/* Cart Action */}

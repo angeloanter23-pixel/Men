@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
@@ -14,10 +15,11 @@ interface AdminViewProps {
   adminCreds: any;
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
   onExit: () => void;
+  onLogoUpdate: (logo: string | null) => void;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ 
-  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit 
+  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate 
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
@@ -51,6 +53,7 @@ const AdminView: React.FC<AdminViewProps> = ({
         setSalesHistory={setSalesHistory}
         adminCreds={adminCreds}
         setAdminCreds={setAdminCreds}
+        onLogoUpdate={onLogoUpdate}
       />
     );
   }

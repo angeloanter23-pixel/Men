@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
@@ -20,9 +21,12 @@ interface AdminDashboardProps {
   setSalesHistory: React.Dispatch<React.SetStateAction<SalesRecord[]>>;
   adminCreds: any;
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
+  onLogoUpdate: (logo: string | null) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+  onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate 
+}) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -48,6 +52,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, se
           const categoryData = backup.menu?.categories || backup.categories || [];
           const qrData = backup.business?.qrAssets || backup.qrAssets || [];
           const bizName = backup.business?.name || backup.businessName || '';
+          const bizLogo = backup.business?.logo || backup.businessLogo || null;
           const feedbackData = backup.feedbacks || [];
           const salesData = backup.sales || backup.salesHistory || [];
           const importedAdminCreds = backup.admin || backup.adminCreds || null;
@@ -64,6 +69,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, menuItems, se
           if (feedbackData.length) setFeedbacks(feedbackData);
           if (salesData.length) setSalesHistory(salesData);
           if (importedAdminCreds) setAdminCreds(importedAdminCreds);
+          if (bizLogo) {
+            onLogoUpdate(bizLogo);
+            localStorage.setItem('foodie_business_logo', bizLogo);
+          }
           if (bizName) {
             localStorage.setItem('foodie_business_name', bizName);
             console.log("Config Import: Business Name set to", bizName);

@@ -22,6 +22,7 @@ import LandingView from './views/LandingView';
 import PaymentView from './views/PaymentView';
 import CreateMenuView from './views/CreateMenuView';
 import TestSupabaseView from './views/TestSupabaseView';
+import SuperAdminView from './views/SuperAdminView';
 
 export interface OrderInstance extends CartItem {
   orderId: string;
@@ -41,6 +42,7 @@ export default function App() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [salesHistory, setSalesHistory] = useState<SalesRecord[]>([]);
   const [adminCreds, setAdminCreds] = useState({ email: 'admin@foodie.com', password: 'password123' });
+  const [logo, setLogo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -54,6 +56,7 @@ export default function App() {
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
     const savedSales = localStorage.getItem('foodie_sales_history');
     const savedAdmin = localStorage.getItem('foodie_admin_creds');
+    const savedLogo = localStorage.getItem('foodie_business_logo');
 
     if (savedMenu && savedCats) {
       setMenuItems(JSON.parse(savedMenu));
@@ -84,6 +87,10 @@ export default function App() {
     if (savedAdmin) {
       setAdminCreds(JSON.parse(savedAdmin));
     }
+
+    if (savedLogo) {
+      setLogo(savedLogo);
+    }
     
     setIsLoading(false);
   }, []);
@@ -95,8 +102,9 @@ export default function App() {
       localStorage.setItem('foodie_feedbacks', JSON.stringify(feedbacks));
       localStorage.setItem('foodie_sales_history', JSON.stringify(salesHistory));
       localStorage.setItem('foodie_admin_creds', JSON.stringify(adminCreds));
+      if (logo) localStorage.setItem('foodie_business_logo', logo);
     }
-  }, [menuItems, categories, feedbacks, salesHistory, adminCreds, isLoading]);
+  }, [menuItems, categories, feedbacks, salesHistory, adminCreds, logo, isLoading]);
 
   useEffect(() => {
     if (orders.length === 0) return;
@@ -163,10 +171,15 @@ export default function App() {
   };
 
   const handleImportConfig = (config: any) => {
+    console.log("App: Importing configuration", config);
     if (config.menu?.categories) setCategories(config.menu.categories);
     if (config.menu?.items) setMenuItems(config.menu.items);
     if (config.business?.name) {
        localStorage.setItem('foodie_business_name', config.business.name);
+    }
+    if (config.business?.logo) {
+      setLogo(config.business.logo);
+      localStorage.setItem('foodie_business_logo', config.business.logo);
     }
     alert('Configuration Imported Successfully!');
     setCurrentView('menu');
@@ -221,6 +234,7 @@ export default function App() {
       case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => setCurrentView('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => setCurrentView('feedback')} />;
       case 'test-supabase': return <TestSupabaseView />;
+      case 'super-admin': return <SuperAdminView onBack={() => setCurrentView('menu')} />;
       case 'admin': return (
         <AdminView 
           menuItems={menuItems} setMenuItems={setMenuItems} 
@@ -229,6 +243,7 @@ export default function App() {
           salesHistory={salesHistory} setSalesHistory={setSalesHistory}
           adminCreds={adminCreds} setAdminCreds={setAdminCreds}
           onExit={() => setCurrentView('menu')}
+          onLogoUpdate={setLogo}
         />
       );
       case 'privacy': return <LegalView title="Privacy Policy" />;
@@ -237,16 +252,16 @@ export default function App() {
     }
   };
 
-  const showNavbar = !['admin', 'payment', 'landing', 'create-menu'].includes(currentView);
+  const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin'].includes(currentView);
 
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={setCurrentView} currentView={currentView} />
       <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
-      {showNavbar && <Navbar onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => setCurrentView('cart')} onLogoClick={() => setCurrentView('menu')} onImport={handleImportConfig} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
+      {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => setCurrentView('cart')} onLogoClick={() => setCurrentView('menu')} onImport={handleImportConfig} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
       <main className={showNavbar ? "min-h-[80vh]" : ""}>{renderView()}</main>
       
-      {!['landing', 'admin', 'payment', 'create-menu'].includes(currentView) && (
+      {!['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView) && (
         <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 max-w-xl mx-auto z-40">
           {[
             { v: 'menu', i: 'fa-house', l: 'Menu' },
