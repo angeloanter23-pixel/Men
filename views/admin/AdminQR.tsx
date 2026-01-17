@@ -1,32 +1,34 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import * as MenuService from '../../services/menuService';
 
 // Declare QRious globally as it's loaded from CDN
 declare const QRious: any;
 
 interface QRAsset {
   id: string;
-  name: string;
-  token: string;
+  label: string;
+  code: string;
+  restaurant_id: string;
 }
 
 const QRBlock: React.FC<{ 
   asset: QRAsset; 
   onDelete: (id: string) => void;
-  onUpdate: (id: string, name: string, token: string) => void;
+  onUpdate: (id: string, label: string, code: string) => void;
 }> = ({ asset, onDelete, onUpdate }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [localName, setLocalName] = useState(asset.name);
-  const [localToken, setLocalToken] = useState(asset.token);
+  const [localLabel, setLocalLabel] = useState(asset.label);
+  const [localCode, setLocalCode] = useState(asset.code);
   const [isCopied, setIsCopied] = useState(false);
 
-  const finalUrl = `mymenu.ph/${localName.replace(/\s+/g, '')}?k=${localToken}`;
+  const businessName = localStorage.getItem('foodie_business_name') || 'foodie';
+  const finalUrl = `mymenu.ph/${businessName.toLowerCase().replace(/\s+/g, '')}/${localLabel.toLowerCase().replace(/\s+/g, '')}?k=${localCode}`;
 
   useEffect(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && typeof QRious !== 'undefined') {
       new QRious({
         element: canvasRef.current,
-        size: 150,
+        size: 180,
         value: finalUrl,
         level: 'H',
         foreground: '#0f172a'
@@ -44,68 +46,74 @@ const QRBlock: React.FC<{
     if (canvasRef.current) {
       const link = document.createElement('a');
       link.href = canvasRef.current.toDataURL("image/png");
-      link.download = `${localName}-QR.png`;
+      link.download = `${localLabel}-QR.png`;
       link.click();
     }
   };
 
+  const handleSyncUpdate = () => {
+    if (localLabel !== asset.label || localCode !== asset.code) {
+        onUpdate(asset.id, localLabel, localCode);
+    }
+  };
+
   return (
-    <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden animate-fade-in">
-      <div className="flex items-start justify-between mb-4">
+    <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-500 relative overflow-hidden group animate-fade-in">
+      <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[4rem] -translate-y-4 translate-x-4 group-hover:bg-indigo-50 transition-colors"></div>
+      
+      <div className="flex items-start justify-between mb-8 relative z-10">
         <div className="flex-1 pr-4">
           <input 
             type="text" 
-            value={localName} 
-            onChange={(e) => {
-              setLocalName(e.target.value);
-              onUpdate(asset.id, e.target.value, localToken);
-            }}
-            className="border border-transparent hover:border-slate-200 focus:border-indigo-600 focus:bg-white bg-transparent outline-none transition-all text-sm font-black uppercase text-indigo-600 px-2 py-1 rounded-lg w-full mb-1" 
-            placeholder="Name" 
+            value={localLabel} 
+            onBlur={handleSyncUpdate}
+            onChange={(e) => setLocalLabel(e.target.value)}
+            className="text-xl font-black uppercase italic tracking-tighter text-indigo-600 bg-transparent border-b-2 border-transparent hover:border-indigo-100 focus:border-indigo-600 outline-none transition-all w-full mb-1" 
+            placeholder="Label..." 
           />
-          <div className="flex items-center text-[11px] font-bold text-slate-400 px-2">
-            <span>K:</span>
+          <div className="flex items-center text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1">
+            <span className="opacity-40 mr-2">TOKEN:</span>
             <input 
               type="text" 
-              value={localToken} 
-              onChange={(e) => {
-                setLocalToken(e.target.value);
-                onUpdate(asset.id, localName, e.target.value);
-              }}
-              className="border border-transparent hover:border-slate-200 focus:border-indigo-600 focus:bg-white bg-transparent outline-none transition-all ml-1 w-24 focus:text-slate-900" 
-              placeholder="Token" 
+              value={localCode} 
+              onBlur={handleSyncUpdate}
+              onChange={(e) => setLocalCode(e.target.value)}
+              className="bg-slate-50 px-3 py-1 rounded-lg text-slate-900 border border-slate-100 outline-none focus:ring-2 ring-indigo-500/10 w-24" 
+              placeholder="Key" 
             />
           </div>
         </div>
-        <button 
-          onClick={() => onDelete(asset.id)}
-          className="w-8 h-8 rounded-full bg-rose-50 text-rose-500 text-xs flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors"
-        >
-          <i className="fa-solid fa-trash-can"></i>
-        </button>
+        <div className="flex gap-2">
+            <button 
+                onClick={handleDownload}
+                className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all active:scale-90 flex items-center justify-center shadow-sm"
+            >
+                <i className="fa-solid fa-download text-sm"></i>
+            </button>
+            <button 
+                onClick={() => onDelete(asset.id)}
+                className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all active:scale-90 flex items-center justify-center shadow-sm"
+            >
+                <i className="fa-solid fa-trash-can text-sm"></i>
+            </button>
+        </div>
       </div>
 
-      <div className="flex flex-col items-center py-4 bg-slate-50 rounded-2xl mb-4 border border-slate-100">
-        <canvas ref={canvasRef}></canvas>
-        <p className="text-[9px] font-mono text-slate-400 mt-3 truncate w-full text-center px-4">
+      <div className="flex flex-col items-center py-10 bg-slate-50/50 rounded-[2.5rem] mb-8 border border-slate-100 shadow-inner group-hover:bg-white transition-all">
+        <div className="bg-white p-4 rounded-3xl shadow-lg shadow-slate-200/50">
+          <canvas ref={canvasRef}></canvas>
+        </div>
+        <p className="text-[8px] font-bold text-slate-400 mt-6 truncate w-full text-center px-10 opacity-40 uppercase tracking-widest">
           {finalUrl}
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <button 
-          onClick={handleCopy}
-          className={`flex-[2] py-3 rounded-xl text-[10px] font-black uppercase transition-all ${isCopied ? 'bg-green-100 text-green-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}
-        >
-          {isCopied ? 'COPIED!' : 'Copy Link'}
-        </button>
-        <button 
-          onClick={handleDownload}
-          className="flex-1 py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
-        >
-          <i className="fa-solid fa-download"></i>
-        </button>
-      </div>
+      <button 
+        onClick={handleCopy}
+        className={`w-full py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all relative z-10 ${isCopied ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-200'}`}
+      >
+        {isCopied ? 'URL SECURED TO CLIPBOARD' : 'Copy Digital Link'}
+      </button>
     </div>
   );
 };
@@ -113,9 +121,34 @@ const QRBlock: React.FC<{
 const AdminQR: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'gen' | 'saved'>('gen');
   const [mode, setMode] = useState<'single' | 'bulk'>('single');
-  const [baseName, setBaseName] = useState('T');
-  const [bulkCount, setBulkCount] = useState(10);
+  const [baseName, setBaseName] = useState('Table ');
+  const [manualToken, setManualToken] = useState('');
+  const [bulkCount, setBulkCount] = useState(5);
   const [savedQrs, setSavedQrs] = useState<QRAsset[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const sessionRaw = localStorage.getItem('foodie_supabase_session');
+  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+  const restaurantId = session?.restaurant?.id;
+
+  useEffect(() => {
+    if (restaurantId && restaurantId !== "undefined") {
+      fetchQRCodes();
+    }
+  }, [restaurantId]);
+
+  const fetchQRCodes = async () => {
+    if (!restaurantId || restaurantId === "undefined") return;
+    setLoading(true);
+    try {
+      const data = await MenuService.getQRCodes(restaurantId);
+      setSavedQrs(data);
+    } catch (err) {
+      console.error("Failed to fetch QR codes", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const generateToken = (length = 6) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -126,126 +159,167 @@ const AdminQR: React.FC = () => {
     return result;
   };
 
-  const handleGenerate = () => {
-    const qty = mode === 'single' ? 1 : Math.min(bulkCount, 50);
-    const newAssets: QRAsset[] = [];
-
-    for (let i = 1; i <= qty; i++) {
-      newAssets.push({
-        id: Math.random().toString(36).substr(2, 9),
-        name: mode === 'single' ? baseName : `${baseName}${i}`,
-        token: generateToken()
-      });
+  const handleGenerate = async () => {
+    if (!restaurantId || restaurantId === "undefined") return alert("System context missing. Please re-login.");
+    
+    setLoading(true);
+    try {
+      if (mode === 'single') {
+        await MenuService.upsertQRCode({
+          restaurant_id: restaurantId,
+          label: baseName,
+          code: manualToken || generateToken(),
+          type: 'menu'
+        });
+        setManualToken('');
+      } else {
+        const qty = Math.min(bulkCount, 50);
+        for (let i = 1; i <= qty; i++) {
+          await MenuService.upsertQRCode({
+            restaurant_id: restaurantId,
+            label: `${baseName}${i}`,
+            code: generateToken(),
+            type: 'menu'
+          });
+        }
+      }
+      await fetchQRCodes();
+      setActiveTab('saved');
+    } catch (err) {
+      alert("Deployment failed. Token codes must be unique.");
+    } finally {
+      setLoading(false);
     }
-
-    setSavedQrs(prev => [...newAssets, ...prev]);
-    setActiveTab('saved');
   };
 
-  const deleteQr = (id: string) => {
-    if (confirm('Delete this QR asset?')) {
-      setSavedQrs(prev => prev.filter(item => item.id !== id));
+  const deleteQr = async (id: string) => {
+    if (confirm('Permanently purge this entry code from the vault?')) {
+      try {
+        await MenuService.deleteQRCode(id);
+        setSavedQrs(prev => prev.filter(item => item.id !== id));
+      } catch (err) {
+        alert("Delete operation failed.");
+      }
     }
   };
 
-  const updateQr = (id: string, name: string, token: string) => {
-    setSavedQrs(prev => prev.map(item => item.id === id ? { ...item, name, token } : item));
+  const updateQr = async (id: string, label: string, code: string) => {
+    try {
+      await MenuService.upsertQRCode({ id, label, code, restaurant_id: restaurantId });
+      setSavedQrs(prev => prev.map(q => q.id === id ? { ...q, label, code } : q));
+    } catch (err) {
+      console.error("Update sync failed", err);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12 animate-fade-in">
-      <nav className="sticky top-16 bg-white/80 backdrop-blur-md border-b border-slate-100 z-40 mb-8 max-w-md mx-auto">
-        <div className="flex justify-around">
+    <div className="min-h-screen bg-slate-50/30 pb-32 animate-fade-in font-['Plus_Jakarta_Sans']">
+      <div className="bg-white border-b border-slate-100 sticky top-16 z-40 mb-10 shadow-sm">
+        <div className="max-w-xl mx-auto flex justify-around">
           <button 
             onClick={() => setActiveTab('gen')}
-            className={`py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'gen' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400'}`}
+            className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'gen' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}
           >
-            Generator
+            Deploy Node
+            {activeTab === 'gen' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}
           </button>
           <button 
             onClick={() => setActiveTab('saved')}
-            className={`py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'saved' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400'}`}
+            className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'saved' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}
           >
-            My QRs
+            Saved Vault ({savedQrs.length})
+            {activeTab === 'saved' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}
           </button>
         </div>
-      </nav>
+      </div>
 
-      <div className="max-w-md mx-auto px-4">
+      <div className="max-w-xl mx-auto px-6">
         {activeTab === 'gen' ? (
-          <section className="space-y-6">
-            <header className="text-left px-2">
-              <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-tight">
-                SHARP<span className="text-indigo-600">QR</span>
+          <section className="space-y-10">
+            <header className="text-center space-y-4">
+              <div className="w-20 h-20 bg-indigo-600 text-white rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-indigo-200 animate-float">
+                <i className="fa-solid fa-qrcode text-3xl"></i>
+              </div>
+              <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
+                SHARP<span className="text-indigo-600">QR</span> TERMINAL
               </h1>
-              <p className="mt-2 text-slate-500 text-xs font-bold leading-relaxed uppercase tracking-wide opacity-70">
-                Digital Menu Entry Assets
-              </p>
-              <p className="mt-3 text-slate-400 text-sm leading-relaxed">
-                Create high-performance QR assets for your digital menu. Generate unique alphanumeric security tokens for every table in seconds.
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] max-w-xs mx-auto leading-relaxed">
+                Deploy high-security entry codes for tables and branches instantly to the cloud.
               </p>
             </header>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
-              <div className="bg-slate-100 p-1 rounded-2xl flex mb-6">
+            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 space-y-10">
+              <div className="bg-slate-50 p-1.5 rounded-2xl flex border border-slate-100">
                 <button 
                   onClick={() => setMode('single')}
-                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${mode === 'single' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500'}`}
+                  className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'single' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}
                 >
-                  Single Entry
+                  Manual Entry
                 </button>
                 <button 
                   onClick={() => setMode('bulk')}
-                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${mode === 'bulk' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500'}`}
+                  className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}
                 >
-                  Bulk (Max 50)
+                  Bulk Deploy
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Base Name (e.g., T)</label>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4 italic">Node Label (e.g. Table 04)</label>
                   <input 
                     type="text" 
                     value={baseName}
                     onChange={(e) => setBaseName(e.target.value)}
-                    placeholder="T" 
-                    className="w-full mt-1 px-5 py-4 bg-slate-50 rounded-2xl focus:ring-2 ring-indigo-500/20 outline-none font-bold" 
+                    placeholder="Enter label..." 
+                    className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
                   />
                 </div>
 
-                {mode === 'bulk' && (
-                  <div className="animate-fade-in">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Count (1-50)</label>
+                {mode === 'single' ? (
+                  <div className="space-y-2 animate-fade-in">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4 italic">Custom Token (Optional)</label>
+                    <input 
+                      type="text" 
+                      value={manualToken}
+                      onChange={(e) => setManualToken(e.target.value)}
+                      placeholder="Auto-generated if empty" 
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                    />
+                  </div>
+                ) : (
+                  <div className="animate-fade-in space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4 italic">Deployment Count</label>
                     <input 
                       type="number" 
                       value={bulkCount}
                       onChange={(e) => setBulkCount(Number(e.target.value))}
                       min="1" 
                       max="50" 
-                      className="w-full mt-1 px-5 py-4 bg-slate-50 rounded-2xl outline-none font-bold" 
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
                     />
                   </div>
                 )}
 
                 <button 
+                  disabled={loading}
                   onClick={handleGenerate}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-indigo-200 uppercase text-xs tracking-widest active:scale-95"
+                  className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600 disabled:opacity-50"
                 >
-                  Build Assets
+                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Deploy to Cloud Vault'}
                 </button>
               </div>
             </div>
           </section>
         ) : (
-          <section className="space-y-4 animate-fade-in">
+          <section className="space-y-6 animate-fade-in">
             {savedQrs.length === 0 ? (
-              <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[2.5rem]">
-                <i className="fa-solid fa-folder-open text-3xl text-slate-200 mb-3"></i>
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">No assets generated yet</p>
+              <div className="py-32 text-center border-4 border-dashed border-slate-100 rounded-[4rem] bg-white/50">
+                <i className="fa-solid fa-folder-open text-4xl text-slate-100 mb-6"></i>
+                <p className="text-slate-300 text-[11px] font-black uppercase tracking-[0.5em] italic">Vault is empty</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-6 pb-20">
                 {savedQrs.map(asset => (
                   <QRBlock 
                     key={asset.id} 
@@ -259,6 +333,10 @@ const AdminQR: React.FC = () => {
           </section>
         )}
       </div>
+      <style>{`
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+      `}</style>
     </div>
   );
 };

@@ -4,10 +4,11 @@ import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
 import AdminQR from './AdminQR';
 import AdminSettings from './AdminSettings';
+import AdminBranches from './AdminBranches';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 
-type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings';
+type AdminTab = 'menu' | 'analytics' | 'branches' | 'qr' | 'settings' | 'import-preview';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -30,6 +31,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{current: number, total: number, label: string}>({ current: 0, total: 0, label: '' });
+  const [previewData, setPreviewData] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -38,126 +41,290 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
       try {
-        console.log("Config Import: File read successfully.");
         const backup = JSON.parse(event.target?.result as string);
-        console.log("Config Import: Parsed JSON data:", backup);
-
-        if (confirm("Importing this configuration will overwrite current data and attempt to sync with the cloud database. Continue?")) {
-          setIsSyncing(true);
-          
-          // Determine the structure (supports both AdminSettings export and CreateMenu export formats)
-          const menuData = backup.menu?.items || backup.menu || [];
-          const categoryData = backup.menu?.categories || backup.categories || [];
-          const qrData = backup.business?.qrAssets || backup.qrAssets || [];
-          const bizName = backup.business?.name || backup.businessName || '';
-          const bizLogo = backup.business?.logo || backup.businessLogo || null;
-          const feedbackData = backup.feedbacks || [];
-          const salesData = backup.sales || backup.salesHistory || [];
-          const importedAdminCreds = backup.admin || backup.adminCreds || null;
-
-          console.log("Config Import: Extracted Menu Items:", menuData.length);
-          console.log("Config Import: Extracted Categories:", categoryData.length);
-          console.log("Config Import: Extracted QR Assets:", qrData.length);
-          console.log("Config Import: Extracted Feedbacks:", feedbackData.length);
-          console.log("Config Import: Extracted Sales History:", salesData.length);
-
-          // 1. Update Local State (Mandatory)
-          if (menuData.length) setMenuItems(menuData);
-          if (categoryData.length) setCategories(categoryData);
-          if (feedbackData.length) setFeedbacks(feedbackData);
-          if (salesData.length) setSalesHistory(salesData);
-          if (importedAdminCreds) setAdminCreds(importedAdminCreds);
-          if (bizLogo) {
-            onLogoUpdate(bizLogo);
-            localStorage.setItem('foodie_business_logo', bizLogo);
-          }
-          if (bizName) {
-            localStorage.setItem('foodie_business_name', bizName);
-            console.log("Config Import: Business Name set to", bizName);
-          }
-
-          // 2. Sync to Supabase if session exists
-          const sessionRaw = localStorage.getItem('foodie_supabase_session');
-          if (sessionRaw) {
-            try {
-              const session = JSON.parse(sessionRaw);
-              const restaurantId = session.restaurant?.id;
-
-              if (restaurantId) {
-                console.log("Cloud Sync: Initiating data push to Supabase for restaurant:", restaurantId);
-                
-                // Sync Categories & Items
-                for (const cat of categoryData) {
-                  console.log(`Cloud Sync: Upserting Category: ${cat.name}`);
-                  const dbCat = await MenuService.upsertCategory({
-                    name: cat.name,
-                    restaurant_id: restaurantId,
-                  });
-                  
-                  // Sync items for this category
-                  const itemsInCat = menuData.filter((m: any) => m.cat_name === cat.name || m.category_id === cat.id);
-                  console.log(`Cloud Sync: Found ${itemsInCat.length} items for category ${cat.name}`);
-                  
-                  for (const item of itemsInCat) {
-                    console.log(`Cloud Sync: Upserting Item: ${item.name}`);
-                    await MenuService.upsertMenuItem({
-                      name: item.name,
-                      price: item.price,
-                      description: item.description,
-                      image_url: item.image_url,
-                      category_id: dbCat.id,
-                      pax: item.pax,
-                      serving_time: item.serving_time,
-                      is_popular: item.is_popular
-                    });
-                  }
-                }
-
-                // Sync QR Assets to Branches (If applicable)
-                if (qrData.length > 0) {
-                  console.log("Cloud Sync: Syncing QR Assets to Branches...");
-                  for (const qr of qrData) {
-                    const slug = `${bizName.toLowerCase().replace(/\s+/g, '')}-${qr.name.toLowerCase().replace(/\s+/g, '')}`;
-                    await MenuService.insertBranch(qr.name, slug, restaurantId);
-                  }
-                }
-                
-                console.log("Cloud Sync: Database tables updated successfully.");
-              }
-            } catch (syncErr) {
-              console.error("Cloud Sync Error:", syncErr);
-              alert("Local import successful, but Cloud Database sync failed. Check browser console for logs.");
-            }
-          }
-
-          alert("Configuration successfully loaded and synced to local workspace.");
-        }
+        setPreviewData(backup);
+        setActiveTab('import-preview');
       } catch (err) {
-        console.error("Config Import Error:", err);
-        alert("Critical Error: Failed to parse configuration JSON. Check console for details.");
+        alert("Manifest Error: The uploaded file is not a valid JSON configuration.");
       } finally {
-        setIsSyncing(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
     reader.readAsText(file);
   };
 
+  const commitImportToCloud = async () => {
+    if (!previewData) return;
+    
+    const sessionRaw = localStorage.getItem('foodie_supabase_session');
+    if (!sessionRaw) return alert("Session expired. Please re-authenticate.");
+    
+    const session = JSON.parse(sessionRaw);
+    const restaurantId = session.restaurant?.id;
+    const menuId = session.defaultMenuId;
+
+    if (!restaurantId || !menuId) return alert("Enterprise Context missing. Please re-login to a valid merchant account.");
+
+    setIsSyncing(true);
+    
+    try {
+      const menuData = previewData.menu?.items || previewData.menu?.menuItems || previewData.menu || [];
+      const categoryData = previewData.menu?.categories || previewData.categories || [];
+      const qrData = previewData.business?.qrAssets || previewData.qrAssets || [];
+      const bizName = previewData.business?.name || previewData.businessName || '';
+      const bizLogo = previewData.business?.logo || previewData.businessLogo || null;
+
+      const totalSteps = categoryData.length + menuData.length + qrData.length;
+      let currentStep = 0;
+
+      setSyncProgress({ current: 0, total: totalSteps, label: 'Initializing deployment...' });
+
+      const newlyCreatedItems: MenuItem[] = [];
+      const newlyCreatedCats: Category[] = [];
+
+      for (const cat of categoryData) {
+        setSyncProgress(p => ({ ...p, label: `Processing Category: ${cat.name}` }));
+        
+        // 1. Duplicate check for Category
+        let dbCat;
+        const existingCat = categories.find(c => c.name.toLowerCase() === cat.name.toLowerCase());
+        
+        if (existingCat) {
+          dbCat = existingCat;
+          // Category exists, we skip DB creation but use its ID
+        } else {
+          dbCat = await MenuService.upsertCategory({
+            name: cat.name,
+            menu_id: menuId,
+            order_index: categories.length + newlyCreatedCats.length
+          });
+          newlyCreatedCats.push(dbCat);
+        }
+        
+        currentStep++;
+        setSyncProgress(p => ({ ...p, current: currentStep }));
+
+        // 2. Process items within this category
+        const itemsInCat = menuData.filter((m: any) => 
+          m.cat_name === cat.name || m.category_id === cat.id
+        );
+        
+        for (const item of itemsInCat) {
+          setSyncProgress(p => ({ ...p, label: `Validating Item: ${item.name}` }));
+          
+          // Duplicate check for Item
+          const itemExists = menuItems.find(mi => mi.name.toLowerCase() === item.name.toLowerCase());
+          
+          if (itemExists) {
+            alert(`Duplicate Found: "${item.name}" already exists in your library. Skipping entry.`);
+            currentStep++;
+            setSyncProgress(p => ({ ...p, current: currentStep }));
+            continue;
+          }
+
+          const dbItem = await MenuService.upsertMenuItem({
+            name: item.name,
+            price: Number(item.price),
+            description: item.description,
+            image_url: item.image_url || 'https://picsum.photos/seed/placeholder/400/400',
+            category_id: dbCat.id,
+            pax: item.pax || '1 Person',
+            serving_time: item.serving_time || '15 mins',
+            is_popular: !!item.is_popular
+          });
+          
+          newlyCreatedItems.push({ ...dbItem, cat_name: dbCat.name });
+          currentStep++;
+          setSyncProgress(p => ({ ...p, current: currentStep }));
+        }
+      }
+      
+      // 3. Sync QR Codes (Merged logic)
+      for (const qr of qrData) {
+        setSyncProgress(p => ({ ...p, label: `Securing Node: ${qr.name || qr.label}` }));
+        
+        await MenuService.upsertQRCode({
+          restaurant_id: restaurantId,
+          code: qr.token || qr.code,
+          label: qr.name || qr.label,
+          type: 'menu'
+        });
+        
+        currentStep++;
+        setSyncProgress(p => ({ ...p, current: currentStep }));
+      }
+
+      // 4. Update state by Appending
+      if (newlyCreatedItems.length) {
+        setMenuItems(prev => [...prev, ...newlyCreatedItems]);
+      }
+      if (newlyCreatedCats.length) {
+        setCategories(prev => [...prev, ...newlyCreatedCats]);
+      }
+
+      if (bizLogo) {
+        onLogoUpdate(bizLogo);
+        localStorage.setItem('foodie_business_logo', bizLogo);
+      }
+      if (bizName) {
+        localStorage.setItem('foodie_business_name', bizName);
+      }
+
+      alert("Deployment Success: Imported data merged with your existing library.");
+      setPreviewData(null);
+      setActiveTab('menu');
+    } catch (err: any) {
+      console.error("Import Failure:", err);
+      alert("Deployment Aborted: " + (err.message || "An unexpected error occurred during database sync."));
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress({ current: 0, total: 0, label: '' });
+    }
+  };
+
+  const renderImportPreview = () => {
+    if (!previewData) return null;
+    const items = previewData.menu?.items || previewData.menu?.menuItems || previewData.menu || [];
+    const cats = previewData.menu?.categories || previewData.categories || [];
+    const qrs = previewData.business?.qrAssets || previewData.qrAssets || [];
+
+    return (
+      <div className="p-6 lg:p-12 animate-fade-in space-y-10 font-['Plus_Jakarta_Sans'] pb-40">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500">Staging Environment</span>
+            </div>
+            <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
+              MANIFEST<span className="text-indigo-600">PREVIEW</span>
+            </h2>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3 italic">
+              New data will be merged with your existing products
+            </p>
+          </div>
+          <div className="flex gap-3 w-full sm:w-auto">
+             <button 
+               onClick={() => setPreviewData(null)} 
+               disabled={isSyncing}
+               className="flex-1 sm:flex-none bg-slate-100 text-slate-500 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 transition-all border border-transparent hover:border-rose-100"
+             >
+               Discard
+             </button>
+             <button 
+               onClick={commitImportToCloud}
+               disabled={isSyncing}
+               className="flex-[2] sm:flex-none bg-slate-900 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-slate-200 active:scale-95 transition-all flex items-center justify-center gap-3 group overflow-hidden relative"
+             >
+               {isSyncing ? (
+                 <i className="fa-solid fa-spinner animate-spin"></i>
+               ) : (
+                 <i className="fa-solid fa-cloud-arrow-up group-hover:translate-y-[-2px] transition-transform"></i>
+               )}
+               <span>{isSyncing ? 'Deploying...' : 'Merge to Cloud'}</span>
+             </button>
+          </div>
+        </header>
+
+        {isSyncing && (
+            <div className="bg-white p-8 rounded-[2.5rem] border border-indigo-100 shadow-xl shadow-indigo-500/5 animate-pulse">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 italic">{syncProgress.label}</span>
+                    <span className="text-xs font-black text-slate-900">{Math.round((syncProgress.current / syncProgress.total) * 100)}%</span>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-indigo-600 transition-all duration-300" 
+                        style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
+                    ></div>
+                </div>
+            </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-10">
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-6 italic">Structural Hierarchy</h3>
+            <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-slate-50/50 border-b border-slate-100">
+                        <tr>
+                            <th className="px-10 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">Context Name</th>
+                            <th className="px-10 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                    {cats.map((c: any, i: number) => {
+                        const exists = categories.find(mi => mi.name.toLowerCase() === c.name.toLowerCase());
+                        return (
+                            <tr key={i} className="hover:bg-slate-50/30 transition-colors">
+                                <td className="px-10 py-5 text-sm font-black text-slate-800 uppercase italic tracking-tight">{c.name}</td>
+                                <td className="px-10 py-5 text-right">
+                                    <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full ${exists ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        {exists ? 'Existing Category' : 'New Context'}
+                                    </span>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-6 italic">Entity Inventory</h3>
+            <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-slate-50/50 border-b border-slate-100">
+                    <tr>
+                        <th className="px-10 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">Entity Details</th>
+                        <th className="px-10 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">Class</th>
+                        <th className="px-10 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Status</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                    {items.map((it: any, i: number) => {
+                        const exists = menuItems.find(mi => mi.name.toLowerCase() === it.name.toLowerCase());
+                        return (
+                            <tr key={i} className="hover:bg-slate-50/30 transition-colors">
+                                <td className="px-10 py-6">
+                                    <div className="flex items-center gap-5">
+                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100 shadow-sm"><img src={it.image_url} className="w-full h-full object-cover" /></div>
+                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight italic">{it.name}</span>
+                                    </div>
+                                </td>
+                                <td className="px-10 py-6 text-[10px] font-black uppercase text-indigo-400 italic tracking-widest">{it.cat_name || 'Generic'}</td>
+                                <td className="px-10 py-6 text-right">
+                                    <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full ${exists ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        {exists ? 'Will be Skipped' : 'Valid Entry'}
+                                    </span>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'menu': return (
-        <AdminMenu 
-          items={menuItems} 
-          setItems={setMenuItems} 
-          cats={categories} 
-          setCats={setCategories} 
-        />
-      );
+      case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} />;
       case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} />;
+      case 'branches': return <AdminBranches />;
       case 'qr': return <AdminQR />;
       case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} />;
+      case 'import-preview': return renderImportPreview();
     }
   };
 
@@ -172,82 +339,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-['Plus_Jakarta_Sans']">
-      {/* Sidebar Overlay for Mobile */}
-      {isSidebarOpen && (
-        <div 
-          onClick={toggleSidebar}
-          className="lg:hidden fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-        />
-      )}
-
-      {/* Dark Sidebar */}
+      {isSidebarOpen && <div onClick={toggleSidebar} className="lg:hidden fixed inset-0 bg-black/50 z-50 backdrop-blur-sm" />}
       <aside className={`fixed lg:static inset-y-0 left-0 w-72 bg-[#0f172a] text-slate-400 h-full p-6 flex flex-col z-[60] transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="mb-10 flex justify-between items-center">
-          <h1 className="text-xl font-black italic tracking-tighter text-white uppercase">SHARP<span className="text-indigo-500">QR</span></h1>
-          <button onClick={toggleSidebar} className="lg:hidden text-slate-400 hover:text-white transition-colors">
-            <i className="fa-solid fa-xmark text-xl"></i>
-          </button>
+        <div className="mb-10 flex justify-between items-center px-2">
+          <h1 className="text-xl font-black italic tracking-tighter text-white uppercase">SHARP<span className="text-indigo-500">ADMIN</span></h1>
+          <button onClick={toggleSidebar} className="lg:hidden text-slate-400 hover:text-white transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
         </div>
-        
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
           {navItem('menu', 'fa-utensils', 'Menu Editor')}
           {navItem('analytics', 'fa-chart-pie', 'Analytics')}
+          {navItem('branches', 'fa-sitemap', 'Branches')}
           {navItem('qr', 'fa-qrcode', 'QR Generator')}
           {navItem('settings', 'fa-gears', 'System Config')}
           
-          <div className="pt-6 mt-4 border-t border-slate-800 space-y-2">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept=".json" 
-              onChange={handleLoadConfig} 
-            />
+          <div className="pt-6 mt-4 border-t border-slate-800">
+            <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleLoadConfig} />
             <button 
-              disabled={isSyncing}
-              onClick={() => fileInputRef.current?.click()}
-              className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold text-indigo-400 hover:bg-indigo-500/10 transition-all ${isSyncing ? 'opacity-50 cursor-wait' : ''}`}
+               onClick={() => fileInputRef.current?.click()} 
+               className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold text-indigo-400 hover:bg-indigo-500/10 transition-all ${activeTab === 'import-preview' ? 'bg-indigo-500/20 border border-indigo-500/50 text-white' : ''}`}
             >
-              <i className={`fa-solid ${isSyncing ? 'fa-spinner animate-spin' : 'fa-file-import'}`}></i> 
-              {isSyncing ? 'Syncing DB...' : 'Load Config'}
+              <i className="fa-solid fa-file-import"></i> 
+              Load Manifest
             </button>
           </div>
         </nav>
-
-        <div className="mt-auto pt-6 border-t border-slate-800">
-          <button onClick={onLogout} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-colors">
-            <i className="fa-solid fa-right-from-bracket"></i> Logout Session
+        <div className="mt-auto pt-6 border-t border-slate-800 px-2">
+          <button onClick={onLogout} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-rose-400 hover:bg-rose-500/10 transition-colors">
+            <i className="fa-solid fa-right-from-bracket"></i> Terminate
           </button>
         </div>
       </aside>
-
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
-        {/* Breadcrumb Header */}
         <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shrink-0">
           <div className="h-16 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
-              <button onClick={toggleSidebar} className="lg:hidden text-slate-600 text-xl active:scale-90 transition-transform">
-                <i className="fa-solid fa-bars-staggered"></i>
-              </button>
-              <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Admin Dashboard / <span className="text-slate-900">{activeTab}</span></h2>
+              <button onClick={toggleSidebar} className="lg:hidden text-slate-600 text-xl active:scale-90 transition-transform"><i className="fa-solid fa-bars-staggered"></i></button>
+              <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Dashboard / <span className="text-slate-900 italic">{activeTab}</span></h2>
             </div>
-            <div className="flex items-center gap-3">
-               <div className="text-right hidden sm:block">
-                  <p className="text-[10px] font-black text-slate-900 uppercase">Administrator</p>
-                  <p className="text-[9px] font-bold text-indigo-500">Level 4 Access</p>
-               </div>
-               <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 shadow-sm">
-                <i className="fa-solid fa-user text-xs text-slate-400"></i>
-               </div>
-            </div>
+            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 shadow-sm"><i className="fa-solid fa-user text-xs text-slate-400"></i></div>
           </div>
         </header>
-
-        {/* View Main Main Content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 relative no-scrollbar pb-10">
-          {renderContent()}
-        </main>
+        <main className="flex-1 overflow-y-auto bg-slate-50 relative no-scrollbar pb-10">{renderContent()}</main>
       </div>
     </div>
   );

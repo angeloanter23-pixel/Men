@@ -49,6 +49,63 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
 
+  // --- ROUTING LOGIC ---
+  const syncStateWithHash = () => {
+    const hash = window.location.hash.replace('#/', '');
+    
+    if (!hash || hash === 'landing') {
+      setCurrentView('landing');
+      setSelectedItem(null);
+      return;
+    }
+
+    if (hash.startsWith('item/')) {
+      const id = parseInt(hash.split('/')[1]);
+      const item = menuItems.find(i => i.id === id) || defaultMenuItems.find(i => i.id === id);
+      setCurrentView('menu');
+      if (item) setSelectedItem(item);
+      return;
+    }
+
+    // Default view mapping
+    const validViews: ViewState[] = [
+      'landing', 'menu', 'cart', 'orders', 'favorites', 'feedback', 
+      'feedback-data', 'privacy', 'terms', 'admin', 'create-menu', 
+      'payment', 'qr-verify', 'group', 'test-supabase', 'super-admin'
+    ];
+    
+    if (validViews.includes(hash as ViewState)) {
+      setCurrentView(hash as ViewState);
+      setSelectedItem(null);
+    } else {
+      window.location.hash = '#/landing';
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('hashchange', syncStateWithHash);
+    return () => window.removeEventListener('hashchange', syncStateWithHash);
+  }, [menuItems]);
+
+  useEffect(() => {
+    // Initial sync after data is ready
+    if (!isLoading) {
+      syncStateWithHash();
+    }
+  }, [isLoading, menuItems]);
+
+  const navigateTo = (view: ViewState) => {
+    window.location.hash = `#/${view}`;
+  };
+
+  const handleItemSelect = (item: MenuItem | null) => {
+    if (item) {
+      window.location.hash = `#/item/${item.id}`;
+    } else {
+      window.location.hash = `#/menu`;
+    }
+  };
+
   useEffect(() => {
     // Load data from localStorage or fallback to data.ts constants
     const savedMenu = localStorage.getItem('foodie_menu_items');
@@ -130,7 +187,7 @@ export default function App() {
 
   const finalizeOrder = () => {
     const itemsToProcess = pendingSingleItem ? [pendingSingleItem] : cart;
-    if (itemsToProcess.length === 0) { setCurrentView('menu'); return; }
+    if (itemsToProcess.length === 0) { navigateTo('menu'); return; }
 
     const timestamp = new Date();
     const newOrders: OrderInstance[] = itemsToProcess.map((item, idx) => ({
@@ -154,24 +211,23 @@ export default function App() {
     setSalesHistory(prev => [...prev, ...newSales]);
     
     if (pendingSingleItem) setPendingSingleItem(null); else setCart([]);
-    setCurrentView('orders');
+    navigateTo('orders');
     setSelectedItem(null);
   };
 
   const handleSendToKitchenDirect = (item: CartItem) => {
     setPendingSingleItem({ ...item });
-    setCurrentView('qr-verify' as ViewState);
+    navigateTo('qr-verify');
   };
 
   const handleFeedbackSubmit = (feedback: Feedback) => {
     setFeedbacks(prev => [feedback, ...prev]);
     setOrders([]);
-    setCurrentView('feedback-data' as ViewState);
+    navigateTo('feedback-data');
     alert('Thank you for your feedback!');
   };
 
   const handleImportConfig = (config: any) => {
-    console.log("App: Importing configuration", config);
     if (config.menu?.categories) setCategories(config.menu.categories);
     if (config.menu?.items) setMenuItems(config.menu.items);
     if (config.business?.name) {
@@ -182,7 +238,7 @@ export default function App() {
       localStorage.setItem('foodie_business_logo', config.business.logo);
     }
     alert('Configuration Imported Successfully!');
-    setCurrentView('menu');
+    navigateTo('menu');
   };
 
   const renderView = () => {
@@ -191,17 +247,17 @@ export default function App() {
     switch (currentView) {
       case 'landing': return (
         <LandingView 
-          onStart={() => setCurrentView('menu')} 
-          onCreateMenu={() => setCurrentView('create-menu' as ViewState)} 
+          onStart={() => navigateTo('menu')} 
+          onCreateMenu={() => navigateTo('create-menu')} 
           onImportMenu={handleImportConfig}
         />
       );
       case 'create-menu': return (
         <CreateMenuView 
-          onCancel={() => setCurrentView('landing')} 
+          onCancel={() => navigateTo('landing')} 
           onComplete={(config) => {
             handleImportConfig(config);
-            setCurrentView('admin');
+            navigateTo('admin');
           }}
         />
       );
@@ -209,32 +265,32 @@ export default function App() {
         <MenuView 
           popularItems={popularItems} categories={categories} filteredItems={filteredItems} 
           activeCategory={activeCategory} searchQuery={searchQuery}
-          onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={setSelectedItem}
+          onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect}
         />
       );
       case 'cart': return (
         <CartView 
           cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))}
-          onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => setCurrentView('qr-verify' as ViewState)}
-          onGoBack={() => setCurrentView('menu')}
+          onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => navigateTo('qr-verify')}
+          onGoBack={() => navigateTo('menu')}
         />
       );
       case 'payment': return (
         <PaymentView 
           total={orders.reduce((sum, o) => sum + (o.price * o.quantity), 0)}
-          onClose={() => setCurrentView('orders')}
+          onClose={() => navigateTo('orders')}
           onSuccess={() => {
             alert("Payment Successful! Your digital receipt has been sent.");
-            setCurrentView('feedback');
+            navigateTo('feedback');
           }}
         />
       );
-      case 'qr-verify': return <QRVerifyView onVerify={finalizeOrder} onCancel={() => { setPendingSingleItem(null); setCurrentView(cart.length > 0 ? 'cart' : 'menu'); }} />;
-      case 'orders': return <OrdersView orders={orders} onPayNow={() => setCurrentView('payment' as ViewState)} onGoToMenu={() => setCurrentView('menu')} />;
-      case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => setCurrentView('menu')} />;
-      case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => setCurrentView('feedback')} />;
+      case 'qr-verify': return <QRVerifyView onVerify={finalizeOrder} onCancel={() => { setPendingSingleItem(null); navigateTo(cart.length > 0 ? 'cart' : 'menu'); }} />;
+      case 'orders': return <OrdersView orders={orders} onPayNow={() => navigateTo('payment')} onGoToMenu={() => navigateTo('menu')} />;
+      case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => navigateTo('menu')} />;
+      case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} />;
       case 'test-supabase': return <TestSupabaseView />;
-      case 'super-admin': return <SuperAdminView onBack={() => setCurrentView('menu')} />;
+      case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
       case 'admin': return (
         <AdminView 
           menuItems={menuItems} setMenuItems={setMenuItems} 
@@ -242,7 +298,7 @@ export default function App() {
           feedbacks={feedbacks} setFeedbacks={setFeedbacks}
           salesHistory={salesHistory} setSalesHistory={setSalesHistory}
           adminCreds={adminCreds} setAdminCreds={setAdminCreds}
-          onExit={() => setCurrentView('menu')}
+          onExit={() => navigateTo('menu')}
           onLogoUpdate={setLogo}
         />
       );
@@ -256,9 +312,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={setCurrentView} currentView={currentView} />
-      <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
-      {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => setCurrentView('cart')} onLogoClick={() => setCurrentView('menu')} onImport={handleImportConfig} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
+      <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => handleItemSelect(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
+      {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={handleImportConfig} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
       <main className={showNavbar ? "min-h-[80vh]" : ""}>{renderView()}</main>
       
       {!['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView) && (
@@ -269,7 +325,7 @@ export default function App() {
             { v: 'favorites', i: 'fa-heart', l: 'Favorites' },
             { v: 'orders', i: 'fa-receipt', l: 'Orders' }
           ].map(btn => (
-            <button key={btn.v} onClick={() => setCurrentView(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}>
+            <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}>
               <i className={`fa-solid ${btn.i} text-xl`}></i>
               <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
             </button>

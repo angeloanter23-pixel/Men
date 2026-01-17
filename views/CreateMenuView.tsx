@@ -1,9 +1,17 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { MenuItem, Category } from '../types';
 import AdminMenu from './admin/AdminMenu';
 
 // Declare QRious globally as it's loaded from CDN
 declare const QRious: any;
+
+interface Branch {
+  id: string;
+  name: string;
+  image_url: string;
+  subdomain: string;
+}
 
 interface QRAsset {
   id: string;
@@ -106,7 +114,7 @@ interface CreateMenuViewProps {
   onComplete: (config: any) => void;
 }
 
-type WizardStep = 'info' | 'codes' | 'dishes' | 'design' | 'preview' | 'finish';
+type WizardStep = 'info' | 'branches' | 'codes' | 'dishes' | 'design' | 'preview' | 'finish';
 
 interface Theme {
   id: string;
@@ -138,27 +146,31 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   // State for Step 1: Info
   const [businessName, setBusinessName] = useState('');
   const [logo, setLogo] = useState<string | null>(null);
-  const [branches, setBranches] = useState<{name: string, url: string}[]>([]);
   
-  // State for Step 2: QR Codes
+  // State for Step 2: Branches
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchSubView, setBranchSubView] = useState<'list' | 'create'>('list');
+  const [editingBranch, setEditingBranch] = useState<Partial<Branch> | null>(null);
+  
+  // State for Step 3: QR Codes
   const [qrAssets, setQrAssets] = useState<QRAsset[]>([]);
   const [qrMode, setQrMode] = useState<'single' | 'bulk'>('single');
   const [qrBaseName, setQrBaseName] = useState('Table ');
   const [qrBulkCount, setQrBulkCount] = useState(5);
   const [selectedQrIds, setSelectedQrIds] = useState<Set<string>>(new Set());
 
-  // State for Step 3: Dishes
+  // State for Step 4: Dishes
   const [categories, setCategories] = useState<Category[]>([
     { id: 1, name: 'Main Course' },
     { id: 2, name: 'Beverages' }
   ]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
-  // State for Step 4: Design
+  // State for Step 5: Design
   const [selectedTheme, setSelectedTheme] = useState<Theme>(THEMES[0]);
   const [selectedFont, setSelectedFont] = useState(FONTS[0]);
 
-  // State for Step 6: Finish
+  // State for Step 7: Finish
   const [userEmail, setUserEmail] = useState('');
   const [hasDownloaded, setHasDownloaded] = useState(false);
 
@@ -186,13 +198,13 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
           setQrAssets(config.business.qrAssets || []);
         }
 
-        // Populate Step 3: Menu
+        // Populate Step 4: Menu
         if (config.menu) {
           setCategories(config.menu.categories || []);
           setMenuItems(config.menu.items || []);
         }
 
-        // Populate Step 4: Design
+        // Populate Step 5: Design
         if (config.design) {
           const matchedTheme = THEMES.find(t => t.id === config.design.theme);
           if (matchedTheme) setSelectedTheme(matchedTheme);
@@ -246,6 +258,25 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
     setSelectedQrIds(new Set());
   };
 
+  const saveBranch = () => {
+    if (!editingBranch?.name) return alert("Branch name is required.");
+    if (branches.length >= 5 && !editingBranch.id) return alert("Branch limit of 5 reached for this plan.");
+
+    if (editingBranch.id) {
+      setBranches(prev => prev.map(b => b.id === editingBranch.id ? editingBranch as Branch : b));
+    } else {
+      const newBranch: Branch = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: editingBranch.name,
+        image_url: editingBranch.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=400',
+        subdomain: editingBranch.subdomain || editingBranch.name.toLowerCase().replace(/\s+/g, '-')
+      };
+      setBranches(prev => [...prev, newBranch]);
+    }
+    setEditingBranch(null);
+    setBranchSubView('list');
+  };
+
   const fullConfigObj = useMemo(() => {
     return {
       business: { name: businessName, logo, branches, qrAssets },
@@ -271,7 +302,10 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
     <div className="space-y-6 animate-fade-in">
       <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Business Name</label>
+          <div className="flex justify-between items-center mb-1">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Business Name</label>
+            <span className="text-[8px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">add branch limit to 5</span>
+          </div>
           <input 
             type="text" 
             placeholder="e.g. Steakhouse Prime" 
@@ -300,6 +334,97 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  const renderBranchesStep = () => (
+    <div className="space-y-8 animate-fade-in">
+      {/* 2 Nav Sub-Navigation */}
+      <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+        <button 
+          onClick={() => setBranchSubView('list')} 
+          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${branchSubView === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+        >
+          Branch List
+        </button>
+        <button 
+          onClick={() => { setEditingBranch({}); setBranchSubView('create'); }} 
+          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${branchSubView === 'create' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+        >
+          Create Branch
+        </button>
+      </div>
+
+      {branchSubView === 'create' ? (
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Branch Name</label>
+            <input 
+              type="text" 
+              value={editingBranch?.name || ''} 
+              onChange={e => setEditingBranch({...editingBranch, name: e.target.value})}
+              placeholder="e.g. Makati Branch" 
+              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent focus:ring-2 ring-indigo-500/10 transition-all" 
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Image URL</label>
+            <input 
+              type="text" 
+              value={editingBranch?.image_url || ''} 
+              onChange={e => setEditingBranch({...editingBranch, image_url: e.target.value})}
+              placeholder="https://images.unsplash..." 
+              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent focus:ring-2 ring-indigo-500/10 transition-all" 
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Subdomain / Slug</label>
+            <input 
+              type="text" 
+              value={editingBranch?.subdomain || ''} 
+              onChange={e => setEditingBranch({...editingBranch, subdomain: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
+              placeholder="e.g. branch-name" 
+              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent focus:ring-2 ring-indigo-500/10 transition-all" 
+            />
+          </div>
+          <button 
+            onClick={saveBranch} 
+            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95"
+          >
+            {editingBranch?.id ? 'Update Branch' : 'Commit Branch'}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center px-2">
+            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Live Territories ({branches.length}/5)</h4>
+          </div>
+          {branches.length === 0 ? (
+            <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-white">
+              <i className="fa-solid fa-map-location-dot text-3xl text-slate-100 mb-3"></i>
+              <p className="text-slate-400 text-[9px] font-black uppercase tracking-widest">No branches deployed yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {branches.map(branch => (
+                <div key={branch.id} className="bg-white p-4 rounded-[2rem] border border-slate-100 flex items-center gap-4 shadow-sm group">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-50 shrink-0">
+                    <img src={branch.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={branch.name} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h5 className="font-black text-xs text-slate-800 uppercase truncate">{branch.name}</h5>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{branch.subdomain}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditingBranch(branch); setBranchSubView('create'); }} className="p-3 text-indigo-400 hover:bg-indigo-50 rounded-xl transition-all"><i className="fa-solid fa-pen"></i></button>
+                    <button onClick={() => setBranches(prev => prev.filter(b => b.id !== branch.id))} className="p-3 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><i className="fa-solid fa-trash-can"></i></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -499,7 +624,7 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
     </div>
   );
 
-  const stepsList: WizardStep[] = ['info', 'codes', 'dishes', 'design', 'preview', 'finish'];
+  const stepsList: WizardStep[] = ['info', 'branches', 'codes', 'dishes', 'design', 'preview', 'finish'];
   const currentIndex = stepsList.indexOf(step);
 
   return (
@@ -544,8 +669,9 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
           </div>
 
           {step === 'info' && renderInfoStep()}
+          {step === 'branches' && renderBranchesStep()}
           {step === 'codes' && renderQRStep()}
-          {step === 'dishes' && <div className="animate-fade-in scale-95 origin-top"><AdminMenu items={menuItems} setItems={setMenuItems as any} cats={categories} setCats={setCategories as any} /></div>}
+          {step === 'dishes' && <div className="animate-fade-in scale-95 origin-top"><AdminMenu items={menuItems} setItems={setMenuItems as any} cats={categories} setCats={setCategories as any} isWizard={true} /></div>}
           {step === 'design' && renderDesignStep()}
           {step === 'preview' && renderPreviewStep()}
           {step === 'finish' && renderFinishStep()}

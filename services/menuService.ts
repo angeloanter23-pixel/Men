@@ -1,3 +1,4 @@
+
 import { supabase } from '../lib/supabase';
 
 // --- Global Utilities ---
@@ -13,10 +14,6 @@ export function getSubdomain() {
 
 // --- Auth Logic (Custom Table Flow) ---
 
-/**
- * Simple Signup: Email and Password only.
- * Automatically provisions a default restaurant entity to maintain multi-tenant integrity.
- */
 export async function authSignUp(email: string, pass: string) {
   // 1. Create a default Restaurant for the new user
   const defaultName = `${email.split('@')[0]}'s Kitchen`;
@@ -28,7 +25,16 @@ export async function authSignUp(email: string, pass: string) {
   
   if (restErr) throw restErr;
 
-  // 2. Create the User linked to that Restaurant
+  // 2. Create a default Menu for this Restaurant immediately
+  const { data: menu, error: menuErr } = await supabase
+    .from('menus')
+    .insert([{ name: 'Main Menu', restaurant_id: rest.id }])
+    .select()
+    .single();
+
+  if (menuErr) throw menuErr;
+
+  // 3. Create the User linked to that Restaurant
   const { data: user, error: userErr } = await supabase
     .from('users')
     .insert([{ 
@@ -40,12 +46,12 @@ export async function authSignUp(email: string, pass: string) {
     .single();
 
   if (userErr) {
-    // Cleanup if user creation fails
+    // Cleanup
     await supabase.from('restaurants').delete().eq('id', rest.id);
     throw userErr;
   }
 
-  return { user, restaurant: rest };
+  return { user, restaurant: rest, defaultMenuId: menu.id };
 }
 
 export async function authSignIn(email: string, pass: string) {
@@ -62,9 +68,18 @@ export async function authSignIn(email: string, pass: string) {
   if (error) throw error;
   if (!data) throw new Error("Invalid credentials or user not found.");
 
+  // Fetch first available menu_id
+  const { data: menu } = await supabase
+    .from('menus')
+    .select('id')
+    .eq('restaurant_id', data.restaurant_id)
+    .limit(1)
+    .maybeSingle();
+
   return {
     user: { id: data.id, email: data.email, restaurant_id: data.restaurant_id },
-    restaurant: data.restaurants
+    restaurant: data.restaurants,
+    defaultMenuId: menu?.id
   };
 }
 
@@ -180,5 +195,32 @@ export async function upsertMenuItem(item: any) {
 
 export async function deleteMenuItem(id: string) {
   const { error } = await supabase.from('items').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// --- QR Management ---
+
+export async function getQRCodes(restaurantId: string) {
+  const { data, error } = await supabase
+    .from('qr_codes')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function upsertQRCode(qr: any) {
+  const { data, error } = await supabase
+    .from('qr_codes')
+    .upsert(qr)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteQRCode(id: string) {
+  const { error } = await supabase.from('qr_codes').delete().eq('id', id);
   if (error) throw error;
 }

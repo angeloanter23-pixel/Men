@@ -2,309 +2,277 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-type TableName = 'restaurants' | 'branches' | 'menus' | 'categories' | 'items' | 'users';
+type TableName = 'restaurants' | 'branches' | 'menus' | 'categories' | 'items' | 'users' | 'qr_codes';
 
 const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [activeTable, setActiveTable] = useState<TableName>('restaurants');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingRow, setEditingRow] = useState<any | null>(null);
-  const [operationError, setOperationError] = useState<{ message: string; details?: string; hint?: string } | null>(null);
+  
+  // Filtering states
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [selectedRestId, setSelectedRestId] = useState<string>('all');
 
-  const tables: TableName[] = ['restaurants', 'branches', 'menus', 'categories', 'items', 'users'];
+  const tables: { id: TableName; label: string; icon: string }[] = [
+    { id: 'restaurants', label: 'Restaurants', icon: 'fa-building' },
+    { id: 'branches', label: 'Branches', icon: 'fa-sitemap' },
+    { id: 'menus', label: 'Menus', icon: 'fa-book-open' },
+    { id: 'categories', label: 'Categories', icon: 'fa-tags' },
+    { id: 'items', label: 'Menu Items', icon: 'fa-utensils' },
+    { id: 'users', label: 'Users', icon: 'fa-users' },
+    { id: 'qr_codes', label: 'QR Codes', icon: 'fa-qrcode' }
+  ];
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
 
   useEffect(() => {
     fetchTableData();
-  }, [activeTable]);
+  }, [activeTable, selectedRestId]);
+
+  const fetchRestaurants = async () => {
+    const { data: res } = await supabase.from('restaurants').select('id, name').order('name');
+    if (res) setRestaurants(res);
+  };
 
   const fetchTableData = async () => {
     setLoading(true);
     setError(null);
-    setOperationError(null);
     try {
-      console.log(`SuperAdmin: Fetching data for table [${activeTable}]...`);
-      const { data: result, error: fetchError } = await supabase
-        .from(activeTable)
-        .select('*')
-        .order('id', { ascending: false });
+      let query;
+
+      if (activeTable === 'categories') {
+        query = supabase.from('categories').select(`
+          id, 
+          name, 
+          menu_id,
+          menus(name, restaurant_id)
+        `);
+        if (selectedRestId !== 'all') {
+          query = query.eq('menus.restaurant_id', selectedRestId);
+        }
+      } else if (activeTable === 'qr_codes') {
+        query = supabase.from('qr_codes').select(`
+          id, 
+          label, 
+          code, 
+          type, 
+          restaurant_id,
+          restaurants(name)
+        `);
+        if (selectedRestId !== 'all') {
+          query = query.eq('restaurant_id', selectedRestId);
+        }
+      } else if (activeTable === 'items') {
+        query = supabase.from('items').select(`
+          id,
+          name,
+          price,
+          description,
+          category_id,
+          categories(
+            name, 
+            menus(name, restaurant_id)
+          )
+        `);
+        if (selectedRestId !== 'all') {
+          query = query.eq('categories.menus.restaurant_id', selectedRestId);
+        }
+      } else if (activeTable === 'menus') {
+        query = supabase.from('menus').select(`
+          *,
+          restaurants(name)
+        `);
+        if (selectedRestId !== 'all') {
+          query = query.eq('restaurant_id', selectedRestId);
+        }
+      } else if (activeTable === 'branches') {
+        query = supabase.from('branches').select(`
+          *,
+          restaurants(name)
+        `);
+        if (selectedRestId !== 'all') {
+          query = query.eq('restaurant_id', selectedRestId);
+        }
+      } else {
+        query = supabase.from(activeTable).select('*');
+        if (selectedRestId !== 'all' && (activeTable === 'users')) {
+          query = query.eq('restaurant_id', selectedRestId);
+        }
+      }
+
+      const { data: result, error: fetchError } = await query.limit(100);
       
       if (fetchError) throw fetchError;
-      setData(result || []);
-      console.log(`SuperAdmin: Successfully fetched ${result?.length || 0} rows.`);
+
+      const processed = (result || []).map(row => {
+        if (activeTable === 'categories') {
+          return {
+            category_id: row.id,
+            category_name: row.name,
+            parent_menu: row.menus?.name || 'Isolated',
+            menu_id: row.menu_id
+          };
+        }
+        if (activeTable === 'qr_codes') {
+          return {
+            qr_id: row.id,
+            qr_label: row.label,
+            qr_code: row.code,
+            qr_type: row.type,
+            owner_restaurant: row.restaurants?.name || 'Orphan',
+            restaurant_id: row.restaurant_id
+          };
+        }
+        if (activeTable === 'items') {
+          return {
+            item_id: row.id,
+            item_name: row.name,
+            price: `₱${row.price}`,
+            category_name: row.categories?.name || 'Uncategorized',
+            menu_context: row.categories?.menus?.name || 'Standalone',
+            restaurant_id: row.categories?.menus?.restaurant_id
+          };
+        }
+        if (activeTable === 'menus' || activeTable === 'branches') {
+          return {
+            ...row,
+            restaurant_name: row.restaurants?.name || 'N/A',
+            restaurants: undefined 
+          };
+        }
+        return row;
+      });
+
+      setData(processed);
     } catch (err: any) {
       console.error("SuperAdmin Fetch Error:", err);
       setError(err.message);
+      setData([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: any) => {
-    if (id === undefined || id === null) {
-      console.error("SuperAdmin: Attempted delete with null/undefined ID");
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to delete record ${id} from ${activeTable}? This action is irreversible.`)) return;
+  const handleDelete = async (row: any) => {
+    // Map the aliased ID back to 'id' for the EQ filter
+    const targetId = row.id || row.qr_id || row.category_id || row.item_id;
+    if (!confirm(`Confirm deletion of record ID: ${targetId}?`)) return;
     
     setLoading(true);
-    setOperationError(null);
     try {
-      console.group(`SuperAdmin: Delete Operation [${activeTable}]`);
-      console.log("Target ID:", id);
-
-      // Normalize ID: Try Number first, fallback to string (Postgres type strictness)
-      const normalizedId = (typeof id === 'string' && !isNaN(Number(id)) && id.trim() !== "") ? Number(id) : id;
-
-      const { data: delResult, error: delError, status } = await supabase
-        .from(activeTable)
-        .delete()
-        .eq('id', normalizedId)
-        .select();
-
-      if (delError) {
-        setOperationError({
-          message: `Database rejected deletion. Check for linked records in other tables.`,
-          details: delError.details || delError.message,
-          hint: delError.hint
-        });
-        throw delError;
-      }
-
-      if (!delResult || delResult.length === 0) {
-        setOperationError({
-          message: "No rows affected.",
-          details: "The record might have been already deleted, or your access level prevents this specific deletion."
-        });
-      } else {
-        console.log("Delete Result Data:", delResult);
-        await fetchTableData();
-      }
-      console.groupEnd();
-    } catch (err: any) {
-      console.error("Delete Exception:", err);
-      console.groupEnd();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpsert = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setOperationError(null);
-    try {
-      console.log(`SuperAdmin: Upserting to [${activeTable}]`, editingRow);
-      
-      // Clean up the editingRow to avoid sending empty strings as IDs if adding new
-      const payload = { ...editingRow };
-      if (!payload.id) delete payload.id;
-
-      const { error: saveError } = await supabase.from(activeTable).upsert(payload);
-      
-      if (saveError) {
-        setOperationError({
-          message: "Commit Failed",
-          details: saveError.message,
-          hint: saveError.hint
-        });
-        throw saveError;
-      }
-
-      setEditingRow(null);
+      const { error: delError } = await supabase.from(activeTable).delete().eq('id', targetId);
+      if (delError) throw delError;
       await fetchTableData();
     } catch (err: any) {
-      console.error("SuperAdmin Upsert Error:", err);
+      alert("Deletion failed: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-['Plus_Jakarta_Sans'] animate-fade-in">
-      <header className="p-4 lg:p-6 border-b border-white/5 flex items-center justify-between sticky top-0 bg-slate-900 z-50">
-        <div className="flex items-center gap-3 lg:gap-4">
-          <button onClick={onBack} className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition">
-            <i className="fa-solid fa-arrow-left text-sm"></i>
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 p-8 font-['Plus_Jakarta_Sans'] overflow-x-hidden">
+      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-12">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-slate-400 hover:text-white transition-all border border-white/10">
+            <i className="fa-solid fa-arrow-left"></i>
           </button>
-          <h1 className="text-lg lg:text-xl font-black italic uppercase tracking-tighter">SUPER<span className="text-indigo-400">ADMIN</span></h1>
+          <div>
+            <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-white">SUPER<span className="text-indigo-500">ADMIN</span></h1>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-2">Enterprise Infrastructure Control</p>
+          </div>
         </div>
-        <div className="flex gap-2">
-            <button onClick={fetchTableData} className="px-3 py-2 lg:px-4 lg:py-2 bg-white/5 rounded-xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest hover:bg-white/10">
-                <i className="fa-solid fa-sync mr-1 lg:mr-2"></i> Sync
-            </button>
+
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+          <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-3">
+             <span className="text-[9px] font-black uppercase text-slate-500">Master Account:</span>
+             <select 
+               value={selectedRestId} 
+               onChange={e => setSelectedRestId(e.target.value)}
+               className="bg-transparent text-xs font-bold outline-none text-indigo-400 cursor-pointer min-w-[150px]"
+             >
+                <option value="all" className="bg-slate-900">Show All Entities</option>
+                {restaurants.map(r => <option key={r.id} value={r.id} className="bg-slate-900">{r.name}</option>)}
+             </select>
+          </div>
+          <button onClick={fetchTableData} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 active:scale-90 transition-all flex items-center justify-center">
+            <i className={`fa-solid fa-rotate ${loading ? 'animate-spin' : ''}`}></i>
+          </button>
         </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-        {/* Navigation Tabs */}
-        <aside className="w-full lg:w-64 border-b lg:border-r border-white/5 p-2 lg:p-4 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-y-auto no-scrollbar scroll-smooth whitespace-nowrap lg:whitespace-normal shrink-0">
-          {tables.map(t => (
-            <button 
-              key={t} 
-              onClick={() => setActiveTable(t)}
-              className={`inline-block lg:w-full text-left px-4 py-2 lg:py-3 rounded-xl text-[10px] lg:text-xs font-bold transition-all ${activeTable === t ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:bg-white/5'}`}
-            >
-              {t.toUpperCase()}
-            </button>
-          ))}
-        </aside>
-
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative no-scrollbar pb-32">
-          {loading && (
-            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center">
-              <i className="fa-solid fa-spinner animate-spin text-3xl text-indigo-400"></i>
-            </div>
-          )}
-
-          <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-xl lg:text-2xl font-black uppercase italic tracking-tighter">Table: {activeTable}</h2>
-            <button 
-              onClick={() => { setOperationError(null); setEditingRow({}); }}
-              className="w-full sm:w-auto bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-plus"></i> Add Entry
-            </button>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs font-bold">
-              <i className="fa-solid fa-triangle-exclamation mr-2"></i> {error}
-            </div>
-          )}
-
-          {/* Global Operation Error Alert */}
-          {operationError && !editingRow && (
-            <div className="mb-6 p-6 bg-rose-500/10 border-2 border-rose-500/20 rounded-3xl animate-fade-in">
-              <div className="flex items-center gap-3 text-rose-500 mb-2">
-                <i className="fa-solid fa-circle-exclamation text-lg"></i>
-                <h4 className="font-black uppercase text-[10px] tracking-widest">Operation Failed</h4>
-              </div>
-              <p className="text-xs font-bold text-white mb-2">{operationError.message}</p>
-              {operationError.details && <p className="text-[10px] text-slate-400 leading-relaxed bg-black/20 p-3 rounded-xl font-mono">{operationError.details}</p>}
-              <button onClick={() => setOperationError(null)} className="mt-4 text-[9px] font-black uppercase text-rose-400 hover:text-white transition-colors underline">Dismiss Error</button>
-            </div>
-          )}
-
-          {/* Desktop Table View */}
-          <div className="hidden lg:block bg-white/5 rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-white/5 text-slate-400 font-black uppercase tracking-widest">
-                    <tr>
-                    {data.length > 0 && Object.keys(data[0]).map(key => (
-                        <th key={key} className="p-4 border-b border-white/5">{key}</th>
-                    ))}
-                    <th className="p-4 border-b border-white/5 text-center sticky right-0 bg-slate-800">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                    {data.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-white/5 transition-colors">
-                        {Object.values(row).map((val: any, i) => (
-                        <td key={i} className="p-4 max-w-xs truncate text-slate-300">
-                            {typeof val === 'object' ? JSON.stringify(val) : String(val)}
-                        </td>
-                        ))}
-                        <td className="p-4 sticky right-0 bg-slate-800/80 backdrop-blur-sm">
-                        <div className="flex justify-center gap-2">
-                            <button onClick={() => { setOperationError(null); setEditingRow(row); }} className="p-2 text-indigo-400 hover:text-white transition-colors"><i className="fa-solid fa-pen"></i></button>
-                            <button onClick={() => handleDelete(row.id)} className="p-2 text-rose-400 hover:text-white transition-colors"><i className="fa-solid fa-trash"></i></button>
-                        </div>
-                        </td>
-                    </tr>
-                    ))}
-                </tbody>
-                </table>
-            </div>
-          </div>
-
-          {/* Mobile Card View */}
-          <div className="lg:hidden space-y-4">
-            {data.map((row, idx) => (
-              <div key={idx} className="bg-white/5 p-5 rounded-3xl border border-white/10 space-y-4 shadow-sm">
-                <div className="flex justify-between items-start border-b border-white/5 pb-3">
-                  <div className="min-w-0 flex-1 pr-4">
-                    <span className="text-[9px] font-black uppercase text-indigo-400 tracking-widest block">ID: {row.id}</span>
-                    <h4 className="text-sm font-black text-white truncate">{row.name || row.email || 'Untitled Entry'}</h4>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => { setOperationError(null); setEditingRow(row); }} className="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center transition-all"><i className="fa-solid fa-pen text-xs"></i></button>
-                    <button onClick={() => handleDelete(row.id)} className="w-9 h-9 rounded-xl bg-rose-600/20 text-rose-400 flex items-center justify-center transition-all"><i className="fa-solid fa-trash text-xs"></i></button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                  {Object.entries(row).slice(0, 6).map(([key, val]) => (
-                    <div key={key} className="min-w-0">
-                      <p className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1 truncate">{key}</p>
-                      <p className="text-[10px] text-slate-300 truncate font-bold">{typeof val === 'object' ? 'Object' : String(val)}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {data.length === 0 && !loading && (
-            <div className="p-20 text-center text-slate-500 font-bold uppercase tracking-widest text-[10px]">
-              No records found in {activeTable}
-            </div>
-          )}
-        </main>
+      {/* Navigation Tabs */}
+      <div className="flex overflow-x-auto no-scrollbar gap-2 mb-10 pb-2">
+        {tables.map(table => (
+          <button 
+            key={table.id}
+            onClick={() => setActiveTable(table.id)}
+            className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex items-center gap-3 ${activeTable === table.id ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-500/20' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}
+          >
+            <i className={`fa-solid ${table.icon}`}></i> {table.label}
+          </button>
+        ))}
       </div>
 
-      {/* Row Editor Modal */}
-      {editingRow && (
-        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 lg:p-6" onClick={() => setEditingRow(null)}>
-          <div className="bg-slate-800 w-full max-w-lg rounded-[2.5rem] lg:rounded-[3rem] p-6 lg:p-10 shadow-2xl border border-white/5 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6 lg:mb-8">
-                <h3 className="text-lg lg:text-xl font-black italic uppercase">Edit Row: {activeTable}</h3>
-                <button onClick={() => setEditingRow(null)} className="text-slate-400 hover:text-white transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-
-            {operationError && (
-              <div className="mb-6 p-4 bg-rose-500/20 rounded-2xl border border-rose-500/30 animate-shake">
-                <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Error Details</p>
-                <p className="text-xs font-bold text-white leading-relaxed">{operationError.message}</p>
-                {operationError.details && <p className="text-[9px] text-slate-400 mt-2 font-mono bg-black/30 p-2 rounded-lg break-all">{operationError.details}</p>}
-              </div>
-            )}
-
-            <form onSubmit={handleUpsert} className="space-y-4 overflow-y-auto no-scrollbar pr-2 flex-1">
-               {(data.length > 0 ? Object.keys(data[0]) : Object.keys(editingRow)).map(key => (
-                 <div key={key} className="space-y-1">
-                    <label className="text-[8px] lg:text-[9px] font-black uppercase text-slate-400 tracking-widest ml-2">{key}</label>
-                    <input 
-                      type="text" 
-                      value={editingRow[key] === null || editingRow[key] === undefined ? '' : editingRow[key]} 
-                      onChange={e => setEditingRow({...editingRow, [key]: e.target.value})}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 lg:p-4 text-xs font-bold text-white outline-none focus:ring-2 ring-indigo-500/20"
-                      readOnly={key === 'id' && editingRow.id}
-                      placeholder={`Enter ${key}...`}
-                    />
-                 </div>
-               ))}
-            </form>
-
-            <div className="pt-6 lg:pt-8 flex gap-3 bg-slate-800">
-                <button type="button" onClick={() => setEditingRow(null)} className="flex-1 py-3 lg:py-4 text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-slate-400">Discard</button>
-                <button type="submit" disabled={loading} className="flex-[2] py-3 lg:py-4 bg-indigo-600 text-white rounded-2xl text-[9px] lg:text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all disabled:opacity-50">
-                   {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Commit Changes'}
-                </button>
-            </div>
-          </div>
+      {error && (
+        <div className="mb-8 bg-rose-500/10 border border-rose-500/20 p-6 rounded-3xl text-rose-500 text-xs font-bold uppercase tracking-widest flex items-center gap-3">
+          <i className="fa-solid fa-circle-exclamation"></i> {error}
         </div>
       )}
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
-        }
-        .animate-shake { animation: shake 0.3s ease-in-out 0s 2; }
-      `}</style>
+
+      <div className="bg-white/5 border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl animate-fade-in">
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="w-full text-left">
+            <thead className="bg-white/5 border-b border-white/10">
+              <tr>
+                {data.length > 0 && Object.keys(data[0]).map((key) => (
+                  <th key={key} className="px-10 py-5 text-[9px] font-black uppercase tracking-widest text-slate-500 italic whitespace-nowrap">
+                    {key.replace('_', ' ')}
+                  </th>
+                ))}
+                <th className="px-10 py-5 text-[9px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {data.map((row, idx) => (
+                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                  {Object.values(row).map((val: any, i) => (
+                    <td key={i} className="px-10 py-5 text-xs font-bold text-slate-300 truncate max-w-[250px] italic">
+                      {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                    </td>
+                  ))}
+                  <td className="px-10 py-5 text-right">
+                     <button 
+                      onClick={() => handleDelete(row)} 
+                      className="text-rose-500/40 hover:text-rose-500 transition-all p-2"
+                      title="Purge Record"
+                     >
+                       <i className="fa-solid fa-trash-can"></i>
+                     </button>
+                  </td>
+                </tr>
+              ))}
+              {data.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={100} className="py-24 text-center">
+                     <i className="fa-solid fa-database text-4xl text-white/5 mb-4"></i>
+                     <p className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-600">No matching records found</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {loading && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] flex items-center justify-center z-[100]">
+           <i className="fa-solid fa-spinner animate-spin text-4xl text-indigo-500"></i>
+        </div>
+      )}
     </div>
   );
 };

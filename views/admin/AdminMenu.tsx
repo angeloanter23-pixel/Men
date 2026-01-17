@@ -1,24 +1,40 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { MenuItem, Category } from '../../types';
+import * as MenuService from '../../services/menuService';
 
 interface AdminMenuProps {
   items: MenuItem[];
   setItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
   cats: Category[];
   setCats: React.Dispatch<React.SetStateAction<Category[]>>;
+  isWizard?: boolean; // New prop to disable DB persistence
 }
 
-const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats }) => {
+const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, isWizard = false }) => {
   const [subTab, setSubTab] = useState<'add' | 'list' | 'edit'>('add');
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [newCatName, setNewCatName] = useState('');
   const [isAddingCat, setIsAddingCat] = useState(false);
+  const [loading, setLoading] = useState(false);
   
+  // Enterprise Session Data
+  const sessionRaw = localStorage.getItem('foodie_supabase_session');
+  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+  const menuId = session?.defaultMenuId;
+
   const initialFormState = {
     name: '', desc: '', price: '', cat: cats[0]?.name || '', people: '', mins: '', image: ''
   };
   
   const [formData, setFormData] = useState(initialFormState);
+
+  // Sync initial category if empty
+  useEffect(() => {
+    if (!formData.cat && cats.length > 0) {
+      setFormData(prev => ({ ...prev, cat: cats[0].name }));
+    }
+  }, [cats]);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -33,32 +49,61 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats })
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.price) return alert("Please fill in the Name and Price.");
     
-    const newItem: MenuItem = {
-      id: subTab === 'edit' && editingItem ? editingItem.id : Date.now(),
-      name: formData.name,
-      price: Number(formData.price),
-      description: formData.desc,
-      image_url: formData.image || 'https://picsum.photos/seed/placeholder/400/400',
-      category_id: cats.find(c => c.name === formData.cat)?.id || (cats.length > 0 ? cats[0].id : 1),
-      cat_name: formData.cat || (cats.length > 0 ? cats[0].name : 'Main Course'),
-      is_popular: false,
-      ingredients: [],
-      pax: formData.people || '1 Person',
-      serving_time: formData.mins ? `${formData.mins} mins` : '15 mins'
-    };
+    setLoading(true);
+    try {
+      const targetCategory = cats.find(c => c.name === formData.cat);
+      if (!targetCategory) throw new Error("Please select a valid category.");
 
-    if (subTab === 'edit' && editingItem) {
-      setItems(prev => prev.map(item => item.id === editingItem.id ? newItem : item));
-    } else {
-      setItems(prev => [newItem, ...prev]);
+      const itemPayload: any = {
+        name: formData.name,
+        price: Number(formData.price),
+        description: formData.desc,
+        image_url: formData.image || 'https://picsum.photos/seed/placeholder/400/400',
+        category_id: targetCategory.id,
+        pax: formData.people || '1 Person',
+        serving_time: formData.mins ? `${formData.mins} mins` : '15 mins',
+        is_popular: false
+      };
+
+      if (subTab === 'edit' && editingItem) {
+        itemPayload.id = editingItem.id;
+      }
+
+      let savedItem: MenuItem;
+      // ONLY save to DB if NOT in wizard mode AND we have a valid menuId
+      if (!isWizard && menuId) {
+        const dbItem = await MenuService.upsertMenuItem(itemPayload);
+        savedItem = {
+           ...dbItem,
+           cat_name: targetCategory.name
+        };
+      } else {
+        // Local only fallback (for Wizard or non-enterprise mode)
+        savedItem = {
+          ...itemPayload,
+          id: itemPayload.id || Date.now(),
+          cat_name: targetCategory.name,
+          ingredients: []
+        };
+      }
+
+      if (subTab === 'edit' && editingItem) {
+        setItems(prev => prev.map(item => item.id === editingItem.id ? savedItem : item));
+      } else {
+        setItems(prev => [savedItem, ...prev]);
+      }
+
+      setFormData(initialFormState);
+      setEditingItem(null);
+      setSubTab('list');
+    } catch (err: any) {
+      alert("Save failed: " + err.message);
+    } finally {
+      setLoading(false);
     }
-
-    setFormData(initialFormState);
-    setEditingItem(null);
-    setSubTab('list');
   };
 
   const startEdit = (item: MenuItem) => {
@@ -75,25 +120,66 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats })
     setSubTab('edit');
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this item?")) {
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+    setLoading(true);
+    try {
+      if (!isWizard && menuId) {
+        await MenuService.deleteMenuItem(id.toString());
+      }
       setItems(prev => prev.filter(item => item.id !== id));
+    } catch (err: any) {
+      alert("Deletion failed: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAddCategorySubmit = (e: React.FormEvent) => {
+  const handleAddCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-    const exists = cats.find(c => c.name.toLowerCase() === newCatName.toLowerCase());
-    if (exists) return alert("Category already exists!");
     
-    const newCat: Category = { id: Date.now(), name: newCatName.trim() };
-    setCats(prev => [...prev, newCat]);
-    setNewCatName('');
-    setIsAddingCat(false);
-    
-    // Auto-select the new category if form is empty
-    if (!formData.cat) setFormData(prev => ({ ...prev, cat: newCat.name }));
+    setLoading(true);
+    try {
+      const exists = cats.find(c => c.name.toLowerCase() === newCatName.toLowerCase());
+      if (exists) throw new Error("Category already exists!");
+      
+      let newCat: Category;
+      if (!isWizard && menuId) {
+        newCat = await MenuService.upsertCategory({
+           name: newCatName.trim(),
+           menu_id: menuId,
+           order_index: cats.length
+        });
+      } else {
+        newCat = { id: Date.now(), name: newCatName.trim() };
+      }
+      
+      setCats(prev => [...prev, newCat]);
+      setNewCatName('');
+      setIsAddingCat(false);
+      
+      if (!formData.cat) setFormData(prev => ({ ...prev, cat: newCat.name }));
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteCategory = async (id: number) => {
+    if (!confirm('This will delete the category label. Items in this category might become hidden. Continue?')) return;
+    setLoading(true);
+    try {
+      if (!isWizard && menuId) {
+        await MenuService.deleteCategory(id.toString());
+      }
+      setCats(prev => prev.filter(cat => cat.id !== id));
+    } catch (err: any) {
+      alert("Delete failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -110,13 +196,16 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats })
           <form onSubmit={handleAddCategorySubmit} className="flex gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 animate-fade-in">
              <input 
                autoFocus
+               disabled={loading}
                type="text" 
                value={newCatName} 
                onChange={e => setNewCatName(e.target.value)}
                placeholder="Category Name..." 
                className="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all"
              />
-             <button type="submit" className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Create</button>
+             <button type="submit" disabled={loading} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">
+               {loading ? '...' : 'Create'}
+             </button>
              <button type="button" onClick={() => setIsAddingCat(false)} className="text-slate-400 text-sm px-2"><i className="fa-solid fa-xmark"></i></button>
           </form>
         )}
@@ -125,7 +214,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats })
           {cats.map(c => (
             <span key={c.id} className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-indigo-100/50 flex items-center gap-3">
               {c.name}
-              <button onClick={() => setCats(cats.filter(cat => cat.id !== c.id))} className="text-indigo-200 hover:text-rose-400"><i className="fa-solid fa-circle-xmark"></i></button>
+              <button onClick={() => deleteCategory(c.id)} className="text-indigo-200 hover:text-rose-400"><i className="fa-solid fa-circle-xmark"></i></button>
             </span>
           ))}
           {cats.length === 0 && <p className="text-[10px] text-slate-300 font-bold px-2 italic">Define categories to organize your menu items.</p>}
@@ -194,7 +283,6 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats })
                   onChange={e => setFormData({...formData, cat: e.target.value})} 
                   className="w-full bg-slate-50 p-5 rounded-2xl font-black text-[10px] uppercase outline-none border border-transparent cursor-pointer"
                 >
-                  <option value="">Select Group...</option>
                   {cats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
@@ -226,9 +314,10 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats })
 
           <button 
             onClick={handleSave} 
+            disabled={loading}
             className={`w-full mt-6 py-6 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.3em] shadow-2xl active:scale-95 transition-all ${subTab === 'edit' ? 'bg-indigo-600 text-white shadow-indigo-100' : 'bg-slate-900 text-white shadow-slate-200'}`}
           >
-            {subTab === 'edit' ? 'Confirm Sync Updates' : 'Add to Digital Library'}
+            {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : (subTab === 'edit' ? 'Confirm Sync Updates' : 'Add to Digital Library')}
           </button>
         </div>
       ) : (
@@ -255,8 +344,8 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats })
                     <div className="text-xs font-black text-slate-900 italic tracking-tighter">₱{item.price}</div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(item)} className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all active:scale-90"><i className="fa-solid fa-pen text-[10px]"></i></button>
-                    <button onClick={() => handleDelete(item.id)} className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-90"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
+                    <button onClick={() => startEdit(item)} disabled={loading} className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all active:scale-90"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                    <button onClick={() => handleDelete(item.id)} disabled={loading} className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-90"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
                   </div>
                 </div>
               </div>
