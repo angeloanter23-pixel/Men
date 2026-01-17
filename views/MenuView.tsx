@@ -17,6 +17,14 @@ const MenuView: React.FC<MenuViewProps> = ({
   popularItems, categories, filteredItems, activeCategory, searchQuery, 
   onSearchChange, onCategorySelect, onItemSelect 
 }) => {
+  const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
+  const bizName = slugify(localStorage.getItem('foodie_business_name') || 'Foodie');
+  const branchName = slugify('Main');
+
+  const getItemUrl = (item: MenuItem) => {
+    return `#/${bizName}/${branchName}/${slugify(item.cat_name)}/${item.id}/${slugify(item.name)}`;
+  };
+
   return (
     <div className="animate-fade-in">
       <header className="px-6 py-8">
@@ -36,7 +44,7 @@ const MenuView: React.FC<MenuViewProps> = ({
           {popularItems.map(item => (
             <a 
               key={item.id} 
-              href={`#/item/${item.id}`}
+              href={getItemUrl(item)}
               onClick={(e) => { e.preventDefault(); onItemSelect(item); }} 
               className="min-w-[160px] group cursor-pointer block"
             >
@@ -66,7 +74,7 @@ const MenuView: React.FC<MenuViewProps> = ({
         {filteredItems.map(item => (
           <a 
             key={item.id} 
-            href={`#/item/${item.id}`}
+            href={getItemUrl(item)}
             onClick={(e) => { e.preventDefault(); onItemSelect(item); }}
             className="flex gap-4 bg-white p-4 rounded-[2.5rem] shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-xl hover:translate-y-[-2px] cursor-pointer active:scale-[0.98] block"
           >

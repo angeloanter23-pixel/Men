@@ -48,66 +48,98 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
+  const [activeTable, setActiveTable] = useState<string | null>(null);
 
-  // --- ROUTING LOGIC ---
-  const syncStateWithHash = () => {
-    const hash = window.location.hash.replace('#/', '');
+  const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
+
+  const syncStateWithURL = () => {
+    const hashPart = window.location.hash.split('?')[0];
+    const queryPart = window.location.hash.split('?')[1] || '';
+    const hash = hashPart.replace(/^#\/?/, '');
+    const parts = hash.split('/').filter(p => p !== '');
     
-    if (!hash || hash === 'landing') {
+    // Check for Table Token in query params
+    const urlParams = new URLSearchParams(queryPart);
+    const tableToken = urlParams.get('k');
+
+    if (tableToken && parts.length > 0) {
+      const tableName = parts[parts.length - 1];
+      if (activeTable !== tableName) {
+        setActiveTable(tableName);
+        alert(`Welcome! You're now ordering from ${tableName.replace(/-/g, ' ')}`);
+      }
+    }
+
+    if (parts.length === 0) {
       setCurrentView('landing');
       setSelectedItem(null);
       return;
     }
 
-    if (hash.startsWith('item/')) {
-      const id = parseInt(hash.split('/')[1]);
-      const item = menuItems.find(i => i.id === id) || defaultMenuItems.find(i => i.id === id);
-      setCurrentView('menu');
-      if (item) setSelectedItem(item);
-      return;
+    // Check for SEO Item URL: #/[Restaurant]/[Branch]/[Category]/[ID]/[Name]
+    if (parts.length >= 4) {
+      const potentialId = parseInt(parts[3]);
+      if (!isNaN(potentialId)) {
+        const item = menuItems.find(i => i.id === potentialId) || defaultMenuItems.find(i => i.id === potentialId);
+        setCurrentView('menu');
+        if (item) setSelectedItem(item);
+        return;
+      }
     }
 
-    // Default view mapping
-    const validViews: ViewState[] = [
-      'landing', 'menu', 'cart', 'orders', 'favorites', 'feedback', 
-      'feedback-data', 'privacy', 'terms', 'admin', 'create-menu', 
-      'payment', 'qr-verify', 'group', 'test-supabase', 'super-admin'
-    ];
-    
-    if (validViews.includes(hash as ViewState)) {
-      setCurrentView(hash as ViewState);
+    const route = parts[0].toLowerCase();
+    const viewMap: Record<string, ViewState> = {
+      'landing': 'landing',
+      'menu': 'menu',
+      'cart': 'cart',
+      'orders': 'orders',
+      'favorites': 'favorites',
+      'feedback': 'feedback',
+      'feedback-data': 'feedback-data',
+      'privacy': 'privacy',
+      'terms': 'terms',
+      'admin': 'admin',
+      'create-menu': 'create-menu',
+      'payment': 'payment',
+      'qr-verify': 'qr-verify',
+      'group': 'group',
+      'test-supabase': 'test-supabase',
+      'super-admin': 'super-admin'
+    };
+
+    if (viewMap[route]) {
+      setCurrentView(viewMap[route]);
       setSelectedItem(null);
     } else {
-      window.location.hash = '#/landing';
+      setCurrentView('landing');
+      setSelectedItem(null);
     }
   };
 
   useEffect(() => {
-    window.addEventListener('hashchange', syncStateWithHash);
-    return () => window.removeEventListener('hashchange', syncStateWithHash);
+    window.addEventListener('hashchange', syncStateWithURL);
+    syncStateWithURL(); // Initial sync
+    return () => window.removeEventListener('hashchange', syncStateWithURL);
   }, [menuItems]);
 
-  useEffect(() => {
-    // Initial sync after data is ready
-    if (!isLoading) {
-      syncStateWithHash();
-    }
-  }, [isLoading, menuItems]);
-
   const navigateTo = (view: ViewState) => {
-    window.location.hash = `#/${view}`;
+    window.location.hash = `/${view}`;
   };
 
   const handleItemSelect = (item: MenuItem | null) => {
     if (item) {
-      window.location.hash = `#/item/${item.id}`;
+      const bizName = slugify(localStorage.getItem('foodie_business_name') || 'Foodie');
+      const branchName = slugify('Main');
+      const catName = slugify(item.cat_name);
+      const itemName = slugify(item.name);
+      
+      window.location.hash = `/${bizName}/${branchName}/${catName}/${item.id}/${itemName}`;
     } else {
-      window.location.hash = `#/menu`;
+      navigateTo('menu');
     }
   };
 
   useEffect(() => {
-    // Load data from localStorage or fallback to data.ts constants
     const savedMenu = localStorage.getItem('foodie_menu_items');
     const savedCats = localStorage.getItem('foodie_categories');
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
@@ -123,31 +155,10 @@ export default function App() {
       setCategories(defaultCategories);
     }
 
-    if (savedFeedbacks) {
-      setFeedbacks(JSON.parse(savedFeedbacks));
-    } else {
-      setFeedbacks([
-        {
-          id: 'fb-1',
-          name: 'James Wilson',
-          scores: { Cleanliness: 5, "Food Quality": 5, Speed: 4, Service: 5, Value: 4, Experience: 5 },
-          note: "Offline mode works perfectly! Great UX.",
-          date: new Date().toISOString().split('T')[0]
-        }
-      ]);
-    }
-
-    if (savedSales) {
-      setSalesHistory(JSON.parse(savedSales));
-    }
-
-    if (savedAdmin) {
-      setAdminCreds(JSON.parse(savedAdmin));
-    }
-
-    if (savedLogo) {
-      setLogo(savedLogo);
-    }
+    if (savedFeedbacks) setFeedbacks(JSON.parse(savedFeedbacks));
+    if (savedSales) setSalesHistory(JSON.parse(savedSales));
+    if (savedAdmin) setAdminCreds(JSON.parse(savedAdmin));
+    if (savedLogo) setLogo(savedLogo);
     
     setIsLoading(false);
   }, []);
@@ -204,7 +215,8 @@ export default function App() {
       itemName: item.name,
       categoryName: item.cat_name,
       quantity: item.quantity,
-      branch: 'Main' 
+      branch: 'Main',
+      tableNumber: activeTable || item.orderTo
     }));
     
     setOrders(prev => [...prev, ...newOrders]);
@@ -230,9 +242,7 @@ export default function App() {
   const handleImportConfig = (config: any) => {
     if (config.menu?.categories) setCategories(config.menu.categories);
     if (config.menu?.items) setMenuItems(config.menu.items);
-    if (config.business?.name) {
-       localStorage.setItem('foodie_business_name', config.business.name);
-    }
+    if (config.business?.name) localStorage.setItem('foodie_business_name', config.business.name);
     if (config.business?.logo) {
       setLogo(config.business.logo);
       localStorage.setItem('foodie_business_logo', config.business.logo);
@@ -325,10 +335,14 @@ export default function App() {
             { v: 'favorites', i: 'fa-heart', l: 'Favorites' },
             { v: 'orders', i: 'fa-receipt', l: 'Orders' }
           ].map(btn => (
-            <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}>
+            <a 
+              key={btn.v} 
+              href={`#/${btn.v}`}
+              className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}
+            >
               <i className={`fa-solid ${btn.i} text-xl`}></i>
               <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
-            </button>
+            </a>
           ))}
         </div>
       )}

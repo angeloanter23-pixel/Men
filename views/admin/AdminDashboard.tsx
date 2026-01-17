@@ -5,10 +5,11 @@ import AdminAnalytics from './AdminAnalytics';
 import AdminQR from './AdminQR';
 import AdminSettings from './AdminSettings';
 import AdminBranches from './AdminBranches';
+import AdminOrders from './AdminOrders';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 
-type AdminTab = 'menu' | 'analytics' | 'branches' | 'qr' | 'settings' | 'import-preview';
+type AdminTab = 'menu' | 'analytics' | 'branches' | 'qr' | 'settings' | 'orders' | 'import-preview';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -87,13 +88,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       for (const cat of categoryData) {
         setSyncProgress(p => ({ ...p, label: `Processing Category: ${cat.name}` }));
         
-        // 1. Duplicate check for Category
         let dbCat;
         const existingCat = categories.find(c => c.name.toLowerCase() === cat.name.toLowerCase());
         
         if (existingCat) {
           dbCat = existingCat;
-          // Category exists, we skip DB creation but use its ID
         } else {
           dbCat = await MenuService.upsertCategory({
             name: cat.name,
@@ -106,7 +105,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         currentStep++;
         setSyncProgress(p => ({ ...p, current: currentStep }));
 
-        // 2. Process items within this category
         const itemsInCat = menuData.filter((m: any) => 
           m.cat_name === cat.name || m.category_id === cat.id
         );
@@ -114,7 +112,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         for (const item of itemsInCat) {
           setSyncProgress(p => ({ ...p, label: `Validating Item: ${item.name}` }));
           
-          // Duplicate check for Item
           const itemExists = menuItems.find(mi => mi.name.toLowerCase() === item.name.toLowerCase());
           
           if (itemExists) {
@@ -141,7 +138,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         }
       }
       
-      // 3. Sync QR Codes (Merged logic)
       for (const qr of qrData) {
         setSyncProgress(p => ({ ...p, label: `Securing Node: ${qr.name || qr.label}` }));
         
@@ -156,7 +152,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setSyncProgress(p => ({ ...p, current: currentStep }));
       }
 
-      // 4. Update state by Appending
       if (newlyCreatedItems.length) {
         setMenuItems(prev => [...prev, ...newlyCreatedItems]);
       }
@@ -188,7 +183,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!previewData) return null;
     const items = previewData.menu?.items || previewData.menu?.menuItems || previewData.menu || [];
     const cats = previewData.menu?.categories || previewData.categories || [];
-    const qrs = previewData.business?.qrAssets || previewData.qrAssets || [];
 
     return (
       <div className="p-6 lg:p-12 animate-fade-in space-y-10 font-['Plus_Jakarta_Sans'] pb-40">
@@ -201,30 +195,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900">
               MANIFEST<span className="text-indigo-600">PREVIEW</span>
             </h2>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3 italic">
-              New data will be merged with your existing products
-            </p>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
-             <button 
-               onClick={() => setPreviewData(null)} 
-               disabled={isSyncing}
-               className="flex-1 sm:flex-none bg-slate-100 text-slate-500 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 transition-all border border-transparent hover:border-rose-100"
-             >
-               Discard
-             </button>
-             <button 
-               onClick={commitImportToCloud}
-               disabled={isSyncing}
-               className="flex-[2] sm:flex-none bg-slate-900 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-slate-200 active:scale-95 transition-all flex items-center justify-center gap-3 group overflow-hidden relative"
-             >
-               {isSyncing ? (
-                 <i className="fa-solid fa-spinner animate-spin"></i>
-               ) : (
-                 <i className="fa-solid fa-cloud-arrow-up group-hover:translate-y-[-2px] transition-transform"></i>
-               )}
-               <span>{isSyncing ? 'Deploying...' : 'Merge to Cloud'}</span>
-             </button>
+             <button onClick={() => setPreviewData(null)} disabled={isSyncing} className="flex-1 sm:flex-none bg-slate-100 text-slate-500 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-500 transition-all border border-transparent hover:border-rose-100">Discard</button>
+             <button onClick={commitImportToCloud} disabled={isSyncing} className="flex-[2] sm:flex-none bg-slate-900 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3">Deploy</button>
           </div>
         </header>
 
@@ -235,10 +209,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <span className="text-xs font-black text-slate-900">{Math.round((syncProgress.current / syncProgress.total) * 100)}%</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-indigo-600 transition-all duration-300" 
-                        style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
-                    ></div>
+                    <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}></div>
                 </div>
             </div>
         )}
@@ -261,11 +232,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         return (
                             <tr key={i} className="hover:bg-slate-50/30 transition-colors">
                                 <td className="px-10 py-5 text-sm font-black text-slate-800 uppercase italic tracking-tight">{c.name}</td>
-                                <td className="px-10 py-5 text-right">
-                                    <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full ${exists ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                        {exists ? 'Existing Category' : 'New Context'}
-                                    </span>
-                                </td>
+                                <td className="px-10 py-5 text-right"><span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full ${exists ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>{exists ? 'Existing Category' : 'New Context'}</span></td>
                             </tr>
                         );
                     })}
@@ -299,11 +266,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     </div>
                                 </td>
                                 <td className="px-10 py-6 text-[10px] font-black uppercase text-indigo-400 italic tracking-widest">{it.cat_name || 'Generic'}</td>
-                                <td className="px-10 py-6 text-right">
-                                    <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full ${exists ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'}`}>
-                                        {exists ? 'Will be Skipped' : 'Valid Entry'}
-                                    </span>
-                                </td>
+                                <td className="px-10 py-6 text-right"><span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full ${exists ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'}`}>{exists ? 'Will be Skipped' : 'Valid Entry'}</span></td>
                             </tr>
                         );
                     })}
@@ -323,6 +286,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} />;
       case 'branches': return <AdminBranches />;
       case 'qr': return <AdminQR />;
+      case 'orders': return <AdminOrders salesHistory={salesHistory} setSalesHistory={setSalesHistory} />;
       case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} />;
       case 'import-preview': return renderImportPreview();
     }
@@ -346,6 +310,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <button onClick={toggleSidebar} className="lg:hidden text-slate-400 hover:text-white transition-colors"><i className="fa-solid fa-xmark text-xl"></i></button>
         </div>
         <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
+          {navItem('orders', 'fa-receipt', 'Live Orders')}
           {navItem('menu', 'fa-utensils', 'Menu Editor')}
           {navItem('analytics', 'fa-chart-pie', 'Analytics')}
           {navItem('branches', 'fa-sitemap', 'Branches')}
@@ -358,8 +323,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                onClick={() => fileInputRef.current?.click()} 
                className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold text-indigo-400 hover:bg-indigo-500/10 transition-all ${activeTab === 'import-preview' ? 'bg-indigo-500/20 border border-indigo-500/50 text-white' : ''}`}
             >
-              <i className="fa-solid fa-file-import"></i> 
-              Load Manifest
+              <i className="fa-solid fa-file-import"></i> Load Manifest
             </button>
           </div>
         </nav>
