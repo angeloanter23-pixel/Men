@@ -49,6 +49,7 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
 
@@ -63,28 +64,21 @@ export default function App() {
     const tableToken = urlParams.get('k');
 
     if (tableToken && parts.length > 0) {
-      const tableName = parts[parts.length - 1];
+      const tableName = parts[0]; // In the pattern #/[table-name], parts[0] is the table name
       if (activeTable !== tableName) {
         setActiveTable(tableName);
-        alert(`Welcome! You're now ordering from ${tableName.replace(/-/g, ' ')}`);
-      }
-    }
-
-    if (parts.length === 0) {
-      setCurrentView('landing');
-      setSelectedItem(null);
-      return;
-    }
-
-    // Check for SEO Item URL: #/[Restaurant]/[Branch]/[Category]/[ID]/[Name]
-    if (parts.length >= 4) {
-      const potentialId = parseInt(parts[3]);
-      if (!isNaN(potentialId)) {
-        const item = menuItems.find(i => i.id === potentialId) || defaultMenuItems.find(i => i.id === potentialId);
+        setShowWelcomeModal(true);
         setCurrentView('menu');
-        if (item) setSelectedItem(item);
+        // Clear query params from hash to prevent repeated welcome but stay on menu
+        window.location.hash = `/menu`;
         return;
       }
+    }
+
+    if (parts.length === 0 || parts[0] === 'menu') {
+      setCurrentView('menu');
+      setSelectedItem(null);
+      return;
     }
 
     const route = parts[0].toLowerCase();
@@ -111,7 +105,8 @@ export default function App() {
       setCurrentView(viewMap[route]);
       setSelectedItem(null);
     } else {
-      setCurrentView('landing');
+      // If it doesn't match a known route but we're here, default to landing unless table is active
+      setCurrentView(activeTable ? 'menu' : 'landing');
       setSelectedItem(null);
     }
   };
@@ -120,23 +115,14 @@ export default function App() {
     window.addEventListener('hashchange', syncStateWithURL);
     syncStateWithURL(); // Initial sync
     return () => window.removeEventListener('hashchange', syncStateWithURL);
-  }, [menuItems]);
+  }, [menuItems, activeTable]);
 
   const navigateTo = (view: ViewState) => {
     window.location.hash = `/${view}`;
   };
 
   const handleItemSelect = (item: MenuItem | null) => {
-    if (item) {
-      const bizName = slugify(localStorage.getItem('foodie_business_name') || 'Foodie');
-      const branchName = slugify('Main');
-      const catName = slugify(item.cat_name);
-      const itemName = slugify(item.name);
-      
-      window.location.hash = `/${bizName}/${branchName}/${catName}/${item.id}/${itemName}`;
-    } else {
-      navigateTo('menu');
-    }
+    setSelectedItem(item);
   };
 
   useEffect(() => {
@@ -216,7 +202,9 @@ export default function App() {
       categoryName: item.cat_name,
       quantity: item.quantity,
       branch: 'Main',
-      tableNumber: activeTable || item.orderTo
+      tableNumber: activeTable?.replace(/-/g, ' ') || item.orderTo,
+      paymentStatus: 'Unpaid',
+      orderStatus: 'Preparing'
     }));
     
     setOrders(prev => [...prev, ...newOrders]);
@@ -322,6 +310,29 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
+      {/* Welcome Table Modal */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+          <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl space-y-6">
+            <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+              <i className="fa-solid fa-utensils text-3xl"></i>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Authenticated Session</p>
+              <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
+                You're ordering from <span className="text-orange-600">{activeTable?.replace(/-/g, ' ')}</span>
+              </h2>
+            </div>
+            <button 
+              onClick={() => setShowWelcomeModal(false)}
+              className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all"
+            >
+              Let's Eat
+            </button>
+          </div>
+        </div>
+      )}
+
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
       <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => handleItemSelect(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
       {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={handleImportConfig} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
@@ -335,14 +346,14 @@ export default function App() {
             { v: 'favorites', i: 'fa-heart', l: 'Favorites' },
             { v: 'orders', i: 'fa-receipt', l: 'Orders' }
           ].map(btn => (
-            <a 
+            <button 
               key={btn.v} 
-              href={`#/${btn.v}`}
+              onClick={() => navigateTo(btn.v as ViewState)}
               className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}
             >
               <i className={`fa-solid ${btn.i} text-xl`}></i>
               <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
-            </a>
+            </button>
           ))}
         </div>
       )}

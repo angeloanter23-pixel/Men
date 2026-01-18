@@ -11,14 +11,13 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentView }) => {
   const navItem = (view: ViewState, icon: string, label: string) => (
-    <a 
-      href={`#/${view}`}
-      onClick={(e) => { e.preventDefault(); onNavigate(view); onClose(); }} 
+    <button 
+      onClick={() => { onNavigate(view); onClose(); }} 
       className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition group text-left ${currentView === view ? 'bg-orange-50 text-orange-600' : 'text-slate-600 hover:bg-slate-50'}`}
     >
       <i className={`fa-solid ${icon} ${currentView === view ? 'text-orange-500' : 'text-slate-400 group-hover:text-orange-500'}`}></i> 
       {label}
-    </a>
+    </button>
   );
 
   return (

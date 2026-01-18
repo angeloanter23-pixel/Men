@@ -22,14 +22,12 @@ const QRBlock: React.FC<{
   const [localCode, setLocalCode] = useState(asset.code);
   const [isCopied, setIsCopied] = useState(false);
 
-  const businessName = localStorage.getItem('foodie_business_name') || 'foodie';
-  
-  // Real URL Generation based on current hosting environment
-  const currentOrigin = window.location.origin;
-  const currentPath = window.location.pathname;
+  // Production URL Configuration
+  const productionBase = "https://men-m53q.vercel.app/";
   const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
   
-  const finalUrl = `${currentOrigin}${currentPath}#/${slugify(businessName)}/${slugify(localLabel)}?k=${localCode}`;
+  // Pattern: https://men-m53q.vercel.app/#/[table-label]?k=[token]
+  const finalUrl = `${productionBase}#/${slugify(localLabel)}?k=${localCode}`;
 
   useEffect(() => {
     if (canvasRef.current && typeof QRious !== 'undefined') {
@@ -245,7 +243,7 @@ const AdminQR: React.FC = () => {
                   </div>
                 ) : (
                   <div className="animate-fade-in space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4 italic">Deployment Count</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Deployment Count</label>
                     <input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} min="1" max="50" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" />
                   </div>
                 )}

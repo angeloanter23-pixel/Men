@@ -17,14 +17,6 @@ const MenuView: React.FC<MenuViewProps> = ({
   popularItems, categories, filteredItems, activeCategory, searchQuery, 
   onSearchChange, onCategorySelect, onItemSelect 
 }) => {
-  const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
-  const bizName = slugify(localStorage.getItem('foodie_business_name') || 'Foodie');
-  const branchName = slugify('Main');
-
-  const getItemUrl = (item: MenuItem) => {
-    return `#/${bizName}/${branchName}/${slugify(item.cat_name)}/${item.id}/${slugify(item.name)}`;
-  };
-
   return (
     <div className="animate-fade-in">
       <header className="px-6 py-8">
@@ -42,11 +34,10 @@ const MenuView: React.FC<MenuViewProps> = ({
         <h2 className="px-6 font-black text-lg mb-4 text-slate-800">Popular 🔥</h2>
         <div className="flex overflow-x-auto gap-5 px-6 no-scrollbar pb-2">
           {popularItems.map(item => (
-            <a 
+            <button 
               key={item.id} 
-              href={getItemUrl(item)}
-              onClick={(e) => { e.preventDefault(); onItemSelect(item); }} 
-              className="min-w-[160px] group cursor-pointer block"
+              onClick={() => onItemSelect(item)} 
+              className="min-w-[160px] group cursor-pointer block text-left"
             >
               <div className="relative h-48 w-full mb-3 overflow-hidden rounded-[2.5rem] shadow-lg border-4 border-white transition-all group-hover:shadow-orange-100">
                 <img src={item.image_url} alt={item.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -54,7 +45,7 @@ const MenuView: React.FC<MenuViewProps> = ({
                 <span className="absolute bottom-4 left-4 text-white font-black text-sm">₱{item.price}</span>
               </div>
               <h3 className="text-xs font-bold text-slate-800 ml-2 truncate">{item.name}</h3>
-            </a>
+            </button>
           ))}
         </div>
       </section>
@@ -72,11 +63,10 @@ const MenuView: React.FC<MenuViewProps> = ({
 
       <div className="px-6 space-y-6 pb-24">
         {filteredItems.map(item => (
-          <a 
+          <button 
             key={item.id} 
-            href={getItemUrl(item)}
-            onClick={(e) => { e.preventDefault(); onItemSelect(item); }}
-            className="flex gap-4 bg-white p-4 rounded-[2.5rem] shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-xl hover:translate-y-[-2px] cursor-pointer active:scale-[0.98] block"
+            onClick={() => onItemSelect(item)}
+            className="w-full flex gap-4 bg-white p-4 rounded-[2.5rem] shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-xl hover:translate-y-[-2px] cursor-pointer active:scale-[0.98] text-left"
           >
             <div className="relative w-24 h-24 flex-shrink-0 overflow-hidden rounded-3xl bg-slate-50">
               <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
@@ -92,7 +82,7 @@ const MenuView: React.FC<MenuViewProps> = ({
                 <i className="fa-solid fa-chevron-right text-slate-200 text-xs"></i>
               </div>
             </div>
-          </a>
+          </button>
         ))}
       </div>
     </div>

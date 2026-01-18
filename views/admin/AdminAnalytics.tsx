@@ -104,6 +104,7 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ feedbacks, salesHistory
 
   const saveSaleRecord = () => {
     if (!recordingItem) return;
+    // FIX: Added missing paymentStatus and orderStatus to satisfy SalesRecord interface
     const record: SalesRecord = {
       timestamp: new Date().toISOString(),
       amount: recordForm.price * recordForm.qty,
@@ -112,7 +113,9 @@ const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ feedbacks, salesHistory
       categoryName: recordingItem.cat_name,
       quantity: recordForm.qty,
       branch: recordForm.branch,
-      tableNumber: recordForm.table
+      tableNumber: recordForm.table,
+      paymentStatus: 'Paid',
+      orderStatus: 'Served'
     };
     setSalesHistory(prev => [...prev, record]);
     setRecordingItem(null);

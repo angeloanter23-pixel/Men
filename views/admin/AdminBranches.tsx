@@ -115,7 +115,7 @@ const AdminBranches: React.FC = () => {
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">ID: {branch.id.slice(0, 8)}</div>
               </div>
               <h4 className="text-lg font-black uppercase italic tracking-tighter mb-1">{branch.name}</h4>
-              <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-6">URL: mymenu.ph/{branch.subdomain}</p>
+              <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-6">URL: men-m53q.vercel.app/{branch.subdomain}</p>
               <div className="flex gap-2">
                 <button onClick={() => { setEditingBranch(branch); setSubView('create'); }} className="flex-1 bg-slate-50 hover:bg-indigo-600 hover:text-white text-indigo-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Edit Context</button>
                 <button onClick={() => handleDelete(branch.id)} className="w-12 h-12 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all"><i className="fa-solid fa-trash-can"></i></button>

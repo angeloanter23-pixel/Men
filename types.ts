@@ -47,4 +47,6 @@ export interface SalesRecord {
   quantity: number;
   branch: string;
   tableNumber?: string;
+  paymentStatus: 'Paid' | 'Unpaid';
+  orderStatus: 'Preparing' | 'Serving' | 'Served';
 }
