@@ -112,6 +112,12 @@ const AdminOrders: React.FC = () => {
                           <i className="fa-solid fa-user text-[10px] text-slate-300"></i>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{order.customer_name}</span>
                        </div>
+                       {order.qr_code_token && (
+                         <div className="flex items-center gap-2">
+                            <i className="fa-solid fa-qrcode text-[10px] text-indigo-300"></i>
+                            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{order.qr_code_token}</span>
+                         </div>
+                       )}
                        <div className="flex items-center gap-2">
                           <span className="text-[10px] font-black text-slate-900">₱{order.amount.toLocaleString()}</span>
                        </div>

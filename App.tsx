@@ -50,10 +50,8 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
-  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, restaurantName: string, branches: string[]} | null>(null);
+  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, branches: string[]} | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-
-  const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
 
   const syncStateWithURL = async () => {
     const path = window.location.pathname;
@@ -66,13 +64,18 @@ export default function App() {
           const details = await MenuService.getQRCodeByCode(token);
           if (details) {
             setActiveTable(details.label);
-            setQrDetails({
+            const qrSession = {
               id: details.id,
               restaurant_id: details.restaurant_id,
               label: details.label,
+              token: details.code,
               restaurantName: details.restaurant_name || 'Premium Merchant',
               branches: details.branches.map((b: any) => b.name)
-            });
+            };
+            setQrDetails(qrSession);
+            // Save to session so it persists across refreshes
+            localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
+            
             setShowWelcomeModal(true);
             setCurrentView('menu');
             window.history.replaceState({}, '', '/#/menu');
@@ -124,9 +127,18 @@ export default function App() {
 
   useEffect(() => {
     window.addEventListener('hashchange', syncStateWithURL);
+    
+    // Load existing QR session if it exists
+    const savedQR = localStorage.getItem('foodie_active_qr');
+    if (savedQR) {
+      const parsed = JSON.parse(savedQR);
+      setQrDetails(parsed);
+      setActiveTable(parsed.label);
+    }
+
     syncStateWithURL();
     return () => window.removeEventListener('hashchange', syncStateWithURL);
-  }, [activeTable]);
+  }, []);
 
   const navigateTo = (view: ViewState) => {
     window.location.hash = `/${view}`;
@@ -164,14 +176,13 @@ export default function App() {
     const itemsToProcess = pendingSingleItem ? [pendingSingleItem] : cart;
     if (itemsToProcess.length === 0) { navigateTo('menu'); return; }
 
-    // Resolve restaurant ID with multi-level fallback
     const sessionRaw = localStorage.getItem('foodie_supabase_session');
     const session = sessionRaw ? JSON.parse(sessionRaw) : null;
     const sessionRestaurantId = session?.restaurant?.id;
     
     const restaurant_id = qrDetails?.restaurant_id || sessionRestaurantId || '9148d88e-6701-4475-ae90-c08ef38411df';
+    const qr_token = qrDetails?.token || 'Manual';
 
-    // Map cart items to database schema - ensuring data types are correct
     const dbOrders = itemsToProcess.map(item => ({
       restaurant_id: restaurant_id,
       item_id: String(item.id),
@@ -183,14 +194,14 @@ export default function App() {
       customer_name: item.orderTo || 'Guest',
       order_status: 'Preparing',
       payment_status: 'Unpaid',
-      instructions: item.customInstructions || ''
+      instructions: item.customInstructions || '',
+      qr_code_token: qr_token // LINKING THE QR TOKEN HERE
     }));
 
     try {
-      console.log("Submitting orders to cloud:", dbOrders);
+      console.log(`Submitting orders for Token: ${qr_token}`, dbOrders);
       await MenuService.insertOrders(dbOrders);
       
-      // Cleanup UI state
       if (pendingSingleItem) setPendingSingleItem(null);
       else setCart([]);
       
@@ -198,7 +209,11 @@ export default function App() {
       setSelectedItem(null);
     } catch (err: any) {
       console.error("Supabase Order Error:", err);
-      alert(`Order Failed: ${err.message || "Database connection error. Please try again."}`);
+      if (err.message.includes('schema cache')) {
+        alert("CRITICAL DATABASE ERROR: The 'orders' table was not found in your Supabase project. Please create the 'orders' table in your Supabase SQL Editor to enable ordering.");
+      } else {
+        alert(`Order Failed: ${err.message || "Database error."}`);
+      }
     }
   };
 
@@ -264,6 +279,7 @@ export default function App() {
               <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 italic">Location Context</p>
                 <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 opacity-60 italic">Token: {qrDetails.token}</p>
                 {qrDetails.branches.length > 0 && <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 opacity-60">Branch: {qrDetails.branches.join(', ')}</p>}
               </div>
             </div>
