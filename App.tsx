@@ -37,7 +37,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Initialize as empty - No more JSON fallback
+  // COMPLETELY EMPTY INITIAL STATE - No more JSON fallback
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -78,14 +78,11 @@ export default function App() {
             setQrDetails(qrSession);
             localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
 
-            // FORCE FETCH MENU FROM DATABASE
+            // FETCH FRESH DATA FOR SCANNED RESTAURANT
             const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
             if (cloudMenu) {
               setMenuItems(cloudMenu.items);
               setCategories(cloudMenu.categories);
-            } else {
-              setMenuItems([]);
-              setCategories([]);
             }
             
             setShowWelcomeModal(true);
@@ -94,7 +91,7 @@ export default function App() {
             return;
           }
         } catch (err) {
-          console.error("Cloud Sync Failure:", err);
+          console.error("Token resolve error:", err);
         } finally {
           setIsLoading(false);
         }
@@ -112,22 +109,11 @@ export default function App() {
 
     const route = parts[0].toLowerCase();
     const viewMap: Record<string, ViewState> = {
-      'landing': 'landing',
-      'menu': 'menu',
-      'cart': 'cart',
-      'orders': 'orders',
-      'favorites': 'favorites',
-      'feedback': 'feedback',
-      'feedback-data': 'feedback-data',
-      'privacy': 'privacy',
-      'terms': 'terms',
-      'admin': 'admin',
-      'create-menu': 'create-menu',
-      'payment': 'payment',
-      'qr-verify': 'qr-verify',
-      'group': 'group',
-      'test-supabase': 'test-supabase',
-      'super-admin': 'super-admin'
+      'landing': 'landing', 'menu': 'menu', 'cart': 'cart', 'orders': 'orders',
+      'favorites': 'favorites', 'feedback': 'feedback', 'feedback-data': 'feedback-data',
+      'privacy': 'privacy', 'terms': 'terms', 'admin': 'admin', 'create-menu': 'create-menu',
+      'payment': 'payment', 'qr-verify': 'qr-verify', 'group': 'group',
+      'test-supabase': 'test-supabase', 'super-admin': 'super-admin'
     };
 
     if (viewMap[route]) {
@@ -142,13 +128,12 @@ export default function App() {
   useEffect(() => {
     window.addEventListener('hashchange', syncStateWithURL);
     
-    // Attempt to recover last session from Supabase context
     const savedQR = localStorage.getItem('foodie_active_qr');
     if (savedQR) {
       const parsed = JSON.parse(savedQR);
       setQrDetails(parsed);
       setActiveTable(parsed.label);
-      // Re-fetch to ensure data freshness from DB
+      // Auto-load menu from cloud if session exists
       MenuService.getMenuByRestaurantId(parsed.restaurant_id).then(res => {
         if (res) {
           setMenuItems(res.items);
@@ -170,7 +155,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Only load non-menu settings from localStorage
+    // Basic settings load
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
     const savedSales = localStorage.getItem('foodie_sales_history');
     const savedAdmin = localStorage.getItem('foodie_admin_creds');
