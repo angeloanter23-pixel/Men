@@ -15,7 +15,6 @@ export function getSubdomain() {
 // --- Auth Logic (Custom Table Flow) ---
 
 export async function authSignUp(email: string, pass: string) {
-  // 1. Create a default Restaurant for the new user
   const defaultName = `${email.split('@')[0]}'s Kitchen`;
   const { data: rest, error: restErr } = await supabase
     .from('restaurants')
@@ -25,7 +24,6 @@ export async function authSignUp(email: string, pass: string) {
   
   if (restErr) throw restErr;
 
-  // 2. Create a default Menu for this Restaurant immediately
   const { data: menu, error: menuErr } = await supabase
     .from('menus')
     .insert([{ name: 'Main Menu', restaurant_id: rest.id }])
@@ -34,7 +32,6 @@ export async function authSignUp(email: string, pass: string) {
 
   if (menuErr) throw menuErr;
 
-  // 3. Create the User linked to that Restaurant
   const { data: user, error: userErr } = await supabase
     .from('users')
     .insert([{ 
@@ -46,7 +43,6 @@ export async function authSignUp(email: string, pass: string) {
     .single();
 
   if (userErr) {
-    // Cleanup
     await supabase.from('restaurants').delete().eq('id', rest.id);
     throw userErr;
   }
@@ -68,7 +64,6 @@ export async function authSignIn(email: string, pass: string) {
   if (error) throw error;
   if (!data) throw new Error("Invalid credentials or user not found.");
 
-  // Fetch first available menu_id
   const { data: menu } = await supabase
     .from('menus')
     .select('id')
@@ -238,7 +233,6 @@ export async function getQRCodeByCode(code: string) {
   if (error) throw error;
   if (!data) return null;
 
-  // Also fetch branches to see where this code might be applicable
   const { data: branches } = await supabase
     .from('branches')
     .select('name')
@@ -249,4 +243,47 @@ export async function getQRCodeByCode(code: string) {
     restaurant_name: data.restaurants?.name,
     branches: branches || []
   };
+}
+
+// --- Order Management ---
+
+export async function insertOrders(orders: any[]) {
+  const { data, error } = await supabase
+    .from('orders')
+    .insert(orders)
+    .select();
+  if (error) throw error;
+  return data;
+}
+
+export async function getOrdersByTable(restaurantId: string, tableLabel: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', tableLabel)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getMerchantOrders(restaurantId: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateOrder(id: string, updates: any) {
+  const { data, error } = await supabase
+    .from('orders')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }

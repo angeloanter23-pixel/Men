@@ -1,90 +1,123 @@
 
-import React, { useState } from 'react';
-import { CartItem } from '../types';
-
-interface OrderInstance extends CartItem {
-  orderId: string;
-  status: 'Pending' | 'Cooking' | 'Ready' | 'Served';
-  timestamp: Date;
-}
+import React, { useState, useEffect } from 'react';
+import * as MenuService from '../services/menuService';
 
 interface OrdersViewProps {
-  orders: OrderInstance[];
+  restaurantId?: string;
+  tableNumber: string | null;
   onPayNow: () => void;
   onGoToMenu: () => void;
 }
 
-const OrdersView: React.FC<OrdersViewProps> = ({ orders, onPayNow, onGoToMenu }) => {
-  const [activeTab, setActiveTab] = useState<'my' | 'group'>('my');
-  const myOrders = orders.filter(o => o.orderTo === 'Me');
-  const groupOrders = orders.filter(o => o.orderTo !== 'Me');
-  const currentDisplay = activeTab === 'my' ? myOrders : groupOrders;
+const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPayNow, onGoToMenu }) => {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Cooking': return 'bg-orange-100 text-orange-600';
-      case 'Ready': return 'bg-green-100 text-green-600';
-      case 'Served': return 'bg-blue-100 text-blue-600';
-      default: return 'bg-slate-100 text-slate-600';
+  // Poll for updates every 10 seconds for live status
+  useEffect(() => {
+    if (tableNumber) {
+      fetchOrders();
+      const interval = setInterval(fetchOrders, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [tableNumber, restaurantId]);
+
+  const fetchOrders = async () => {
+    if (!tableNumber) return;
+    const rid = restaurantId || '9148d88e-6701-4475-ae90-c08ef38411df'; // Fallback
+    try {
+      const data = await MenuService.getOrdersByTable(rid, tableNumber);
+      setOrders(data);
+    } catch (err) {
+      console.error("Failed to fetch order stream:", err);
     }
   };
 
-  const totalBill = orders.reduce((sum, o) => sum + (o.price * o.quantity), 0);
+  const totalUnpaid = orders
+    .filter(o => o.payment_status === 'Unpaid')
+    .reduce((sum, o) => sum + o.amount, 0);
+
+  if (!tableNumber) {
+    return (
+      <div className="p-10 text-center py-40 animate-fade-in flex flex-col items-center">
+        <div className="w-24 h-24 bg-slate-50 text-slate-200 rounded-full flex items-center justify-center mb-8 text-4xl shadow-inner">
+          <i className="fa-solid fa-receipt"></i>
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2 uppercase italic tracking-tighter">No Active Session</h2>
+        <p className="text-slate-400 text-sm max-w-[240px] mb-10 leading-relaxed font-medium">Please scan a table QR code to view your active order history.</p>
+        <button onClick={onGoToMenu} className="bg-orange-500 text-white px-10 py-5 rounded-[2rem] font-black text-[10px] tracking-[0.3em] uppercase shadow-xl shadow-orange-100 active:scale-95 transition-all">BACK TO MENU</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 pb-48 min-h-screen animate-fade-in bg-slate-50/30">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-black text-slate-800 tracking-tighter italic uppercase">Live Orders</h2>
-        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
-           <button onClick={() => setActiveTab('my')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'my' ? 'bg-white text-orange-600 shadow-md' : 'text-slate-400'}`}>SELF</button>
-           <button onClick={() => setActiveTab('group')} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'group' ? 'bg-white text-orange-600 shadow-md' : 'text-slate-400'}`}>FRIENDS</button>
+    <div className="p-6 pb-40 animate-fade-in font-['Plus_Jakarta_Sans']">
+      <header className="mb-8 flex justify-between items-end px-2">
+        <div>
+           <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1 italic">Order Stream</p>
+           <h2 className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter leading-none">Your <span className="text-orange-500">Tickets</span></h2>
         </div>
-      </div>
-      <div className="space-y-6">
-        {currentDisplay.length === 0 ? (
-          <div className="text-center py-32 flex flex-col items-center">
-            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-slate-200 text-4xl shadow-sm border border-slate-100 mb-6"><i className="fa-solid fa-receipt"></i></div>
-            <p className="font-black text-[10px] text-slate-300 uppercase tracking-[0.3em] mb-8">No Active Sessions</p>
-            <button onClick={onGoToMenu} className="bg-orange-500 text-white px-10 py-5 rounded-[2rem] font-black text-xs tracking-widest shadow-xl shadow-orange-100">ORDER SOMETHING</button>
-          </div>
-        ) : (
-          currentDisplay.map((order) => (
-            <div key={order.orderId} className="flex flex-col bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 space-y-4">
-               <div className="flex gap-5 items-center">
-                 <div className="w-20 h-20 rounded-3xl overflow-hidden bg-slate-50 shadow-inner border border-slate-100">
-                   <img src={order.image_url} className="w-full h-full object-cover grayscale-[0.2]" alt="" />
-                 </div>
-                 <div className="flex-1">
-                   <div className="flex justify-between items-start">
-                     <h4 className="font-black text-slate-800 text-sm leading-tight uppercase tracking-tight">{order.name} <span className="text-orange-500 italic ml-1">x{order.quantity}</span></h4>
-                     <span className={`text-[9px] px-3 py-1.5 rounded-xl font-black uppercase tracking-wider shadow-sm ${getStatusColor(order.status)}`}>{order.status}</span>
-                   </div>
-                   <div className="flex justify-between items-center mt-3">
-                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{order.orderTo !== 'Me' ? `Guest: ${order.orderTo}` : 'My Order'}</p>
-                     <span className="text-[10px] text-slate-400 font-bold">{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                   </div>
-                 </div>
-               </div>
-               {order.customInstructions && (
-                 <div className="bg-orange-50/50 p-5 rounded-2xl border border-orange-100/20">
-                   <p className="text-xs text-slate-600 font-bold italic leading-relaxed">"{order.customInstructions}"</p>
-                 </div>
-               )}
-            </div>
-          ))
-        )}
-      </div>
+        <div className="text-right">
+           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Active Node</p>
+           <p className="text-xs font-black text-slate-800 uppercase italic">{tableNumber}</p>
+        </div>
+      </header>
 
-      {orders.length > 0 && (
-        <div className="fixed bottom-24 left-0 right-0 p-6 flex flex-col gap-4 max-w-xl mx-auto bg-white/80 backdrop-blur-2xl border-t border-slate-100 z-50 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] rounded-t-[3rem]">
-          <div className="flex justify-between items-center px-4">
-            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Running Total</span>
-            <span className="text-2xl font-black italic tracking-tighter text-slate-900">₱{totalBill.toLocaleString()}</span>
-          </div>
-          <div className="flex gap-4">
-            <button onClick={onPayNow} className="flex-[2] bg-slate-900 text-white py-5 rounded-[2rem] font-black text-xs tracking-widest active:scale-95 shadow-2xl hover:bg-orange-600 transition-all">PAY NOW</button>
-            <button className="flex-1 bg-slate-100 text-slate-400 py-5 rounded-[2rem] font-black text-xs tracking-widest active:scale-95">LATER</button>
-          </div>
+      {orders.length === 0 ? (
+        <div className="py-24 text-center border-4 border-dashed border-slate-50 rounded-[3rem] bg-white shadow-sm flex flex-col items-center">
+          <i className="fa-solid fa-utensils text-slate-100 text-5xl mb-6"></i>
+          <p className="text-slate-300 text-[10px] font-black uppercase tracking-[0.4em]">Kitchen is quiet...</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {orders.map((order) => (
+            <div key={order.id} className="bg-white p-5 rounded-[2.5rem] border border-slate-50 shadow-sm flex gap-5 animate-fade-in group">
+               <div className="w-16 h-16 rounded-[1.8rem] bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 shrink-0">
+                  <i className="fa-solid fa-fire-burner text-lg group-hover:animate-bounce"></i>
+               </div>
+               <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-black text-sm text-slate-800 uppercase italic tracking-tight truncate pr-4">{order.item_name}</h4>
+                    <span className="text-[10px] font-black text-indigo-600 italic">₱{order.amount}</span>
+                  </div>
+                  <div className="flex gap-3 items-center mb-3">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Quantity: {order.quantity}</span>
+                    <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                     <span className={`px-4 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border ${
+                       order.order_status === 'Served' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                       order.order_status === 'Serving' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                     }`}>
+                       {order.order_status}
+                     </span>
+                     <span className={`text-[8px] font-black uppercase tracking-widest ${order.payment_status === 'Paid' ? 'text-emerald-500' : 'text-rose-400'}`}>
+                       {order.payment_status}
+                     </span>
+                  </div>
+               </div>
+            </div>
+          ))}
+
+          {totalUnpaid > 0 && (
+            <div className="mt-10 bg-slate-900 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-700"></div>
+               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-orange-500 mb-2">Checkout Bill</p>
+               <div className="flex justify-between items-end">
+                  <div>
+                    <h3 className="text-4xl font-black italic tracking-tighter">₱{totalUnpaid.toLocaleString()}</h3>
+                    <p className="text-[8px] font-bold text-slate-500 mt-2 uppercase tracking-[0.2em]">Excludes already paid items</p>
+                  </div>
+                  <button 
+                    onClick={onPayNow}
+                    className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl hover:bg-orange-500 hover:text-white"
+                  >
+                    PAY NOW
+                  </button>
+               </div>
+            </div>
+          )}
         </div>
       )}
     </div>

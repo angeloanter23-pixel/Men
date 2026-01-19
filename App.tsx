@@ -50,22 +50,16 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
-  const [qrDetails, setQrDetails] = useState<{label: string, restaurantName: string, branches: string[]} | null>(null);
+  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, restaurantName: string, branches: string[]} | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
 
   const syncStateWithURL = async () => {
-    const hashPart = window.location.hash.split('?')[0];
-    const hash = hashPart.replace(/^#\/?/, '');
-    const parts = hash.split('/').filter(p => p !== '');
     const path = window.location.pathname;
 
-    // Detection for new URL pattern: https://men-m53q.vercel.app/[token]
     if (path !== '/' && path.length > 1) {
-      const token = path.substring(1); // Remove leading slash
-      
-      // Standard view routes to exclude from token detection
+      const token = path.substring(1); 
       const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu'];
       if (!reserved.includes(token.toLowerCase())) {
         try {
@@ -73,13 +67,14 @@ export default function App() {
           if (details) {
             setActiveTable(details.label);
             setQrDetails({
+              id: details.id,
+              restaurant_id: details.restaurant_id,
               label: details.label,
               restaurantName: details.restaurant_name || 'Premium Merchant',
               branches: details.branches.map((b: any) => b.name)
             });
             setShowWelcomeModal(true);
             setCurrentView('menu');
-            // Clean up the URL to hash routing for SPA stability
             window.history.replaceState({}, '', '/#/menu');
             return;
           }
@@ -88,6 +83,9 @@ export default function App() {
         }
       }
     }
+
+    const hashPart = window.location.hash.replace(/^#\/?/, '').split('?')[0];
+    const parts = hashPart.split('/').filter(p => p !== '');
 
     if (parts.length === 0 || parts[0] === 'menu') {
       setCurrentView('menu');
@@ -126,9 +124,9 @@ export default function App() {
 
   useEffect(() => {
     window.addEventListener('hashchange', syncStateWithURL);
-    syncStateWithURL(); // Initial sync
+    syncStateWithURL();
     return () => window.removeEventListener('hashchange', syncStateWithURL);
-  }, [menuItems, activeTable]);
+  }, [activeTable]);
 
   const navigateTo = (view: ViewState) => {
     window.location.hash = `/${view}`;
@@ -162,70 +160,35 @@ export default function App() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem('foodie_menu_items', JSON.stringify(menuItems));
-      localStorage.setItem('foodie_categories', JSON.stringify(categories));
-      localStorage.setItem('foodie_feedbacks', JSON.stringify(feedbacks));
-      localStorage.setItem('foodie_sales_history', JSON.stringify(salesHistory));
-      localStorage.setItem('foodie_admin_creds', JSON.stringify(adminCreds));
-      if (logo) localStorage.setItem('foodie_business_logo', logo);
-    }
-  }, [menuItems, categories, feedbacks, salesHistory, adminCreds, logo, isLoading]);
-
-  useEffect(() => {
-    if (orders.length === 0) return;
-    const interval = setInterval(() => {
-      setOrders(prev => prev.map(o => {
-        if (o.status === 'Pending') return { ...o, status: 'Cooking' };
-        if (o.status === 'Cooking') return { ...o, status: 'Ready' };
-        if (o.status === 'Ready') return { ...o, status: 'Served' };
-        return o;
-      }));
-    }, 12000);
-    return () => clearInterval(interval);
-  }, [orders.length]);
-
-  const popularItems = useMemo(() => menuItems.filter(item => item.is_popular), [menuItems]);
-  const filteredItems = useMemo(() => {
-    return menuItems.filter(item => {
-      const matchesCategory = activeCategory === 'all' || item.cat_name === activeCategory;
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [activeCategory, searchQuery, menuItems]);
-
-  const finalizeOrder = () => {
+  const finalizeOrder = async () => {
     const itemsToProcess = pendingSingleItem ? [pendingSingleItem] : cart;
     if (itemsToProcess.length === 0) { navigateTo('menu'); return; }
 
-    const timestamp = new Date();
-    const newOrders: OrderInstance[] = itemsToProcess.map((item, idx) => ({
-      ...item,
-      orderId: `ORD-${timestamp.getTime()}-${idx}`,
-      status: 'Pending',
-      timestamp
-    }));
-    
-    const newSales: SalesRecord[] = itemsToProcess.map(item => ({
-      timestamp: timestamp.toISOString(),
-      amount: item.price * item.quantity,
-      itemId: item.id,
-      itemName: item.name,
-      categoryName: item.cat_name,
+    const restaurant_id = qrDetails?.restaurant_id || '9148d88e-6701-4475-ae90-c08ef38411df'; // Fallback for local testing if no QR session
+
+    // Map cart items to database schema
+    const dbOrders = itemsToProcess.map(item => ({
+      restaurant_id,
+      item_id: item.id,
+      item_name: item.name,
+      price: item.price,
       quantity: item.quantity,
-      branch: 'Main',
-      tableNumber: activeTable?.replace(/-/g, ' ') || item.orderTo,
-      paymentStatus: 'Unpaid',
-      orderStatus: 'Preparing'
+      amount: item.price * item.quantity,
+      table_number: activeTable || 'Walk-in',
+      customer_name: item.orderTo || 'Guest',
+      order_status: 'Preparing',
+      payment_status: 'Unpaid',
+      instructions: item.customInstructions || ''
     }));
-    
-    setOrders(prev => [...prev, ...newOrders]);
-    setSalesHistory(prev => [...prev, ...newSales]);
-    
-    if (pendingSingleItem) setPendingSingleItem(null); else setCart([]);
-    navigateTo('orders');
-    setSelectedItem(null);
+
+    try {
+      await MenuService.insertOrders(dbOrders);
+      if (pendingSingleItem) setPendingSingleItem(null); else setCart([]);
+      navigateTo('orders');
+      setSelectedItem(null);
+    } catch (err) {
+      alert("Order submission failed. Cloud sync error.");
+    }
   };
 
   const handleSendToKitchenDirect = (item: CartItem) => {
@@ -256,63 +219,18 @@ export default function App() {
     if (isLoading) return <div className="flex items-center justify-center min-h-[80vh] font-black text-orange-600 animate-pulse uppercase tracking-widest text-xs">Initialising...</div>;
 
     switch (currentView) {
-      case 'landing': return (
-        <LandingView 
-          onStart={() => navigateTo('menu')} 
-          onCreateMenu={() => navigateTo('create-menu')} 
-          onImportMenu={handleImportConfig}
-        />
-      );
-      case 'create-menu': return (
-        <CreateMenuView 
-          onCancel={() => navigateTo('landing')} 
-          onComplete={(config) => {
-            handleImportConfig(config);
-            navigateTo('admin');
-          }}
-        />
-      );
-      case 'menu': return (
-        <MenuView 
-          popularItems={popularItems} categories={categories} filteredItems={filteredItems} 
-          activeCategory={activeCategory} searchQuery={searchQuery}
-          onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect}
-        />
-      );
-      case 'cart': return (
-        <CartView 
-          cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))}
-          onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => navigateTo('qr-verify')}
-          onGoBack={() => navigateTo('menu')}
-        />
-      );
-      case 'payment': return (
-        <PaymentView 
-          total={orders.reduce((sum, o) => sum + (o.price * o.quantity), 0)}
-          onClose={() => navigateTo('orders')}
-          onSuccess={() => {
-            alert("Payment Successful! Your digital receipt has been sent.");
-            navigateTo('feedback');
-          }}
-        />
-      );
+      case 'landing': return <LandingView onStart={() => navigateTo('menu')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={handleImportConfig} />;
+      case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={(config) => { handleImportConfig(config); navigateTo('admin'); }} />;
+      case 'menu': return <MenuView popularItems={menuItems.filter(i => i.is_popular)} categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
+      case 'cart': return <CartView cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))} onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => navigateTo('qr-verify')} onGoBack={() => navigateTo('menu')} />;
+      case 'payment': return <PaymentView total={0} onClose={() => navigateTo('orders')} onSuccess={() => { alert("Payment Successful!"); navigateTo('feedback'); }} />;
       case 'qr-verify': return <QRVerifyView onVerify={finalizeOrder} onCancel={() => { setPendingSingleItem(null); navigateTo(cart.length > 0 ? 'cart' : 'menu'); }} />;
-      case 'orders': return <OrdersView orders={orders} onPayNow={() => navigateTo('payment')} onGoToMenu={() => navigateTo('menu')} />;
+      case 'orders': return <OrdersView restaurantId={qrDetails?.restaurant_id} tableNumber={activeTable} onPayNow={() => navigateTo('payment')} onGoToMenu={() => navigateTo('menu')} />;
       case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => navigateTo('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} />;
       case 'test-supabase': return <TestSupabaseView />;
       case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
-      case 'admin': return (
-        <AdminView 
-          menuItems={menuItems} setMenuItems={setMenuItems} 
-          categories={categories} setCategories={setCategories} 
-          feedbacks={feedbacks} setFeedbacks={setFeedbacks}
-          salesHistory={salesHistory} setSalesHistory={setSalesHistory}
-          adminCreds={adminCreds} setAdminCreds={setAdminCreds}
-          onExit={() => navigateTo('menu')}
-          onLogoUpdate={setLogo}
-        />
-      );
+      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onExit={() => navigateTo('menu')} onLogoUpdate={setLogo} />;
       case 'privacy': return <LegalView title="Privacy Policy" />;
       case 'terms': return <LegalView title="Terms & Agreement" />;
       default: return null;
@@ -323,35 +241,22 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
-      {/* Welcome Discovery Modal */}
       {showWelcomeModal && qrDetails && (
         <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl space-y-6">
-            <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
-              <i className="fa-solid fa-utensils text-3xl"></i>
-            </div>
+            <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-2"><i className="fa-solid fa-utensils text-3xl"></i></div>
             <div className="space-y-4">
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Authenticated Session</p>
-                <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
-                  Welcome to <span className="text-orange-600">{qrDetails.restaurantName}</span>
-                </h2>
+                <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Welcome to <span className="text-orange-600">{qrDetails.restaurantName}</span></h2>
               </div>
-              
               <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 italic">Location Context</p>
                 <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
-                {qrDetails.branches.length > 0 && (
-                  <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 opacity-60">Branch: {qrDetails.branches.join(', ')}</p>
-                )}
+                {qrDetails.branches.length > 0 && <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 opacity-60">Branch: {qrDetails.branches.join(', ')}</p>}
               </div>
             </div>
-            <button 
-              onClick={() => setShowWelcomeModal(false)}
-              className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all"
-            >
-              Start Ordering
-            </button>
+            <button onClick={() => setShowWelcomeModal(false)} className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Start Ordering</button>
           </div>
         </div>
       )}
@@ -363,17 +268,8 @@ export default function App() {
       
       {!['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView) && (
         <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 max-w-xl mx-auto z-40">
-          {[
-            { v: 'menu', i: 'fa-house', l: 'Menu' },
-            { v: 'group', i: 'fa-users', l: 'Group' },
-            { v: 'favorites', i: 'fa-heart', l: 'Favorites' },
-            { v: 'orders', i: 'fa-receipt', l: 'Orders' }
-          ].map(btn => (
-            <button 
-              key={btn.v} 
-              onClick={() => navigateTo(btn.v as ViewState)}
-              className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}
-            >
+          {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Favorites' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => (
+            <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}>
               <i className={`fa-solid ${btn.i} text-xl`}></i>
               <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
             </button>
