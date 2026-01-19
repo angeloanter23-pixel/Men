@@ -103,6 +103,45 @@ export async function getBranchesForRestaurant(restaurantId: string) {
   return data || [];
 }
 
+export async function getMenuByRestaurantId(restaurantId: string) {
+  // 1. Get the primary menu for the restaurant
+  const { data: menu, error: menuErr } = await supabase
+    .from('menus')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+    .limit(1)
+    .maybeSingle();
+
+  if (menuErr || !menu) return null;
+
+  // 2. Get categories and join with items
+  const { data: categories, error: catErr } = await supabase
+    .from('categories')
+    .select(`
+      id, name, order_index,
+      items (
+        id, category_id, name, description, price, image_url, pax, serving_time, is_popular, created_at
+      )
+    `)
+    .eq('menu_id', menu.id)
+    .order('order_index');
+
+  if (catErr) throw catErr;
+
+  // 3. Flatten for the UI state
+  const allItems: any[] = [];
+  const processedCats = (categories || []).map(cat => {
+    const catItems = (cat.items || []).map((item: any) => ({
+      ...item,
+      cat_name: cat.name
+    }));
+    allItems.push(...catItems);
+    return { id: cat.id, name: cat.name };
+  });
+
+  return { categories: processedCats, items: allItems };
+}
+
 export async function getMenuForBranch(overrideSubdomain?: string) {
   const subdomain = overrideSubdomain || getSubdomain();
   if (!subdomain) return null;

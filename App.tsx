@@ -56,13 +56,18 @@ export default function App() {
   const syncStateWithURL = async () => {
     const path = window.location.pathname;
 
+    // Check if URL contains a QR token (e.g. /Sz6zww)
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
       const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu'];
+      
       if (!reserved.includes(token.toLowerCase())) {
         try {
+          setIsLoading(true);
           const details = await MenuService.getQRCodeByCode(token);
+          
           if (details) {
+            // 1. Setup Session Context
             setActiveTable(details.label);
             const qrSession = {
               id: details.id,
@@ -73,8 +78,16 @@ export default function App() {
               branches: details.branches.map((b: any) => b.name)
             };
             setQrDetails(qrSession);
-            // Save to session so it persists across refreshes
             localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
+
+            // 2. FETCH ACTUAL MENU FROM CLOUD FOR THIS RESTAURANT
+            const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
+            if (cloudMenu) {
+              setMenuItems(cloudMenu.items);
+              setCategories(cloudMenu.categories);
+              localStorage.setItem('foodie_menu_items', JSON.stringify(cloudMenu.items));
+              localStorage.setItem('foodie_categories', JSON.stringify(cloudMenu.categories));
+            }
             
             setShowWelcomeModal(true);
             setCurrentView('menu');
@@ -83,10 +96,13 @@ export default function App() {
           }
         } catch (err) {
           console.error("Token resolution failure:", err);
+        } finally {
+          setIsLoading(false);
         }
       }
     }
 
+    // Standard hash-based routing
     const hashPart = window.location.hash.replace(/^#\/?/, '').split('?')[0];
     const parts = hashPart.split('/').filter(p => p !== '');
 
@@ -128,7 +144,6 @@ export default function App() {
   useEffect(() => {
     window.addEventListener('hashchange', syncStateWithURL);
     
-    // Load existing QR session if it exists
     const savedQR = localStorage.getItem('foodie_active_qr');
     if (savedQR) {
       const parsed = JSON.parse(savedQR);
@@ -195,11 +210,11 @@ export default function App() {
       order_status: 'Preparing',
       payment_status: 'Unpaid',
       instructions: item.customInstructions || '',
-      qr_code_token: qr_token // LINKING THE QR TOKEN HERE
+      qr_code_token: qr_token
     }));
 
     try {
-      console.log(`Submitting orders for Token: ${qr_token}`, dbOrders);
+      console.log(`Submitting orders to database table 'orders'...`);
       await MenuService.insertOrders(dbOrders);
       
       if (pendingSingleItem) setPendingSingleItem(null);
@@ -210,9 +225,9 @@ export default function App() {
     } catch (err: any) {
       console.error("Supabase Order Error:", err);
       if (err.message.includes('schema cache')) {
-        alert("CRITICAL DATABASE ERROR: The 'orders' table was not found in your Supabase project. Please create the 'orders' table in your Supabase SQL Editor to enable ordering.");
+        alert("CRITICAL: The 'orders' table is missing from your Supabase database. Please create the table using the SQL provided in the instructions to enable ordering.");
       } else {
-        alert(`Order Failed: ${err.message || "Database error."}`);
+        alert(`Order Failed: ${err.message || "Database connection error."}`);
       }
     }
   };
@@ -242,7 +257,15 @@ export default function App() {
   };
 
   const renderView = () => {
-    if (isLoading) return <div className="flex items-center justify-center min-h-[80vh] font-black text-orange-600 animate-pulse uppercase tracking-widest text-xs">Initialising...</div>;
+    if (isLoading) return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 animate-fade-in">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+        <div className="text-center">
+          <p className="font-black text-indigo-600 uppercase tracking-[0.4em] text-[10px] mb-2">Synchronizing Cloud Menu</p>
+          <p className="text-slate-400 text-xs font-bold italic">Loading fresh selections...</p>
+        </div>
+      </div>
+    );
 
     switch (currentView) {
       case 'landing': return <LandingView onStart={() => navigateTo('menu')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={handleImportConfig} />;
@@ -266,7 +289,7 @@ export default function App() {
   const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin'].includes(currentView);
 
   return (
-    <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
+    <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden font-jakarta">
       {showWelcomeModal && qrDetails && (
         <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl space-y-6">
