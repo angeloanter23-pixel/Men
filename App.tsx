@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
 import { menuItems as defaultMenuItems, categories as defaultCategories } from './data';
+import * as MenuService from './services/menuService';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -49,29 +50,43 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
+  const [qrDetails, setQrDetails] = useState<{label: string, restaurantName: string, branches: string[]} | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
 
-  const syncStateWithURL = () => {
+  const syncStateWithURL = async () => {
     const hashPart = window.location.hash.split('?')[0];
-    const queryPart = window.location.hash.split('?')[1] || '';
     const hash = hashPart.replace(/^#\/?/, '');
     const parts = hash.split('/').filter(p => p !== '');
-    
-    // Check for Table Token in query params
-    const urlParams = new URLSearchParams(queryPart);
-    const tableToken = urlParams.get('k');
+    const path = window.location.pathname;
 
-    if (tableToken && parts.length > 0) {
-      const tableName = parts[0]; // In the pattern #/[table-name], parts[0] is the table name
-      if (activeTable !== tableName) {
-        setActiveTable(tableName);
-        setShowWelcomeModal(true);
-        setCurrentView('menu');
-        // Clear query params from hash to prevent repeated welcome but stay on menu
-        window.location.hash = `/menu`;
-        return;
+    // Detection for new URL pattern: https://men-m53q.vercel.app/[token]
+    // We treat any non-root path as a potential token if it doesn't match standard views
+    if (path !== '/' && path.length > 1) {
+      const token = path.substring(1); // Remove leading slash
+      
+      // Standard view routes to exclude from token detection
+      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing'];
+      if (!reserved.includes(token.toLowerCase())) {
+        try {
+          const details = await MenuService.getQRCodeByCode(token);
+          if (details) {
+            setActiveTable(details.label);
+            setQrDetails({
+              label: details.label,
+              restaurantName: details.restaurant_name || 'Premium Merchant',
+              branches: details.branches.map((b: any) => b.name)
+            });
+            setShowWelcomeModal(true);
+            setCurrentView('menu');
+            // Clean up the URL to hash routing for SPA stability
+            window.history.replaceState({}, '', '/#/menu');
+            return;
+          }
+        } catch (err) {
+          console.error("Token resolution failure:", err);
+        }
       }
     }
 
@@ -105,7 +120,6 @@ export default function App() {
       setCurrentView(viewMap[route]);
       setSelectedItem(null);
     } else {
-      // If it doesn't match a known route but we're here, default to landing unless table is active
       setCurrentView(activeTable ? 'menu' : 'landing');
       setSelectedItem(null);
     }
@@ -311,23 +325,33 @@ export default function App() {
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
       {/* Welcome Table Modal */}
-      {showWelcomeModal && (
+      {showWelcomeModal && qrDetails && (
         <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl space-y-6">
             <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
               <i className="fa-solid fa-utensils text-3xl"></i>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Authenticated Session</p>
-              <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
-                You're ordering from <span className="text-orange-600">{activeTable?.replace(/-/g, ' ')}</span>
-              </h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Authenticated Session</p>
+                <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
+                  Welcome to <span className="text-orange-600">{qrDetails.restaurantName}</span>
+                </h2>
+              </div>
+              
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 italic">Location Context</p>
+                <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
+                {qrDetails.branches.length > 0 && (
+                  <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 opacity-60">Served by: {qrDetails.branches.join(', ')}</p>
+                )}
+              </div>
             </div>
             <button 
               onClick={() => setShowWelcomeModal(false)}
               className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all"
             >
-              Let's Eat
+              Start Ordering
             </button>
           </div>
         </div>

@@ -22,12 +22,9 @@ const QRBlock: React.FC<{
   const [localCode, setLocalCode] = useState(asset.code);
   const [isCopied, setIsCopied] = useState(false);
 
-  // Production URL Configuration
+  // Production URL Pattern: https://men-m53q.vercel.app/[token]
   const productionBase = "https://men-m53q.vercel.app/";
-  const slugify = (text: string) => text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
-  
-  // Pattern: https://men-m53q.vercel.app/#/[table-label]?k=[token]
-  const finalUrl = `${productionBase}#/${slugify(localLabel)}?k=${localCode}`;
+  const finalUrl = `${productionBase}${localCode}`;
 
   useEffect(() => {
     if (canvasRef.current && typeof QRious !== 'undefined') {
@@ -99,7 +96,7 @@ const QRBlock: React.FC<{
           <canvas ref={canvasRef}></canvas>
         </div>
         <div className="mt-6 w-full px-8">
-           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 text-center">Real Production URL</p>
+           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 text-center">Production Entry URL</p>
            <p className="text-[8px] font-bold text-slate-400 break-all text-center opacity-60 leading-tight">
              {finalUrl}
            </p>
@@ -214,8 +211,8 @@ const AdminQR: React.FC = () => {
     <div className="min-h-screen bg-slate-50/30 pb-32 animate-fade-in font-['Plus_Jakarta_Sans']">
       <div className="bg-white border-b border-slate-100 sticky top-16 z-40 mb-10 shadow-sm">
         <div className="max-w-xl mx-auto flex justify-around">
-          <button onClick={() => setActiveTab('gen')} className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'gen' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}>Deploy Node{activeTab === 'gen' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}</button>
-          <button onClick={() => setActiveTab('saved')} className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'saved' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}>Saved Vault ({savedQrs.length}){activeTab === 'saved' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}</button>
+          <button onClick={() => setActiveTab('gen')} className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'gen' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}>Generator{activeTab === 'gen' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}</button>
+          <button onClick={() => setActiveTab('saved')} className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'saved' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}>Save Vaults{activeTab === 'saved' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}</button>
         </div>
       </div>
 
@@ -253,6 +250,7 @@ const AdminQR: React.FC = () => {
           </section>
         ) : (
           <section className="space-y-6 animate-fade-in">
+            <h3 className="text-center text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] mb-6 italic">QR List</h3>
             {savedQrs.length === 0 ? (
               <div className="py-32 text-center border-4 border-dashed border-slate-100 rounded-[4rem] bg-white/50"><i className="fa-solid fa-folder-open text-4xl text-slate-100 mb-6"></i><p className="text-slate-300 text-[11px] font-black uppercase tracking-[0.5em] italic">Vault is empty</p></div>
             ) : (

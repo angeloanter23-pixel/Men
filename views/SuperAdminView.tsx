@@ -14,6 +14,11 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [selectedRestId, setSelectedRestId] = useState<string>('all');
 
+  // Seek states
+  const [seekInput, setSeekInput] = useState('');
+  const [seekResult, setSeekResult] = useState<any>(null);
+  const [showSeekModal, setShowSeekModal] = useState(false);
+
   const tables: { id: TableName; label: string; icon: string }[] = [
     { id: 'restaurants', label: 'Restaurants', icon: 'fa-building' },
     { id: 'branches', label: 'Branches', icon: 'fa-sitemap' },
@@ -157,7 +162,6 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const handleDelete = async (row: any) => {
-    // Map the aliased ID back to 'id' for the EQ filter
     const targetId = row.id || row.qr_id || row.category_id || row.item_id;
     if (!confirm(`Confirm deletion of record ID: ${targetId}?`)) return;
     
@@ -168,6 +172,44 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       await fetchTableData();
     } catch (err: any) {
       alert("Deletion failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSeek = async () => {
+    if (!seekInput.trim()) return;
+    setLoading(true);
+    try {
+      const { data: qrData, error: seekError } = await supabase
+        .from('qr_codes')
+        .select(`
+          *,
+          restaurants ( id, name )
+        `)
+        .eq('code', seekInput.trim())
+        .maybeSingle();
+
+      if (seekError) throw seekError;
+      if (!qrData) {
+        alert("Discovery Failure: No QR entity found matching this identifier.");
+        return;
+      }
+
+      // Fetch branches for this restaurant for context
+      const { data: branchesData } = await supabase
+        .from('branches')
+        .select('name, subdomain')
+        .eq('restaurant_id', qrData.restaurant_id);
+
+      setSeekResult({
+        ...qrData,
+        restaurant_name: qrData.restaurants?.name || 'Unknown Restaurant',
+        branches: branchesData || []
+      });
+      setShowSeekModal(true);
+    } catch (err: any) {
+      alert("Seek Error: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -187,7 +229,23 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
-          <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-3">
+          {/* Seeker Tool */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-2 flex items-center gap-2">
+            <textarea 
+              value={seekInput}
+              onChange={e => setSeekInput(e.target.value)}
+              placeholder="Paste QR Code Token..."
+              className="bg-slate-900 border border-white/5 rounded-xl px-4 py-2 text-[10px] font-bold outline-none text-indigo-400 focus:ring-2 ring-indigo-500/20 w-48 h-10 resize-none no-scrollbar"
+            />
+            <button 
+              onClick={handleSeek}
+              className="h-10 px-4 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-magnifying-glass"></i> SEEK
+            </button>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-3 h-[52px]">
              <span className="text-[9px] font-black uppercase text-slate-500">Master Account:</span>
              <select 
                value={selectedRestId} 
@@ -268,6 +326,70 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         </div>
       </div>
       
+      {/* Seek Modal */}
+      {showSeekModal && seekResult && (
+        <div className="fixed inset-0 z-[1000] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in" onClick={() => setShowSeekModal(false)}>
+          <div className="bg-[#0f172a] border border-white/10 w-full max-w-sm rounded-[3rem] p-10 lg:p-12 shadow-2xl relative transition-all" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-10">
+               <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500 mb-3 italic">Discovery Diagnostic</p>
+                  <h2 className="text-3xl font-black uppercase tracking-tighter text-white italic leading-none">Entity Identity</h2>
+               </div>
+               <button onClick={() => setShowSeekModal(false)} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-slate-500 hover:text-rose-500 transition-all border border-white/5"><i className="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div className="space-y-8">
+               <div className="space-y-3">
+                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest italic ml-2">QR Designation (Label)</label>
+                  <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 flex items-center gap-4">
+                     <i className="fa-solid fa-tag text-indigo-400"></i>
+                     <p className="font-black text-lg text-white uppercase italic tracking-tighter">{seekResult.label}</p>
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Master Business Name</label>
+                  <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 flex items-center gap-4">
+                     <i className="fa-solid fa-building text-indigo-400"></i>
+                     <p className="font-bold text-sm text-slate-200">{seekResult.restaurant_name}</p>
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Associated Branch Territories</label>
+                  <div className="space-y-2">
+                     {seekResult.branches.length > 0 ? seekResult.branches.map((b: any, i: number) => (
+                       <div key={i} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex justify-between items-center group">
+                          <div>
+                            <p className="text-xs font-black text-white uppercase tracking-tight">{b.name}</p>
+                            <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest italic">{b.subdomain}</p>
+                          </div>
+                          <i className="fa-solid fa-circle-nodes text-[10px] text-indigo-500/20 group-hover:text-indigo-500 transition-colors"></i>
+                       </div>
+                     )) : (
+                       <p className="text-[9px] text-slate-600 font-bold italic py-2 ml-2">No branch context defined for this entity.</p>
+                     )}
+                  </div>
+               </div>
+
+               <div className="pt-6 border-t border-white/5">
+                  <div className="flex justify-between items-center px-2">
+                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Global UID</span>
+                    <span className="text-[8px] font-mono text-slate-400 opacity-50">{seekResult.id}</span>
+                  </div>
+               </div>
+            </div>
+
+            <button 
+              onClick={() => setShowSeekModal(false)}
+              className="w-full mt-10 py-5 bg-indigo-600 text-white rounded-3xl font-black uppercase text-[10px] tracking-[0.4em] shadow-xl active:scale-95 transition-all"
+            >
+              Close Diagnostic
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading && (
         <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] flex items-center justify-center z-[100]">
            <i className="fa-solid fa-spinner animate-spin text-4xl text-indigo-500"></i>

@@ -224,3 +224,29 @@ export async function deleteQRCode(id: string) {
   const { error } = await supabase.from('qr_codes').delete().eq('id', id);
   if (error) throw error;
 }
+
+export async function getQRCodeByCode(code: string) {
+  const { data, error } = await supabase
+    .from('qr_codes')
+    .select(`
+      *,
+      restaurants ( id, name )
+    `)
+    .eq('code', code)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  // Also fetch branches to see where this code might be applicable
+  const { data: branches } = await supabase
+    .from('branches')
+    .select('name')
+    .eq('restaurant_id', data.restaurant_id);
+
+  return {
+    ...data,
+    restaurant_name: data.restaurants?.name,
+    branches: branches || []
+  };
+}
