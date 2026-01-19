@@ -62,12 +62,11 @@ export default function App() {
     const path = window.location.pathname;
 
     // Detection for new URL pattern: https://men-m53q.vercel.app/[token]
-    // We treat any non-root path as a potential token if it doesn't match standard views
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); // Remove leading slash
       
       // Standard view routes to exclude from token detection
-      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing'];
+      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu'];
       if (!reserved.includes(token.toLowerCase())) {
         try {
           const details = await MenuService.getQRCodeByCode(token);
@@ -324,7 +323,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden">
-      {/* Welcome Table Modal */}
+      {/* Welcome Discovery Modal */}
       {showWelcomeModal && qrDetails && (
         <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl space-y-6">
@@ -343,7 +342,7 @@ export default function App() {
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 italic">Location Context</p>
                 <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
                 {qrDetails.branches.length > 0 && (
-                  <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 opacity-60">Served by: {qrDetails.branches.join(', ')}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 opacity-60">Branch: {qrDetails.branches.join(', ')}</p>
                 )}
               </div>
             </div>
