@@ -42,23 +42,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Auto-sync from cloud on load
   useEffect(() => {
-    if (restaurantId) {
+    if (restaurantId && restaurantId !== "undefined") {
       refreshCloudMenu();
     }
   }, [restaurantId]);
 
   const refreshCloudMenu = async () => {
-    if (!restaurantId) return;
+    if (!restaurantId || restaurantId === "undefined") return;
     setIsSyncing(true);
-    setSyncProgress({ current: 0, total: 100, label: 'Connecting to Cloud...' });
+    setSyncProgress({ current: 0, total: 100, label: 'Synchronizing with Database...' });
     try {
+      // Direct call to fetch from database, ignoring local mockups
       const cloudMenu = await MenuService.getMenuByRestaurantId(restaurantId);
+      
+      // HARD OVERWRITE: Clear current state and use database values.
+      // If the database returns empty categories/items, the editor will correctly show an empty state.
       if (cloudMenu) {
-        setMenuItems(cloudMenu.items);
-        setCategories(cloudMenu.categories);
+        setMenuItems(cloudMenu.items || []);
+        setCategories(cloudMenu.categories || []);
       }
-    } catch (err) {
-      console.error("Cloud Refresh Failed:", err);
+    } catch (err: any) {
+      const errorMsg = err.message || JSON.stringify(err);
+      console.error("Cloud Refresh Failed:", errorMsg);
+      setSyncProgress(p => ({ ...p, label: `Sync Error: ${errorMsg.slice(0, 15)}...` }));
     } finally {
       setIsSyncing(false);
     }
@@ -76,7 +82,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setPreviewData(backup);
         setActiveTab('import-preview');
       } catch (err) {
-        alert("Manifest Error: The uploaded file is not a valid JSON configuration.");
+        alert("Manifest Error: Invalid JSON configuration.");
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
@@ -87,7 +93,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const commitImportToCloud = async () => {
     if (!previewData) return;
     const menuId = session?.defaultMenuId;
-    if (!restaurantId || !menuId) return alert("Enterprise Context missing. Please re-login.");
+    if (!restaurantId || !menuId || restaurantId === "undefined") return alert("Enterprise Context Missing.");
 
     setIsSyncing(true);
     try {
@@ -96,19 +102,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const totalSteps = categoryData.length + menuData.length;
       let currentStep = 0;
 
+      const currentCats = [...categories];
+
       for (const cat of categoryData) {
-        setSyncProgress(p => ({ ...p, label: `Syncing Category: ${cat.name}`, current: ++currentStep, total: totalSteps }));
-        const dbCat = await MenuService.upsertCategory({ name: cat.name, menu_id: menuId, order_index: currentStep });
+        setSyncProgress(p => ({ ...p, label: `Syncing: ${cat.name}`, current: ++currentStep, total: totalSteps }));
+        
+        let dbCat = currentCats.find(c => c.name.toLowerCase() === cat.name.toLowerCase());
+        
+        if (!dbCat) {
+          // Explicitly NOT sending an icon field as it doesn't exist
+          dbCat = await MenuService.upsertCategory({ name: cat.name, menu_id: menuId, order_index: currentStep });
+          currentCats.push(dbCat!);
+        }
         
         const itemsInCat = menuData.filter((m: any) => m.cat_name === cat.name || m.category_id === cat.id);
         for (const item of itemsInCat) {
+          const itemExists = menuItems.some(i => i.name.toLowerCase() === item.name.toLowerCase() && i.category_id === dbCat!.id);
+          if (itemExists) {
+            currentStep++;
+            continue;
+          }
+
           setSyncProgress(p => ({ ...p, label: `Syncing Item: ${item.name}`, current: ++currentStep, total: totalSteps }));
           await MenuService.upsertMenuItem({
             name: item.name,
             price: Number(item.price),
             description: item.description,
             image_url: item.image_url,
-            category_id: dbCat.id,
+            category_id: dbCat!.id,
             pax: item.pax || '1 Person',
             serving_time: item.serving_time || '15 mins'
           });
@@ -119,7 +140,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setActiveTab('menu');
       alert("Deployment Success.");
     } catch (err: any) {
-      alert("Deployment Error: " + err.message);
+      alert("Deployment Error: " + (err.message || "Unknown error"));
     } finally {
       setIsSyncing(false);
     }
@@ -142,7 +163,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <thead className="bg-slate-50 border-b border-slate-100"><tr className="text-[9px] font-black uppercase tracking-widest text-slate-400"><th className="p-5">Entity</th><th className="p-5 text-right">Action</th></tr></thead>
               <tbody className="divide-y divide-slate-50">
                 {items.map((it: any, i: number) => (
-                  <tr key={i}><td className="p-5 font-black text-xs text-slate-800 uppercase italic">{it.name}</td><td className="p-5 text-right"><span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[8px] font-black uppercase">To be Created</span></td></tr>
+                  <tr key={i}><td className="p-5 font-black text-xs text-slate-800 uppercase italic">{it.name}</td><td className="p-5 text-right"><span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[8px] font-black uppercase">To be Synced</span></td></tr>
                 ))}
               </tbody>
            </table>
@@ -189,7 +210,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="pt-6 mt-4 border-t border-slate-800">
             <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleLoadConfig} />
             <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold text-indigo-400 hover:bg-indigo-500/10">
-              <i className="fa-solid fa-file-import"></i> Load Manifest
+              <i className="fa-solid fa-file-import"></i> Load Config
             </button>
           </div>
         </nav>

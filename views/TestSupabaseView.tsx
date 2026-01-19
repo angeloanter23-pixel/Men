@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import * as MenuService from '../services/menuService';
 
@@ -142,9 +143,13 @@ const TestSupabaseView: React.FC = () => {
         await MenuService.insertBranch(formValues.name, sub, session!.restaurant.id);
         await refreshBranches();
       } else if (modalType === 'category') {
+        const cleanName = formValues.name.trim();
+        const exists = activeBranch.categories?.some((c: any) => c.name.toLowerCase() === cleanName.toLowerCase());
+        if (exists) throw new Error("A category with this name already exists.");
+
         await MenuService.upsertCategory({ 
           id: formValues.id || undefined,
-          name: formValues.name, 
+          name: cleanName, 
           menu_id: activeBranch.menu_id, 
           order_index: (activeBranch.categories?.length || 0) 
         });
@@ -176,6 +181,9 @@ const TestSupabaseView: React.FC = () => {
 
   const quickAddCategory = async (name: string) => {
     if (!activeBranch) return;
+    const exists = activeBranch.categories?.some((c: any) => c.name.toLowerCase() === name.toLowerCase());
+    if (exists) return alert(`Category "${name}" already exists.`);
+
     try {
       setLoading(true);
       await MenuService.upsertCategory({ 

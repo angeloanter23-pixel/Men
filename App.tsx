@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
 import * as MenuService from './services/menuService';
+import { menuItems as mockupItems, categories as mockupCategories } from './data';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -37,9 +38,14 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // COMPLETELY EMPTY INITIAL STATE - No more JSON fallback
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  // SESSION-AWARE DATA INITIALIZATION
+  const hasMerchantSession = !!localStorage.getItem('foodie_supabase_session');
+
+  // If a merchant session is present, we start with EMPTY states to force database loading.
+  // We only show mockup items on the public landing tour when no session is active.
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(hasMerchantSession ? [] : mockupItems);
+  const [categories, setCategories] = useState<Category[]>(hasMerchantSession ? [] : mockupCategories);
+  
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [salesHistory, setSalesHistory] = useState<SalesRecord[]>([]);
   const [adminCreds, setAdminCreds] = useState({ email: 'admin@foodie.com', password: 'password123' });
@@ -58,7 +64,7 @@ export default function App() {
 
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
-      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu'];
+      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu', 'test-supabase'];
       
       if (!reserved.includes(token.toLowerCase())) {
         try {
@@ -78,12 +84,9 @@ export default function App() {
             setQrDetails(qrSession);
             localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
 
-            // FETCH FRESH DATA FOR SCANNED RESTAURANT
             const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
-            if (cloudMenu) {
-              setMenuItems(cloudMenu.items);
-              setCategories(cloudMenu.categories);
-            }
+            setMenuItems(cloudMenu.items || []);
+            setCategories(cloudMenu.categories || []);
             
             setShowWelcomeModal(true);
             setCurrentView('menu');
@@ -128,20 +131,38 @@ export default function App() {
   useEffect(() => {
     window.addEventListener('hashchange', syncStateWithURL);
     
-    const savedQR = localStorage.getItem('foodie_active_qr');
-    if (savedQR) {
-      const parsed = JSON.parse(savedQR);
-      setQrDetails(parsed);
-      setActiveTable(parsed.label);
-      // Auto-load menu from cloud if session exists
-      MenuService.getMenuByRestaurantId(parsed.restaurant_id).then(res => {
-        if (res) {
-          setMenuItems(res.items);
-          setCategories(res.categories);
-        }
-      });
-    }
+    const initializeData = async () => {
+      setIsLoading(true);
+      try {
+        const savedQR = localStorage.getItem('foodie_active_qr');
+        const sessionRaw = localStorage.getItem('foodie_supabase_session');
+        const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+        const merchantRid = session?.restaurant?.id;
 
+        if (savedQR) {
+          const parsed = JSON.parse(savedQR);
+          if (parsed.restaurant_id && parsed.restaurant_id !== "undefined") {
+            setQrDetails(parsed);
+            setActiveTable(parsed.label);
+            const res = await MenuService.getMenuByRestaurantId(parsed.restaurant_id);
+            // Overwrite with actual DB data
+            setMenuItems(res.items || []); 
+            setCategories(res.categories || []); 
+          }
+        } else if (merchantRid && merchantRid !== "undefined") {
+          // If merchant is logged in, ensure we ONLY show their DB data
+          const res = await MenuService.getMenuByRestaurantId(merchantRid);
+          setMenuItems(res.items || []); 
+          setCategories(res.categories || []); 
+        }
+      } catch (err) {
+        console.error("Initialization sync failed:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeData();
     syncStateWithURL();
     return () => window.removeEventListener('hashchange', syncStateWithURL);
   }, []);
@@ -155,7 +176,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Basic settings load
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
     const savedSales = localStorage.getItem('foodie_sales_history');
     const savedAdmin = localStorage.getItem('foodie_admin_creds');
@@ -165,8 +185,6 @@ export default function App() {
     if (savedSales) setSalesHistory(JSON.parse(savedSales));
     if (savedAdmin) setAdminCreds(JSON.parse(savedAdmin));
     if (savedLogo) setLogo(savedLogo);
-    
-    setIsLoading(false);
   }, []);
 
   const finalizeOrder = async () => {
@@ -234,7 +252,7 @@ export default function App() {
     if (isLoading) return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 animate-fade-in">
         <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="font-black text-indigo-600 uppercase tracking-[0.4em] text-[10px]">Cloud Syncing...</p>
+        <p className="font-black text-indigo-600 uppercase tracking-[0.4em] text-[10px]">Merchant Syncing...</p>
       </div>
     );
 

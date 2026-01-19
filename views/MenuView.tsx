@@ -51,12 +51,20 @@ const MenuView: React.FC<MenuViewProps> = ({
       </section>
 
       <div className="flex overflow-x-auto gap-3 px-6 py-4 no-scrollbar sticky top-16 bg-white/90 backdrop-blur-md z-30 mb-4 border-b border-slate-50">
-        {['all', ...categories.map(c => c.name)].map(cat => (
+        <button 
+          onClick={() => onCategorySelect('all')}
+          className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all shadow-sm border flex items-center gap-2 ${activeCategory === 'all' ? 'bg-orange-500 text-white border-orange-500 shadow-orange-100' : 'bg-white text-slate-400 border-slate-100'}`}
+        >
+          <i className="fa-solid fa-list-ul"></i>
+          all
+        </button>
+        {categories.map(cat => (
           <button 
-            key={cat} onClick={() => onCategorySelect(cat)}
-            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all shadow-sm border ${activeCategory === cat ? 'bg-orange-500 text-white border-orange-500 shadow-orange-100' : 'bg-white text-slate-400 border-slate-100'}`}
+            key={cat.id} onClick={() => onCategorySelect(cat.name)}
+            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all shadow-sm border flex items-center gap-2 ${activeCategory === cat.name ? 'bg-orange-500 text-white border-orange-500 shadow-orange-100' : 'bg-white text-slate-400 border-slate-100'}`}
           >
-            {cat}
+            <i className={`fa-solid ${cat.icon || 'fa-folder'}`}></i>
+            {cat.name}
           </button>
         ))}
       </div>

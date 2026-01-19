@@ -22,7 +22,7 @@ export async function authSignUp(email: string, pass: string) {
     .select()
     .single();
   
-  if (restErr) throw restErr;
+  if (restErr) throw new Error(restErr.message || "Failed to create restaurant profile.");
 
   const { data: menu, error: menuErr } = await supabase
     .from('menus')
@@ -30,7 +30,7 @@ export async function authSignUp(email: string, pass: string) {
     .select()
     .single();
 
-  if (menuErr) throw menuErr;
+  if (menuErr) throw new Error(menuErr.message || "Failed to initialize primary menu.");
 
   const { data: user, error: userErr } = await supabase
     .from('users')
@@ -44,7 +44,7 @@ export async function authSignUp(email: string, pass: string) {
 
   if (userErr) {
     await supabase.from('restaurants').delete().eq('id', rest.id);
-    throw userErr;
+    throw new Error(userErr.message || "User enrollment failed.");
   }
 
   return { user, restaurant: rest, defaultMenuId: menu.id };
@@ -61,20 +61,19 @@ export async function authSignIn(email: string, pass: string) {
     .eq('password', pass)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Authentication error.");
   if (!data) throw new Error("Invalid credentials or user not found.");
 
-  const { data: menu } = await supabase
+  const { data: menus } = await supabase
     .from('menus')
     .select('id')
     .eq('restaurant_id', data.restaurant_id)
-    .limit(1)
-    .maybeSingle();
+    .order('created_at', { ascending: true });
 
   return {
     user: { id: data.id, email: data.email, restaurant_id: data.restaurant_id },
     restaurant: data.restaurants,
-    defaultMenuId: menu?.id
+    defaultMenuId: menus && menus.length > 0 ? menus[0].id : null
   };
 }
 
@@ -87,7 +86,7 @@ export async function updateRestaurant(id: string, name: string) {
     .eq('id', id)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Update failed.");
   return data;
 }
 
@@ -99,22 +98,25 @@ export async function getBranchesForRestaurant(restaurantId: string) {
     .select('*')
     .eq('restaurant_id', restaurantId)
     .order('name');
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Fetch failed.");
   return data || [];
 }
 
 export async function getMenuByRestaurantId(restaurantId: string) {
-  // 1. Get the primary menu for the restaurant
-  const { data: menu, error: menuErr } = await supabase
+  if (!restaurantId || restaurantId === "undefined") return { categories: [], items: [] };
+
+  const { data: menus, error: menuErr } = await supabase
     .from('menus')
     .select('id')
     .eq('restaurant_id', restaurantId)
-    .limit(1)
-    .maybeSingle();
+    .order('created_at', { ascending: true });
 
-  if (menuErr || !menu) return null;
+  if (menuErr) throw new Error(menuErr.message);
+  if (!menus || menus.length === 0) return { categories: [], items: [] };
 
-  // 2. Get categories and join with items
+  const menuId = menus[0].id;
+
+  // REMOVED 'icon' from selection to fix error
   const { data: categories, error: catErr } = await supabase
     .from('categories')
     .select(`
@@ -123,12 +125,11 @@ export async function getMenuByRestaurantId(restaurantId: string) {
         id, category_id, name, description, price, image_url, pax, serving_time, is_popular, created_at
       )
     `)
-    .eq('menu_id', menu.id)
+    .eq('menu_id', menuId)
     .order('order_index');
 
-  if (catErr) throw catErr;
+  if (catErr) throw new Error(catErr.message || "Catalog fetch failed.");
 
-  // 3. Flatten for the UI state
   const allItems: any[] = [];
   const processedCats = (categories || []).map(cat => {
     const catItems = (cat.items || []).map((item: any) => ({
@@ -136,7 +137,7 @@ export async function getMenuByRestaurantId(restaurantId: string) {
       cat_name: cat.name
     }));
     allItems.push(...catItems);
-    return { id: cat.id, name: cat.name };
+    return { id: cat.id, name: cat.name }; // Return only name and id
   });
 
   return { categories: processedCats, items: allItems };
@@ -152,9 +153,10 @@ export async function getMenuForBranch(overrideSubdomain?: string) {
     .eq('subdomain', subdomain)
     .maybeSingle();
 
-  if (branchErr) throw branchErr;
+  if (branchErr) throw new Error(branchErr.message || "Branch lookup failed.");
   if (!branch) return { error: 'Branch not found', detectedSubdomain: subdomain };
 
+  // REMOVED 'icon' from selection to fix error
   const { data: categories, error: catErr } = await supabase
     .from('categories')
     .select(`
@@ -166,7 +168,7 @@ export async function getMenuForBranch(overrideSubdomain?: string) {
     .eq('menu_id', branch.menu_id)
     .order('order_index');
 
-  if (catErr) throw catErr;
+  if (catErr) throw new Error(catErr.message || "Branch catalog fetch failed.");
 
   return { 
     ...branch, 
@@ -178,7 +180,7 @@ export async function getMenuForBranch(overrideSubdomain?: string) {
 
 export async function deleteRestaurant(id: string) {
   const { error } = await supabase.from('restaurants').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Purge failed.");
 }
 
 export async function insertBranch(name: string, subdomain: string, restaurant_id: string) {
@@ -188,7 +190,7 @@ export async function insertBranch(name: string, subdomain: string, restaurant_i
     .select()
     .single();
 
-  if (menuErr) throw menuErr;
+  if (menuErr) throw new Error(menuErr.message || "Branch menu creation failed.");
 
   const { data: branch, error: branchErr } = await supabase
     .from('branches')
@@ -201,35 +203,35 @@ export async function insertBranch(name: string, subdomain: string, restaurant_i
     .select()
     .single();
 
-  if (branchErr) throw branchErr;
+  if (branchErr) throw new Error(branchErr.message || "Branch deployment failed.");
   return branch;
 }
 
 export async function deleteBranch(id: string) {
   const { error } = await supabase.from('branches').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Branch deletion failed.");
 }
 
 export async function upsertCategory(category: any) {
   const { data, error } = await supabase.from('categories').upsert(category).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Category sync failed.");
   return data;
 }
 
 export async function deleteCategory(id: string) {
   const { error } = await supabase.from('categories').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Category deletion failed.");
 }
 
 export async function upsertMenuItem(item: any) {
   const { data, error } = await supabase.from('items').upsert(item).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Dish sync failed.");
   return data;
 }
 
 export async function deleteMenuItem(id: string) {
   const { error } = await supabase.from('items').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Dish deletion failed.");
 }
 
 // --- QR Management ---
@@ -240,7 +242,7 @@ export async function getQRCodes(restaurantId: string) {
     .select('*')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(error.message || "QR fetch failed.");
   return data || [];
 }
 
@@ -250,13 +252,13 @@ export async function upsertQRCode(qr: any) {
     .upsert(qr)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(error.message || "QR sync failed.");
   return data;
 }
 
 export async function deleteQRCode(id: string) {
   const { error } = await supabase.from('qr_codes').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message || "QR deletion failed.");
 }
 
 export async function getQRCodeByCode(code: string) {
@@ -269,7 +271,7 @@ export async function getQRCodeByCode(code: string) {
     .eq('code', code)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Access code lookup failed.");
   if (!data) return null;
 
   const { data: branches } = await supabase
@@ -291,7 +293,7 @@ export async function insertOrders(orders: any[]) {
     .from('orders')
     .insert(orders)
     .select();
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Order placement failed.");
   return data;
 }
 
@@ -302,7 +304,7 @@ export async function getOrdersByTable(restaurantId: string, tableLabel: string)
     .eq('restaurant_id', restaurantId)
     .eq('table_number', tableLabel)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Table order fetch failed.");
   return data || [];
 }
 
@@ -312,7 +314,7 @@ export async function getMerchantOrders(restaurantId: string) {
     .select('*')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Merchant order fetch failed.");
   return data || [];
 }
 
@@ -323,6 +325,6 @@ export async function updateOrder(id: string, updates: any) {
     .eq('id', id)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Order update failed.");
   return data;
 }
