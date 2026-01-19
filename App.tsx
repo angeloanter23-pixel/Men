@@ -164,16 +164,21 @@ export default function App() {
     const itemsToProcess = pendingSingleItem ? [pendingSingleItem] : cart;
     if (itemsToProcess.length === 0) { navigateTo('menu'); return; }
 
-    const restaurant_id = qrDetails?.restaurant_id || '9148d88e-6701-4475-ae90-c08ef38411df'; // Fallback for local testing if no QR session
+    // Resolve restaurant ID with multi-level fallback
+    const sessionRaw = localStorage.getItem('foodie_supabase_session');
+    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+    const sessionRestaurantId = session?.restaurant?.id;
+    
+    const restaurant_id = qrDetails?.restaurant_id || sessionRestaurantId || '9148d88e-6701-4475-ae90-c08ef38411df';
 
-    // Map cart items to database schema
+    // Map cart items to database schema - ensuring data types are correct
     const dbOrders = itemsToProcess.map(item => ({
-      restaurant_id,
-      item_id: item.id,
+      restaurant_id: restaurant_id,
+      item_id: String(item.id),
       item_name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      amount: item.price * item.quantity,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+      amount: Number(item.price * item.quantity),
       table_number: activeTable || 'Walk-in',
       customer_name: item.orderTo || 'Guest',
       order_status: 'Preparing',
@@ -182,12 +187,18 @@ export default function App() {
     }));
 
     try {
+      console.log("Submitting orders to cloud:", dbOrders);
       await MenuService.insertOrders(dbOrders);
-      if (pendingSingleItem) setPendingSingleItem(null); else setCart([]);
+      
+      // Cleanup UI state
+      if (pendingSingleItem) setPendingSingleItem(null);
+      else setCart([]);
+      
       navigateTo('orders');
       setSelectedItem(null);
-    } catch (err) {
-      alert("Order submission failed. Cloud sync error.");
+    } catch (err: any) {
+      console.error("Supabase Order Error:", err);
+      alert(`Order Failed: ${err.message || "Database connection error. Please try again."}`);
     }
   };
 

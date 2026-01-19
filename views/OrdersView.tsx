@@ -24,7 +24,14 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
 
   const fetchOrders = async () => {
     if (!tableNumber) return;
-    const rid = restaurantId || '9148d88e-6701-4475-ae90-c08ef38411df'; // Fallback
+    
+    // Resolve ID from session if prop is missing
+    const sessionRaw = localStorage.getItem('foodie_supabase_session');
+    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+    const sessionRestaurantId = session?.restaurant?.id;
+
+    const rid = restaurantId || sessionRestaurantId || '9148d88e-6701-4475-ae90-c08ef38411df'; 
+    
     try {
       const data = await MenuService.getOrdersByTable(rid, tableNumber);
       setOrders(data);
