@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
-import { menuItems as defaultMenuItems, categories as defaultCategories } from './data';
 import * as MenuService from './services/menuService';
 
 // Components
@@ -38,6 +37,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Initialize as empty - No more JSON fallback
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -56,7 +56,6 @@ export default function App() {
   const syncStateWithURL = async () => {
     const path = window.location.pathname;
 
-    // Check if URL contains a QR token (e.g. /Sz6zww)
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
       const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu'];
@@ -67,7 +66,6 @@ export default function App() {
           const details = await MenuService.getQRCodeByCode(token);
           
           if (details) {
-            // 1. Setup Session Context
             setActiveTable(details.label);
             const qrSession = {
               id: details.id,
@@ -80,13 +78,14 @@ export default function App() {
             setQrDetails(qrSession);
             localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
 
-            // 2. FETCH ACTUAL MENU FROM CLOUD FOR THIS RESTAURANT
+            // FORCE FETCH MENU FROM DATABASE
             const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
             if (cloudMenu) {
               setMenuItems(cloudMenu.items);
               setCategories(cloudMenu.categories);
-              localStorage.setItem('foodie_menu_items', JSON.stringify(cloudMenu.items));
-              localStorage.setItem('foodie_categories', JSON.stringify(cloudMenu.categories));
+            } else {
+              setMenuItems([]);
+              setCategories([]);
             }
             
             setShowWelcomeModal(true);
@@ -95,14 +94,13 @@ export default function App() {
             return;
           }
         } catch (err) {
-          console.error("Token resolution failure:", err);
+          console.error("Cloud Sync Failure:", err);
         } finally {
           setIsLoading(false);
         }
       }
     }
 
-    // Standard hash-based routing
     const hashPart = window.location.hash.replace(/^#\/?/, '').split('?')[0];
     const parts = hashPart.split('/').filter(p => p !== '');
 
@@ -144,11 +142,19 @@ export default function App() {
   useEffect(() => {
     window.addEventListener('hashchange', syncStateWithURL);
     
+    // Attempt to recover last session from Supabase context
     const savedQR = localStorage.getItem('foodie_active_qr');
     if (savedQR) {
       const parsed = JSON.parse(savedQR);
       setQrDetails(parsed);
       setActiveTable(parsed.label);
+      // Re-fetch to ensure data freshness from DB
+      MenuService.getMenuByRestaurantId(parsed.restaurant_id).then(res => {
+        if (res) {
+          setMenuItems(res.items);
+          setCategories(res.categories);
+        }
+      });
     }
 
     syncStateWithURL();
@@ -164,20 +170,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    const savedMenu = localStorage.getItem('foodie_menu_items');
-    const savedCats = localStorage.getItem('foodie_categories');
+    // Only load non-menu settings from localStorage
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
     const savedSales = localStorage.getItem('foodie_sales_history');
     const savedAdmin = localStorage.getItem('foodie_admin_creds');
     const savedLogo = localStorage.getItem('foodie_business_logo');
-
-    if (savedMenu && savedCats) {
-      setMenuItems(JSON.parse(savedMenu));
-      setCategories(JSON.parse(savedCats));
-    } else {
-      setMenuItems(defaultMenuItems);
-      setCategories(defaultCategories);
-    }
 
     if (savedFeedbacks) setFeedbacks(JSON.parse(savedFeedbacks));
     if (savedSales) setSalesHistory(JSON.parse(savedSales));
@@ -214,21 +211,14 @@ export default function App() {
     }));
 
     try {
-      console.log(`Submitting orders to database table 'orders'...`);
       await MenuService.insertOrders(dbOrders);
-      
       if (pendingSingleItem) setPendingSingleItem(null);
       else setCart([]);
-      
       navigateTo('orders');
       setSelectedItem(null);
     } catch (err: any) {
-      console.error("Supabase Order Error:", err);
-      if (err.message.includes('schema cache')) {
-        alert("CRITICAL: The 'orders' table is missing from your Supabase database. Please create the table using the SQL provided in the instructions to enable ordering.");
-      } else {
-        alert(`Order Failed: ${err.message || "Database connection error."}`);
-      }
+      console.error("Order Failure:", err);
+      alert(`Order Failed: ${err.message}`);
     }
   };
 
@@ -252,7 +242,6 @@ export default function App() {
       setLogo(config.business.logo);
       localStorage.setItem('foodie_business_logo', config.business.logo);
     }
-    alert('Configuration Imported Successfully!');
     navigateTo('menu');
   };
 
@@ -260,10 +249,7 @@ export default function App() {
     if (isLoading) return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 animate-fade-in">
         <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-        <div className="text-center">
-          <p className="font-black text-indigo-600 uppercase tracking-[0.4em] text-[10px] mb-2">Synchronizing Cloud Menu</p>
-          <p className="text-slate-400 text-xs font-bold italic">Loading fresh selections...</p>
-        </div>
+        <p className="font-black text-indigo-600 uppercase tracking-[0.4em] text-[10px]">Cloud Syncing...</p>
       </div>
     );
 
@@ -303,7 +289,6 @@ export default function App() {
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 italic">Location Context</p>
                 <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
                 <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 opacity-60 italic">Token: {qrDetails.token}</p>
-                {qrDetails.branches.length > 0 && <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 opacity-60">Branch: {qrDetails.branches.join(', ')}</p>}
               </div>
             </div>
             <button onClick={() => setShowWelcomeModal(false)} className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Start Ordering</button>
