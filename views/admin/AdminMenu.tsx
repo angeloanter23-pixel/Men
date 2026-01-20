@@ -14,6 +14,9 @@ interface AdminMenuProps {
 const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, isWizard = false }) => {
   const [activeTab, setActiveTab] = useState<'items' | 'add' | 'categories'>('items');
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
+  const [catToDelete, setCatToDelete] = useState<Category | null>(null);
+  const [catDeleteOption, setCatDeleteOption] = useState<'delete_all' | 'keep_items'>('keep_items');
   const [newCatName, setNewCatName] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -48,11 +51,10 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
   };
 
   const handleSaveItem = async () => {
-    if (!formData.name || !formData.price || !formData.cat) return alert("Please fill in Name, Price, and Category.");
+    if (!formData.name || !formData.price) return alert("Please fill in Name and Price.");
     setLoading(true);
     try {
       const targetCategory = cats.find(c => c.name === formData.cat);
-      if (!targetCategory) throw new Error("Please pick a category.");
 
       // Convert text ingredients to objects for the database
       const ingredientsArray = formData.ingredients
@@ -73,7 +75,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
         description: formData.desc,
         ingredients: ingredientsArray,
         image_url: formData.image || 'https://picsum.photos/seed/dish/400/400',
-        category_id: targetCategory.id,
+        category_id: targetCategory ? targetCategory.id : null,
         pax: formData.people,
         serving_time: formData.mins,
         is_popular: formData.isPopular
@@ -83,12 +85,24 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
 
       if (!isWizard) {
         const dbItem = await MenuService.upsertMenuItem(itemPayload);
-        const savedItem = { ...dbItem, cat_name: targetCategory.name };
+        const savedItem = { ...dbItem, cat_name: targetCategory ? targetCategory.name : 'Uncategorized' };
         
         if (editingItem) {
           setItems(prev => prev.map(it => it.id === editingItem.id ? savedItem : it));
         } else {
           setItems(prev => [savedItem, ...prev]);
+        }
+      } else {
+        // Wizard mode
+        const wizardItem: any = {
+          ...itemPayload,
+          id: editingItem ? editingItem.id : Math.floor(Math.random() * 1000000),
+          cat_name: targetCategory ? targetCategory.name : 'Uncategorized'
+        };
+        if (editingItem) {
+          setItems(prev => prev.map(it => it.id === editingItem.id ? wizardItem : it));
+        } else {
+          setItems(prev => [wizardItem, ...prev]);
         }
       }
 
@@ -114,7 +128,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
       desc: item.description,
       ingredients: formattedIngredients,
       price: item.price.toString(),
-      cat: item.cat_name,
+      cat: item.cat_name === 'Uncategorized' ? '' : item.cat_name,
       people: item.pax,
       mins: item.serving_time,
       image: item.image_url,
@@ -123,16 +137,61 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
     setActiveTab('add');
   };
 
-  const handleDeleteItem = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this dish?")) return;
+  const confirmDeleteItem = async () => {
+    if (!itemToDelete) return;
     setLoading(true);
     try {
       if (!isWizard) {
-        await MenuService.deleteMenuItem(id.toString());
+        await MenuService.deleteMenuItem(itemToDelete.id.toString());
       }
-      setItems(prev => prev.filter(it => it.id !== id));
+      setItems(prev => prev.filter(it => it.id !== itemToDelete.id));
+      setItemToDelete(null);
     } catch (err: any) {
-      alert("Delete failed.");
+      alert("Delete failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!catToDelete) return;
+    setLoading(true);
+    try {
+      const itemsInCat = items.filter(i => i.category_id === catToDelete.id);
+
+      if (!isWizard) {
+        if (catDeleteOption === 'delete_all') {
+            // Bulk delete items in database first
+            for (const item of itemsInCat) {
+                await MenuService.deleteMenuItem(item.id.toString());
+            }
+            // Update local state by removing items
+            setItems(prev => prev.filter(i => i.category_id !== catToDelete.id));
+        } else {
+            // STRATEGY: Reassign items to null (Uncategorized)
+            for (const item of itemsInCat) {
+                const updatedPayload = { ...item, category_id: null };
+                delete (updatedPayload as any).cat_name; // Clean up before DB upsert
+                await MenuService.upsertMenuItem(updatedPayload);
+            }
+            // Update local state to reflect reassignment
+            setItems(prev => prev.map(i => i.category_id === catToDelete.id ? { ...i, category_id: null, cat_name: 'Uncategorized' } : i));
+        }
+
+        await MenuService.deleteCategory(catToDelete.id.toString());
+      } else {
+        // Wizard mode (local only)
+        if (catDeleteOption === 'delete_all') {
+          setItems(prev => prev.filter(i => i.category_id !== catToDelete.id));
+        } else {
+          setItems(prev => prev.map(i => i.category_id === catToDelete.id ? { ...i, category_id: null, cat_name: 'Uncategorized' } : i));
+        }
+      }
+      
+      setCats(prev => prev.filter(cat => cat.id !== catToDelete.id));
+      setCatToDelete(null);
+    } catch (err: any) {
+      alert("Delete failed: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -157,6 +216,9 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
       setLoading(false);
     }
   };
+
+  // Helper to get item count for specific category
+  const getItemsCountForCat = (catId: number) => items.filter(i => i.category_id === catId).length;
 
   return (
     <div className="flex flex-col h-full animate-fade-in relative bg-white font-['Plus_Jakarta_Sans']">
@@ -217,16 +279,12 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
                <div className="grid grid-cols-1 gap-3">
                  {cats.map(c => (
                    <div key={c.id} className="bg-white border border-slate-100 px-6 py-4 rounded-2xl flex items-center justify-between shadow-sm">
-                      <span className="font-black text-sm text-slate-800 uppercase italic">{c.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-black text-sm text-slate-800 uppercase italic leading-none">{c.name}</span>
+                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-1">{getItemsCountForCat(c.id)} Dishes</span>
+                      </div>
                       <button 
-                        onClick={async () => {
-                          if(confirm(`Delete group "${c.name}"?`)) {
-                            setLoading(true);
-                            await MenuService.deleteCategory(c.id.toString());
-                            setCats(prev => prev.filter(cat => cat.id !== c.id));
-                            setLoading(false);
-                          }
-                        }}
+                        onClick={() => { setCatToDelete(c); setCatDeleteOption('keep_items'); }}
                         className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"
                       >
                         <i className="fa-solid fa-trash-can text-xs"></i>
@@ -255,7 +313,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
                         {item.is_popular && <span className="bg-orange-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Popular</span>}
                       </div>
                       <div className="flex items-center gap-3 mt-1">
-                        <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{item.cat_name}</p>
+                        <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{item.cat_name || 'Uncategorized'}</p>
                         <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
                         <p className="text-[10px] font-bold text-slate-400">₱{item.price}</p>
                       </div>
@@ -264,7 +322,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
                 <div className="flex gap-2 shrink-0">
                    <button onClick={() => startEdit(item)} className="w-11 h-11 rounded-[1.3rem] bg-indigo-50 text-indigo-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all active:scale-90 shadow-sm"><i className="fa-solid fa-pen text-xs"></i></button>
                    <button 
-                    onClick={() => handleDeleteItem(item.id)} 
+                    onClick={() => setItemToDelete(item)} 
                     className="w-11 h-11 rounded-[1.3rem] bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-90 shadow-sm"
                    >
                      <i className="fa-solid fa-trash-can text-xs"></i>
@@ -345,7 +403,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
                <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Group / Category</label>
                   <select value={formData.cat} onChange={e => setFormData({...formData, cat: e.target.value})} className="w-full bg-slate-50 p-6 rounded-2xl font-black text-[10px] uppercase outline-none shadow-inner cursor-pointer">
-                     <option value="">Select a Group</option>
+                     <option value="">Uncategorized (None)</option>
                      {cats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                </div>
@@ -371,11 +429,109 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
         )}
       </div>
 
+      {/* CUSTOM PREMIUM DELETE MODAL (ITEMS) */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in" onClick={() => setItemToDelete(null)}>
+           <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-scale" onClick={e => e.stopPropagation()}>
+              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <i className="fa-solid fa-trash-can text-3xl"></i>
+              </div>
+              <div>
+                <h4 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900">Delete Dish?</h4>
+                <p className="text-sm text-slate-400 font-medium mt-2">Are you sure you want to remove <span className="text-slate-900 font-bold">"{itemToDelete.name}"</span>? This cannot be undone.</p>
+              </div>
+              <div className="space-y-3">
+                 <button 
+                  onClick={confirmDeleteItem} 
+                  disabled={loading}
+                  className="w-full py-5 bg-rose-500 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] shadow-xl shadow-rose-500/20 active:scale-95 transition-all"
+                 >
+                   {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Yes, Delete Item'}
+                 </button>
+                 <button 
+                  onClick={() => setItemToDelete(null)}
+                  className="w-full py-4 text-[10px] font-black uppercase text-slate-300 hover:text-slate-600 tracking-widest transition-colors"
+                 >
+                   Keep this Dish
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* CUSTOM PREMIUM DELETE MODAL (CATEGORIES/GROUPS) */}
+      {catToDelete && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in" onClick={() => setCatToDelete(null)}>
+           <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-scale" onClick={e => e.stopPropagation()}>
+              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <i className="fa-solid fa-folder-minus text-3xl"></i>
+              </div>
+              <div>
+                <h4 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900">Delete Group?</h4>
+                <p className="text-sm text-slate-400 font-medium mt-2">Group <span className="text-slate-900 font-bold">"{catToDelete.name}"</span> currently contains <span className="text-indigo-600 font-black">{getItemsCountForCat(catToDelete.id)} items</span>.</p>
+              </div>
+
+              {getItemsCountForCat(catToDelete.id) > 0 && (
+                <div className="space-y-3 text-left">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic text-center">Handling Instructions</p>
+                   <label className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 cursor-pointer transition-all hover:bg-white hover:border-indigo-200 group">
+                      <input 
+                        type="radio" 
+                        name="cat-delete-opt" 
+                        checked={catDeleteOption === 'delete_all'} 
+                        onChange={() => setCatDeleteOption('delete_all')}
+                        className="w-4 h-4 accent-indigo-600"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-slate-800 uppercase italic">Delete all dishes</span>
+                        <span className="text-[9px] font-bold text-slate-400">Permanently remove dishes in this category</span>
+                      </div>
+                   </label>
+                   <label className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 cursor-pointer transition-all hover:bg-white hover:border-indigo-200 group">
+                      <input 
+                        type="radio" 
+                        name="cat-delete-opt" 
+                        checked={catDeleteOption === 'keep_items'} 
+                        onChange={() => setCatDeleteOption('keep_items')}
+                        className="w-4 h-4 accent-indigo-600"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-slate-800 uppercase italic">Keep dishes</span>
+                        <span className="text-[9px] font-bold text-slate-400">Items will become uncategorized</span>
+                      </div>
+                   </label>
+                </div>
+              )}
+
+              <div className="space-y-3 pt-2">
+                 <button 
+                  onClick={confirmDeleteCategory} 
+                  disabled={loading}
+                  className="w-full py-5 bg-rose-500 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] shadow-xl shadow-rose-500/20 active:scale-95 transition-all"
+                 >
+                   {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Yes, Delete Group'}
+                 </button>
+                 <button 
+                  onClick={() => setCatToDelete(null)}
+                  className="w-full py-4 text-[10px] font-black uppercase text-slate-300 hover:text-slate-600 tracking-widest transition-colors"
+                 >
+                   Keep this Group
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
       {loading && (
         <div className="fixed inset-0 bg-white/50 backdrop-blur-[2px] z-[100] flex items-center justify-center pointer-events-none">
            <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin shadow-xl"></div>
         </div>
       )}
+      
+      <style>{`
+        @keyframes scale { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-scale { animation: scale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      `}</style>
     </div>
   );
 };

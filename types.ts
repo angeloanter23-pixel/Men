@@ -11,7 +11,7 @@ export interface MenuItem {
   price: number;
   description: string;
   image_url: string;
-  category_id: number;
+  category_id: number | null;
   cat_name: string;
   is_popular: boolean;
   ingredients: any[];

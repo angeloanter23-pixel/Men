@@ -41,8 +41,6 @@ export default function App() {
   // SESSION-AWARE DATA INITIALIZATION
   const hasMerchantSession = !!localStorage.getItem('foodie_supabase_session');
 
-  // If a merchant session is present, we start with EMPTY states to force database loading.
-  // We only show mockup items on the public landing tour when no session is active.
   const [menuItems, setMenuItems] = useState<MenuItem[]>(hasMerchantSession ? [] : mockupItems);
   const [categories, setCategories] = useState<Category[]>(hasMerchantSession ? [] : mockupCategories);
   
@@ -56,8 +54,30 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
-  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, branches: string[]} | null>(null);
+  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, branches: string[], theme?: any} | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // Dynamic Theme State
+  const [appTheme, setAppTheme] = useState<any>({
+    primary_color: '#FF6B00',
+    secondary_color: '#FFF3E0',
+    font_family: 'Plus Jakarta Sans',
+    logo_url: ''
+  });
+
+  const applyTheme = (themeData: any) => {
+    if (!themeData || typeof themeData !== 'object') return;
+    const merged = { ...appTheme, ...themeData };
+    setAppTheme(merged);
+    
+    // Set Logo if provided in theme
+    if (merged.logo_url) setLogo(merged.logo_url);
+    
+    // Inject CSS variables for dynamic coloring
+    document.documentElement.style.setProperty('--brand-primary', merged.primary_color);
+    document.documentElement.style.setProperty('--brand-secondary', merged.secondary_color);
+    document.documentElement.style.setProperty('--brand-font', merged.font_family);
+  };
 
   const syncStateWithURL = async () => {
     const path = window.location.pathname;
@@ -79,10 +99,13 @@ export default function App() {
               label: details.label,
               token: details.code,
               restaurantName: details.restaurant_name || 'Premium Merchant',
-              branches: details.branches.map((b: any) => b.name)
+              branches: details.branches.map((b: any) => b.name),
+              theme: details.theme
             };
             setQrDetails(qrSession);
             localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
+            
+            if (details.theme) applyTheme(details.theme);
 
             const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
             setMenuItems(cloudMenu.items || []);
@@ -144,16 +167,17 @@ export default function App() {
           if (parsed.restaurant_id && parsed.restaurant_id !== "undefined") {
             setQrDetails(parsed);
             setActiveTable(parsed.label);
+            if (parsed.theme) applyTheme(parsed.theme);
             const res = await MenuService.getMenuByRestaurantId(parsed.restaurant_id);
-            // Overwrite with actual DB data
             setMenuItems(res.items || []); 
             setCategories(res.categories || []); 
           }
         } else if (merchantRid && merchantRid !== "undefined") {
-          // If merchant is logged in, ensure we ONLY show their DB data
           const res = await MenuService.getMenuByRestaurantId(merchantRid);
           setMenuItems(res.items || []); 
           setCategories(res.categories || []); 
+          // If logged in as admin, fetch latest restaurant theme
+          if (session?.restaurant?.theme) applyTheme(session.restaurant.theme);
         }
       } catch (err) {
         console.error("Initialization sync failed:", err);
@@ -177,12 +201,10 @@ export default function App() {
 
   useEffect(() => {
     const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
-    const savedSales = localStorage.getItem('foodie_sales_history');
     const savedAdmin = localStorage.getItem('foodie_admin_creds');
     const savedLogo = localStorage.getItem('foodie_business_logo');
 
     if (savedFeedbacks) setFeedbacks(JSON.parse(savedFeedbacks));
-    if (savedSales) setSalesHistory(JSON.parse(savedSales));
     if (savedAdmin) setAdminCreds(JSON.parse(savedAdmin));
     if (savedLogo) setLogo(savedLogo);
   }, []);
@@ -278,15 +300,36 @@ export default function App() {
   const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin'].includes(currentView);
 
   return (
-    <div className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden font-jakarta">
+    <div 
+      className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden"
+      style={{ fontFamily: 'var(--brand-font, "Plus Jakarta Sans")' }}
+    >
+      <style>{`
+        :root {
+          --brand-primary: ${appTheme.primary_color};
+          --brand-secondary: ${appTheme.secondary_color};
+          --brand-font: ${appTheme.font_family};
+        }
+        .text-brand-primary { color: var(--brand-primary); }
+        .bg-brand-primary { background-color: var(--brand-primary); }
+        .text-brand-secondary { color: var(--brand-secondary); }
+        .bg-brand-secondary { background-color: var(--brand-secondary); }
+        /* Override generic orange-500 if theme is set */
+        ${appTheme ? `
+          .text-orange-500, .text-orange-600 { color: var(--brand-primary); }
+          .bg-orange-500, .bg-orange-600 { background-color: var(--brand-primary); }
+          .bg-orange-50 { background-color: var(--brand-secondary); }
+        ` : ''}
+      `}</style>
+
       {showWelcomeModal && qrDetails && (
         <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl space-y-6">
-            <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-2"><i className="fa-solid fa-utensils text-3xl"></i></div>
+            <div className="w-20 h-20 bg-brand-secondary text-brand-primary rounded-full flex items-center justify-center mx-auto mb-2"><i className="fa-solid fa-utensils text-3xl"></i></div>
             <div className="space-y-4">
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Authenticated Session</p>
-                <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Welcome to <span className="text-orange-600">{qrDetails.restaurantName}</span></h2>
+                <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Welcome to <span className="text-brand-primary">{qrDetails.restaurantName}</span></h2>
               </div>
               <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 italic">Location Context</p>
@@ -307,7 +350,7 @@ export default function App() {
       {!['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView) && (
         <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 max-w-xl mx-auto z-40">
           {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Favorites' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => (
-            <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-orange-500' : 'text-slate-300 hover:text-orange-300'}`}>
+            <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-brand-primary' : 'text-slate-300 hover:text-orange-300'}`}>
               <i className={`fa-solid ${btn.i} text-xl`}></i>
               <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
             </button>
