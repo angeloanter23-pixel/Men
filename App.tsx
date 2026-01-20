@@ -293,6 +293,7 @@ export default function App() {
       case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onExit={() => navigateTo('menu')} onLogoUpdate={setLogo} />;
       case 'privacy': return <LegalView title="Privacy Policy" />;
       case 'terms': return <LegalView title="Terms & Agreement" />;
+      case 'group': return <GroupView />;
       default: return null;
     }
   };
@@ -352,7 +353,7 @@ export default function App() {
           {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Favorites' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => (
             <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-brand-primary' : 'text-slate-300 hover:text-orange-300'}`}>
               <i className={`fa-solid ${btn.i} text-xl`}></i>
-              <span className="text-[10px] font-black uppercase tracking-widest">{btn.l}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest leading-none">{btn.l}</span>
             </button>
           ))}
         </div>
