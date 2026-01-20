@@ -116,13 +116,12 @@ export async function getMenuByRestaurantId(restaurantId: string) {
 
   const menuId = menus[0].id;
 
-  // REMOVED 'icon' from selection to fix error
   const { data: categories, error: catErr } = await supabase
     .from('categories')
     .select(`
       id, name, order_index,
       items (
-        id, category_id, name, description, price, image_url, pax, serving_time, is_popular, created_at
+        id, category_id, name, description, price, image_url, pax, serving_time, is_popular, created_at, ingredients
       )
     `)
     .eq('menu_id', menuId)
@@ -137,7 +136,7 @@ export async function getMenuByRestaurantId(restaurantId: string) {
       cat_name: cat.name
     }));
     allItems.push(...catItems);
-    return { id: cat.id, name: cat.name }; // Return only name and id
+    return { id: cat.id, name: cat.name, items: catItems };
   });
 
   return { categories: processedCats, items: allItems };
@@ -156,13 +155,12 @@ export async function getMenuForBranch(overrideSubdomain?: string) {
   if (branchErr) throw new Error(branchErr.message || "Branch lookup failed.");
   if (!branch) return { error: 'Branch not found', detectedSubdomain: subdomain };
 
-  // REMOVED 'icon' from selection to fix error
   const { data: categories, error: catErr } = await supabase
     .from('categories')
     .select(`
       id, name, order_index,
       items (
-        id, category_id, name, description, price, image_url, pax, serving_time, is_popular, created_at
+        id, category_id, name, description, price, image_url, pax, serving_time, is_popular, created_at, ingredients
       )
     `)
     .eq('menu_id', branch.menu_id)
@@ -170,9 +168,17 @@ export async function getMenuForBranch(overrideSubdomain?: string) {
 
   if (catErr) throw new Error(catErr.message || "Branch catalog fetch failed.");
 
+  const processedCats = (categories || []).map(cat => ({
+    ...cat,
+    items: (cat.items || []).map((item: any) => ({
+      ...item,
+      cat_name: cat.name
+    }))
+  }));
+
   return { 
     ...branch, 
-    categories: categories || [] 
+    categories: processedCats 
   };
 }
 

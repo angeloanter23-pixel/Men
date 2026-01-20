@@ -22,7 +22,7 @@ const QRBlock: React.FC<{
   const [localCode, setLocalCode] = useState(asset.code);
   const [isCopied, setIsCopied] = useState(false);
 
-  // Production URL Pattern: https://men-m53q.vercel.app/[token]
+  // Production URL Pattern
   const productionBase = "https://men-m53q.vercel.app/";
   const finalUrl = `${productionBase}${localCode}`;
 
@@ -95,9 +95,9 @@ const QRBlock: React.FC<{
         <div className="bg-white p-4 rounded-3xl shadow-lg shadow-slate-200/50">
           <canvas ref={canvasRef}></canvas>
         </div>
-        <div className="mt-6 w-full px-8">
-           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1 text-center">Production Entry URL</p>
-           <p className="text-[8px] font-bold text-slate-400 break-all text-center opacity-60 leading-tight">
+        <div className="mt-6 w-full px-8 text-center">
+           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Direct Link</p>
+           <p className="text-[8px] font-bold text-slate-400 break-all opacity-60 leading-tight">
              {finalUrl}
            </p>
         </div>
@@ -107,7 +107,7 @@ const QRBlock: React.FC<{
         onClick={handleCopy}
         className={`w-full py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all relative z-10 ${isCopied ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-200'}`}
       >
-        {isCopied ? 'URL SECURED TO CLIPBOARD' : 'Copy Digital Link'}
+        {isCopied ? 'LINK COPIED' : 'Copy Menu Link'}
       </button>
     </div>
   );
@@ -117,7 +117,6 @@ const AdminQR: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'gen' | 'saved'>('gen');
   const [mode, setMode] = useState<'single' | 'bulk'>('single');
   const [baseName, setBaseName] = useState('Table ');
-  const [manualToken, setManualToken] = useState('');
   const [bulkCount, setBulkCount] = useState(5);
   const [savedQrs, setSavedQrs] = useState<QRAsset[]>([]);
   const [loading, setLoading] = useState(false);
@@ -155,7 +154,7 @@ const AdminQR: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (!restaurantId || restaurantId === "undefined") return alert("System context missing. Please re-login.");
+    if (!restaurantId || restaurantId === "undefined") return alert("Please log in again.");
     
     setLoading(true);
     try {
@@ -163,10 +162,9 @@ const AdminQR: React.FC = () => {
         await MenuService.upsertQRCode({
           restaurant_id: restaurantId,
           label: baseName,
-          code: manualToken || generateToken(),
+          code: generateToken(),
           type: 'menu'
         });
-        setManualToken('');
       } else {
         const qty = Math.min(bulkCount, 50);
         for (let i = 1; i <= qty; i++) {
@@ -181,19 +179,19 @@ const AdminQR: React.FC = () => {
       await fetchQRCodes();
       setActiveTab('saved');
     } catch (err) {
-      alert("Deployment failed. Token codes must be unique.");
+      alert("Error creating code. Every code must be unique.");
     } finally {
       setLoading(false);
     }
   };
 
   const deleteQr = async (id: string) => {
-    if (confirm('Permanently purge this entry code from the vault?')) {
+    if (confirm('Delete this QR code?')) {
       try {
         await MenuService.deleteQRCode(id);
         setSavedQrs(prev => prev.filter(item => item.id !== id));
       } catch (err) {
-        alert("Delete operation failed.");
+        alert("Failed to delete.");
       }
     }
   };
@@ -203,58 +201,93 @@ const AdminQR: React.FC = () => {
       await MenuService.upsertQRCode({ id, label, code, restaurant_id: restaurantId });
       setSavedQrs(prev => prev.map(q => q.id === id ? { ...q, label, code } : q));
     } catch (err) {
-      console.error("Update sync failed", err);
+      console.error("Failed to update", err);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/30 pb-32 animate-fade-in font-['Plus_Jakarta_Sans']">
-      <div className="bg-white border-b border-slate-100 sticky top-16 z-40 mb-10 shadow-sm">
-        <div className="max-w-xl mx-auto flex justify-around">
-          <button onClick={() => setActiveTab('gen')} className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'gen' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}>Generator{activeTab === 'gen' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}</button>
-          <button onClick={() => setActiveTab('saved')} className={`py-6 text-[10px] font-black uppercase tracking-[0.4em] transition-all relative ${activeTab === 'saved' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-600'}`}>Save Vaults{activeTab === 'saved' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full"></div>}</button>
+    <div className="flex flex-col h-full animate-fade-in relative overflow-x-hidden font-['Plus_Jakarta_Sans'] bg-slate-50/30">
+      
+      {/* Sub-Navigation */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-[45] px-6 py-4 space-y-4 mb-8 shadow-sm">
+        <div className="flex overflow-x-auto no-scrollbar gap-2">
+          <button 
+            onClick={() => setActiveTab('gen')}
+            className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${activeTab === 'gen' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+          >
+            Generator
+          </button>
+          <button 
+            onClick={() => setActiveTab('saved')}
+            className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${activeTab === 'saved' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+          >
+            Saved Codes ({savedQrs.length})
+          </button>
         </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-6">
+      <div className="flex-1 overflow-y-auto p-6 lg:p-10 no-scrollbar pb-32">
+        {/* Header */}
+        <div className="mb-10 animate-fade-in-up">
+          <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-2">
+            {activeTab === 'gen' ? 'Create QR Codes' : 'Saved QR Codes'}
+          </h3>
+          <p className="text-slate-500 text-sm max-w-2xl leading-relaxed">
+            {activeTab === 'gen' 
+              ? 'Create new QR codes for your tables. Each code is unique and randomly generated to link directly to your menu.' 
+              : 'Review and manage your active menu links. You can download these QR codes to print for your tables.'}
+          </p>
+        </div>
+
         {activeTab === 'gen' ? (
-          <section className="space-y-10">
-            <header className="text-center space-y-4">
-              <div className="w-20 h-20 bg-indigo-600 text-white rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl animate-float"><i className="fa-solid fa-qrcode text-3xl"></i></div>
-              <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900">SHARP<span className="text-indigo-600">QR</span> TERMINAL</h1>
-            </header>
-            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl space-y-10">
-              <div className="bg-slate-50 p-1.5 rounded-2xl flex border border-slate-100">
-                <button onClick={() => setMode('single')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'single' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}>Manual Entry</button>
-                <button onClick={() => setMode('bulk')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-400'}`}>Bulk Deploy</button>
+          <section className="space-y-10 max-w-2xl">
+            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-10">
+              <div className="bg-slate-50 p-1.5 rounded-2xl flex border border-slate-100 shadow-inner">
+                <button onClick={() => setMode('single')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'single' ? 'bg-white text-indigo-600 shadow-md border border-slate-50' : 'text-slate-400'}`}>Single Code</button>
+                <button onClick={() => setMode('bulk')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-md border border-slate-50' : 'text-slate-400'}`}>Bulk Create</button>
               </div>
+              
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4 italic">Node Label (e.g. Table 04)</label>
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Table Name (e.g. Table 1)</label>
                   <input type="text" value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Enter label..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" />
                 </div>
-                {mode === 'single' ? (
-                  <div className="space-y-2 animate-fade-in">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4 italic">Custom Token (Optional)</label>
-                    <input type="text" value={manualToken} onChange={(e) => setManualToken(e.target.value)} placeholder="Auto-generated if empty" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" />
-                  </div>
-                ) : (
+                
+                {mode === 'bulk' && (
                   <div className="animate-fade-in space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Deployment Count</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">How many codes?</label>
                     <input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} min="1" max="50" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" />
                   </div>
                 )}
-                <button disabled={loading} onClick={handleGenerate} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600 disabled:opacity-50">{loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Deploy to Cloud Vault'}</button>
+                
+                <button disabled={loading} onClick={handleGenerate} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600 disabled:opacity-50">
+                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Create QR Code'}
+                </button>
               </div>
+            </div>
+            
+            {/* Note Card */}
+            <div className="bg-indigo-600 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-700"></div>
+               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-300 mb-2">Helpful Tip</p>
+               <h4 className="text-xl font-black italic tracking-tighter mb-4 uppercase">Unique Access</h4>
+               <p className="text-[11px] font-medium opacity-80 leading-relaxed">
+                 Every QR code you create is unique. This means each table will have its own special link. Use "Bulk Create" to quickly make codes for many tables at once.
+               </p>
+               <i className="fa-solid fa-circle-info absolute bottom-6 right-8 text-4xl opacity-10"></i>
             </div>
           </section>
         ) : (
-          <section className="space-y-6 animate-fade-in">
-            <h3 className="text-center text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] mb-6 italic">QR List</h3>
+          <section className="space-y-8 animate-fade-in">
             {savedQrs.length === 0 ? (
-              <div className="py-32 text-center border-4 border-dashed border-slate-100 rounded-[4rem] bg-white/50"><i className="fa-solid fa-folder-open text-4xl text-slate-100 mb-6"></i><p className="text-slate-300 text-[11px] font-black uppercase tracking-[0.5em] italic">Vault is empty</p></div>
+              <div className="py-32 text-center border-4 border-dashed border-slate-100 rounded-[4rem] bg-white/50">
+                <i className="fa-solid fa-folder-open text-4xl text-slate-100 mb-6"></i>
+                <p className="text-slate-300 text-[11px] font-black uppercase tracking-[0.5em] italic">No codes saved yet</p>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 pb-20">{savedQrs.map(asset => <QRBlock key={asset.id} asset={asset} onDelete={deleteQr} onUpdate={updateQr} />)}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-20">
+                {savedQrs.map(asset => <QRBlock key={asset.id} asset={asset} onDelete={deleteQr} onUpdate={updateQr} />)}
+              </div>
             )}
           </section>
         )}

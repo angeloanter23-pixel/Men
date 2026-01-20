@@ -14,7 +14,7 @@ export interface MenuItem {
   category_id: number;
   cat_name: string;
   is_popular: boolean;
-  ingredients: string[];
+  ingredients: any[];
   pax: string;
   serving_time: string;
 }

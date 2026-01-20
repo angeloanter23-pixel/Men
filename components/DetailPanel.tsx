@@ -65,14 +65,14 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
           
           <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium">{item.description}</p>
 
-          {/* Ingredients Section */}
+          {/* Ingredients Section - Updated to prevent React Error #31 */}
           {item.ingredients && item.ingredients.length > 0 && (
             <div className="mb-8">
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 italic">Main Ingredients</label>
               <div className="flex flex-wrap gap-2">
-                {item.ingredients.map((ing, i) => (
+                {item.ingredients.map((ing: any, i) => (
                   <span key={i} className="px-3 py-1.5 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-bold border border-slate-100">
-                    {ing}
+                    {typeof ing === 'object' ? (ing.label || ing.key) : ing}
                   </span>
                 ))}
               </div>
@@ -110,7 +110,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
               </div>
             </div>
 
-            {/* Buttons inside the scrollable container below Quantity */}
             <div className="grid grid-cols-1 gap-3 pt-4">
               <button 
                 onClick={handleKitchen} 
