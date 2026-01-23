@@ -298,11 +298,12 @@ export default function App() {
     }
   };
 
+  const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin'].includes(currentView);
   const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin'].includes(currentView);
 
   return (
     <div 
-      className="min-h-screen pb-24 max-w-xl mx-auto bg-white shadow-2xl relative overflow-x-hidden"
+      className={`min-h-screen bg-white relative overflow-x-hidden ${isDesktopFullWidthView ? 'w-full' : 'max-w-xl mx-auto shadow-2xl pb-24'}`}
       style={{ fontFamily: 'var(--brand-font, "Plus Jakarta Sans")' }}
     >
       <style>{`
