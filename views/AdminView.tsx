@@ -29,13 +29,14 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [forgotEmail, setForgotEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
   const [clientIp, setClientIp] = useState('0.0.0.0');
   
   // Security States
   const [isBlocked, setIsBlocked] = useState(false);
   const [countdown, setCountdown] = useState<number>(0);
   const [remainingTries, setRemainingTries] = useState<number>(5);
+  const [isCoolingDown, setIsCoolingDown] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   // Initial IP Fetch
   useEffect(() => {
@@ -77,9 +78,26 @@ const AdminView: React.FC<AdminViewProps> = ({
     return () => clearInterval(timer);
   }, [countdown]);
 
+  // Per-attempt Cooldown Timer
+  useEffect(() => {
+    let timer: number;
+    if (isCoolingDown && cooldownSeconds > 0) {
+      timer = window.setInterval(() => {
+        setCooldownSeconds(prev => {
+          if (prev <= 1) {
+            setIsCoolingDown(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isCoolingDown, cooldownSeconds]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isBlocked || !email || !password) return;
+    if (isBlocked || isCoolingDown || !email || !password) return;
 
     setLoading(true);
     setError('');
@@ -105,15 +123,17 @@ const AdminView: React.FC<AdminViewProps> = ({
     } catch (dbErr: any) {
       // Record Failure
       const failData = await MenuService.recordLoginFailure(email, clientIp);
-      const triesLeft = 5 - failData.attempts;
+      const triesLeft = 5 - (failData?.attempts || 1);
       setRemainingTries(Math.max(0, triesLeft));
 
-      if (failData.blocked_until) {
+      if (failData?.blocked_until) {
         const diff = Math.ceil((new Date(failData.blocked_until).getTime() - Date.now()) / 1000);
         setIsBlocked(true);
         setCountdown(diff);
         setError("Too many mistakes. Account locked.");
       } else {
+        setIsCoolingDown(true);
+        setCooldownSeconds(3); 
         setError(`Incorrect password. ${triesLeft} tries left.`);
       }
     } finally {
@@ -121,24 +141,26 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
+  const handleRecovery = () => {
+    if (!forgotEmail.includes('@')) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    const to = "geloelolo@gmail.com";
+    const subject = "Merchant Account Recovery Request";
+    const body = `Hello Support Team,\n\nI am requesting recovery for my Foodie Premium merchant account.\n\nAccount Email: ${forgotEmail}\n\nPlease send me a password reset link or updated credentials.\n\nThank you.`;
+    
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
+    
+    alert('A recovery request email has been generated in Gmail. Please send it to proceed.');
+    setView('login');
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  const handleBiometricLogin = () => {
-    if (isBlocked) return;
-    const isEnrolled = localStorage.getItem('foodie_biometric_enrolled') === 'true';
-    if (!isEnrolled) {
-      setError('Setup Touch ID in your settings first.');
-      return;
-    }
-    setIsScanning(true);
-    setTimeout(() => {
-      setIsScanning(false);
-      setIsAuthenticated(true);
-    }, 1800);
   };
 
   if (isAuthenticated) {
@@ -165,174 +187,94 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-10 animate-fade-in font-jakarta relative overflow-hidden">
-      {/* Design Accents */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-50 rounded-full blur-[100px] opacity-40"></div>
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-50 rounded-full blur-[100px] opacity-40"></div>
 
       <div className="w-full max-w-sm relative z-10 space-y-12">
-        
         {view === 'login' ? (
           <div className="space-y-10">
             <header className="space-y-5 text-center">
-              <div className={`inline-flex w-16 h-16 rounded-3xl items-center justify-center text-white shadow-2xl transition-all duration-700 ${isBlocked ? 'bg-rose-500 scale-110 shadow-rose-100 rotate-12' : 'bg-slate-900 shadow-slate-100'}`}>
-                <i className={`fa-solid ${isBlocked ? 'fa-lock' : 'fa-fingerprint'} text-2xl`}></i>
+              <div className={`inline-flex w-16 h-16 rounded-3xl items-center justify-center text-white shadow-2xl transition-all duration-700 ${isBlocked ? 'bg-rose-500 scale-110 shadow-rose-100 rotate-12' : isCoolingDown ? 'bg-amber-500 rotate-0' : 'bg-slate-900 shadow-slate-100'}`}>
+                <i className={`fa-solid ${isBlocked ? 'fa-lock' : isCoolingDown ? 'fa-hourglass-half' : 'fa-fingerprint'} text-2xl`}></i>
               </div>
               <div className="space-y-2">
                 <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight italic uppercase">
-                  {isBlocked ? 'Locked' : 'Sign In'}
+                  {isBlocked ? 'Locked' : isCoolingDown ? 'Wait' : 'Sign In'}
                 </h2>
                 <p className="text-slate-400 text-sm font-medium">
-                  {isBlocked ? `Please wait ${formatTime(countdown)}` : 'Enter your merchant details below'}
+                  {isBlocked ? `Access suspended for ${formatTime(countdown)}` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Enter your merchant details below'}
                 </p>
               </div>
             </header>
 
             <form onSubmit={handleLogin} className="space-y-8">
-              <div className={`space-y-6 transition-all duration-700 ${isBlocked ? 'opacity-10 blur-sm pointer-events-none' : 'opacity-100'}`}>
+              <div className={`space-y-6 transition-all duration-700 ${(isBlocked || isCoolingDown) ? 'opacity-30 blur-[2px] pointer-events-none' : 'opacity-100'}`}>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Email Address</label>
                     {remainingTries < 5 && !isBlocked && (
-                      <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-100 animate-pulse">
-                        {remainingTries} tries left
+                      <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest animate-pulse">
+                        {remainingTries} Attempts Left
                       </span>
                     )}
                   </div>
-                  <input
-                    type="email"
-                    placeholder="you@business.com"
-                    className="w-full bg-slate-50 p-5 rounded-3xl font-bold text-base outline-none focus:ring-4 ring-indigo-500/5 border border-transparent focus:border-indigo-100 transition-all shadow-inner placeholder:text-slate-300"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                  <input 
+                    type="email" 
+                    required 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    className="w-full bg-slate-50 border-none rounded-2xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                    placeholder="admin@foodie.com" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Secure Key</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full bg-slate-50 p-5 rounded-3xl font-bold text-base outline-none focus:ring-4 ring-indigo-500/5 border border-transparent focus:border-indigo-100 transition-all shadow-inner placeholder:text-slate-300"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Password</label>
+                  <input 
+                    type="password" 
+                    required 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    className="w-full bg-slate-50 border-none rounded-2xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                    placeholder="••••••••" 
                   />
                 </div>
               </div>
 
-              {error && (
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 animate-shake">
-                  <i className="fa-solid fa-triangle-exclamation text-rose-500"></i>
-                  <p className="text-rose-600 text-xs font-bold leading-tight">{error}</p>
-                </div>
-              )}
+              {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest animate-fade-in-up bg-rose-50 py-3 rounded-xl border border-rose-100">{error}</p>}
 
-              <div className="space-y-5">
-                <button
-                  type="submit"
-                  disabled={loading || isBlocked}
-                  className={`w-full py-6 rounded-[2.5rem] font-black uppercase text-xs tracking-[0.3em] shadow-2xl active:scale-95 transition-all ${isBlocked ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white hover:bg-indigo-600 shadow-indigo-100 disabled:opacity-50'}`}
+              <div className="pt-4 space-y-4">
+                <button 
+                  type="submit" 
+                  disabled={loading || isBlocked || isCoolingDown} 
+                  className={`w-full py-6 rounded-3xl font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${isBlocked ? 'bg-slate-100 text-slate-300 shadow-none cursor-not-allowed' : isCoolingDown ? 'bg-amber-100 text-amber-600 cursor-wait' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}
                 >
-                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? 'SECURE LOCK' : 'Access Portal'}
+                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? 'Locked Out' : 'Authenticate'}
                 </button>
-
-                <div className="flex justify-between items-center px-4">
-                  <button 
-                    type="button" 
-                    onClick={() => setView('forgot')}
-                    className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
-                  >
-                    Forgot Key?
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={handleBiometricLogin}
-                    disabled={isBlocked}
-                    className={`flex items-center gap-2 text-xs font-bold transition-all ${isBlocked ? 'text-slate-200 cursor-not-allowed' : 'text-indigo-500 hover:text-indigo-700 active:scale-90'}`}
-                  >
-                    <i className="fa-solid fa-fingerprint"></i> Touch ID
-                  </button>
-                </div>
+                <button type="button" onClick={() => setView('forgot')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors">Forgot Credentials?</button>
               </div>
             </form>
           </div>
         ) : (
           <div className="space-y-10 animate-fade-in">
-            <header className="space-y-5">
-              <button 
-                onClick={() => setView('login')}
-                className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 active:scale-90 transition-all"
-              >
-                <i className="fa-solid fa-arrow-left text-sm"></i>
-              </button>
-              <div className="space-y-2">
-                <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight italic uppercase leading-none">
-                  Reset <br/>
-                  <span className="text-orange-500">Access.</span>
-                </h2>
-                <p className="text-slate-400 text-sm font-medium">Enter your email and request a manual reset.</p>
+             <header className="space-y-4 text-center">
+              <div className="inline-flex w-16 h-16 bg-slate-900 rounded-3xl items-center justify-center text-white shadow-xl">
+                <i className="fa-solid fa-envelope-open text-2xl"></i>
               </div>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase leading-none">Security<br/><span className="text-indigo-600">Recovery</span></h2>
+              <p className="text-slate-400 text-xs font-medium px-4">Enter your recovery email and we'll send a password reset link.</p>
             </header>
-
-            <div className="space-y-8">
-               <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Registered Email</label>
-                  <input
-                    type="email"
-                    placeholder="you@business.com"
-                    className="w-full bg-slate-50 p-5 rounded-3xl font-bold text-base outline-none focus:ring-4 ring-orange-500/5 border border-transparent focus:border-orange-100 transition-all shadow-inner"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                  />
-               </div>
-
-               <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 space-y-6">
-                  <p className="text-xs font-medium text-slate-500 leading-relaxed italic">
-                    For security, our team processes all resets manually within 24 hours. Click below to start.
-                  </p>
-                  <a 
-                    href={`mailto:geloelolo@gmail.com?subject=Merchant Reset: ${forgotEmail}&body=Requesting a manual password reset for my account: ${forgotEmail}`}
-                    className="w-full bg-indigo-600 text-white py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-100 flex items-center justify-center gap-3 hover:bg-indigo-700 active:scale-95 transition-all"
-                  >
-                    <i className="fa-solid fa-paper-plane"></i> Send Request
-                  </a>
-               </div>
+            <div className="space-y-6">
+              <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="w-full bg-slate-50 border-none rounded-2xl p-6 text-sm font-bold outline-none" placeholder="Recovery Email..." />
+              <button onClick={handleRecovery} className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black uppercase text-[10px] tracking-[0.4em]">Send Reset link</button>
+              <button onClick={() => setView('login')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors">Back to Login</button>
             </div>
           </div>
         )}
 
-        <footer className="pt-8 border-t border-slate-50 text-center space-y-4">
-          <p className="text-[8px] font-bold text-slate-200 uppercase tracking-widest italic">Connected Node: {clientIp}</p>
-          <button 
-            type="button"
-            onClick={onExit}
-            className="text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-[0.4em] transition-colors"
-          >
-            Exit Terminal
-          </button>
+        <footer className="text-center pt-10">
+          <p className="text-[10px] font-black text-slate-200 uppercase tracking-[0.5em] italic">Platinum Zen Terminal 2.0</p>
         </footer>
       </div>
-
-      {/* Touch ID Overlay */}
-      {isScanning && (
-        <div className="fixed inset-0 z-[500] bg-white/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 animate-fade-in">
-          <div className="relative w-40 h-40 flex items-center justify-center">
-             <i className="fa-solid fa-fingerprint text-8xl text-indigo-500 animate-pulse"></i>
-             <div className="absolute inset-0 border-[3px] border-indigo-50 rounded-full border-t-indigo-500 animate-spin"></div>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter mt-12 mb-2">Analyzing ID</h2>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">Verifying Security Node...</p>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
-        }
-        .animate-shake { animation: shake 0.3s ease-in-out; }
-      `}</style>
     </div>
   );
 };

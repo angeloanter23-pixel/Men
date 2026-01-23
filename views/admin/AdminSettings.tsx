@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import * as MenuService from '../../services/menuService';
 
@@ -7,6 +6,7 @@ interface AdminSettingsProps {
   onLogout: () => void;
   adminCreds: any;
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
+  onImportClick?: () => void;
 }
 
 const FONTS = [
@@ -17,18 +17,16 @@ const FONTS = [
   { id: 'Poppins', name: 'Poppins Classic' }
 ];
 
-const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, setAdminCreds }) => {
-  const [isBiometricEnabled, setIsBiometricEnabled] = useState(
+const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onImportClick }) => {
+  const [isBiometricEnabled] = useState(
     localStorage.getItem('foodie_biometric_enrolled') === 'true'
   );
   
-  // Merchant Data States
   const [merchantData, setMerchantData] = useState<any>(null);
   const [isLoadingMerchant, setIsLoadingMerchant] = useState(false);
   const [isEditingMerchant, setIsEditingMerchant] = useState(false);
   const [isEditingTheme, setIsEditingTheme] = useState(false);
   
-  // Theme State
   const [theme, setTheme] = useState({
     primary_color: '#FF6B00',
     secondary_color: '#FFF3E0',
@@ -85,13 +83,12 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
       await MenuService.updateRestaurantTheme(restaurantId, theme);
       setIsEditingTheme(false);
       alert("Theme saved and applied.");
-      // Refresh session theme
       const sessionData = JSON.parse(localStorage.getItem('foodie_supabase_session') || '{}');
       if (sessionData.restaurant) {
         sessionData.restaurant.theme = theme;
         localStorage.setItem('foodie_supabase_session', JSON.stringify(sessionData));
       }
-      window.location.reload(); // Force theme application
+      window.location.reload();
     } catch (err: any) {
       alert("Theme update failed: " + err.message);
     } finally {
@@ -139,6 +136,20 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
             )}
           </div>
         )}
+      </div>
+
+      {/* Import/Export Backup */}
+      <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl flex items-center justify-between gap-6">
+         <div className="space-y-1">
+            <h3 className="text-xs font-black uppercase text-slate-800 tracking-tight">Data Management</h3>
+            <p className="text-[10px] text-slate-400 font-medium italic">Import a .json backup file from the Product Tour wizard.</p>
+         </div>
+         <button 
+          onClick={onImportClick}
+          className="bg-indigo-50 text-indigo-600 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+         >
+           Load Configuration
+         </button>
       </div>
 
       {/* Visual Branding Engine */}
@@ -212,7 +223,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
             </div>
           </div>
 
-          {/* Theme Preview Card */}
           <div className="bg-slate-50 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center border border-slate-100 shadow-inner group">
              <div 
                className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-4 shadow-xl transition-all group-hover:scale-110"
@@ -221,7 +231,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                 <i className="fa-solid fa-magic-wand-sparkles text-xl"></i>
              </div>
              <h4 className="text-xl font-black uppercase italic tracking-tighter mb-2" style={{ fontFamily: theme.font_family }}>Preview Header</h4>
-             <p className="text-xs text-slate-500 font-medium mb-6">This is how your chosen typography and colors will harmonize.</p>
+             <p className="text-xs text-slate-500 font-medium mb-6 italic">Visual harmony check.</p>
              <div 
                className="px-6 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest border transition-all"
                style={{ borderColor: theme.primary_color, color: theme.primary_color, backgroundColor: theme.secondary_color }}
@@ -232,7 +242,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         </div>
       </div>
 
-      {/* Security & Access */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm space-y-6">
           <h3 className="text-xs font-black uppercase text-slate-300 tracking-widest">Login Security</h3>

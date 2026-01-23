@@ -14,89 +14,127 @@ export function getSubdomain() {
 
 // --- Security Helpers ---
 
+export async function checkBusinessNameExists(name: string) {
+  const cleanName = name.trim();
+  if (!cleanName) return false;
+  
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('id')
+    .ilike('name', cleanName)
+    .maybeSingle();
+    
+  if (error) {
+    console.error("Database check error:", error.message);
+    return false;
+  }
+  return !!data;
+}
+
 export async function getClientIp() {
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
+    const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return '0.0.0.0';
     const data = await res.json();
-    return data.ip;
+    return data.ip || '0.0.0.0';
   } catch (e) {
-    return '0.0.0.0'; // Fallback
+    return '0.0.0.0';
   }
 }
 
 export async function getLoginStatus(email: string, ip: string) {
   if (!email) return { attempts: 0, blocked_until: null };
-  const { data, error } = await supabase
-    .from('login_attempts')
-    .select('attempts, blocked_until')
-    .eq('email', email.toLowerCase().trim())
-    .eq('ip_address', ip)
-    .maybeSingle();
-  
-  if (error) return { attempts: 0, blocked_until: null };
-  return {
-    attempts: data?.attempts || 0,
-    blocked_until: data?.blocked_until || null
-  };
+  try {
+    const { data, error } = await supabase
+      .from('login_attempts')
+      .select('attempts, blocked_until')
+      .eq('email', email.toLowerCase().trim())
+      .eq('ip_address', ip)
+      .maybeSingle();
+    
+    // If table doesn't exist, we just return a default safe state
+    if (error && error.code === 'PGRST116') return { attempts: 0, blocked_until: null };
+    if (error) {
+      console.warn("Security table missing or inaccessible. Brute-force protection is offline.");
+      return { attempts: 0, blocked_until: null };
+    }
+    
+    return {
+      attempts: data?.attempts || 0,
+      blocked_until: data?.blocked_until || null
+    };
+  } catch (err) {
+    return { attempts: 0, blocked_until: null };
+  }
 }
 
 export async function recordLoginFailure(email: string, ip: string) {
   const cleanEmail = email.toLowerCase().trim();
   
-  // 1. Get current state
-  const { data: existing } = await supabase
-    .from('login_attempts')
-    .select('id, attempts')
-    .eq('email', cleanEmail)
-    .eq('ip_address', ip)
-    .maybeSingle();
+  try {
+    const { data: existing, error: fetchErr } = await supabase
+      .from('login_attempts')
+      .select('id, attempts')
+      .eq('email', cleanEmail)
+      .eq('ip_address', ip)
+      .maybeSingle();
 
-  const newAttempts = (existing?.attempts || 0) + 1;
-  let blocked_until = null;
+    if (fetchErr) throw fetchErr;
 
-  // 2. Determine if we should block (limit: 5)
-  if (newAttempts >= 5) {
-    const blockDate = new Date();
-    blockDate.setMinutes(blockDate.getMinutes() + 10);
-    blocked_until = blockDate.toISOString();
+    const newAttempts = (existing?.attempts || 0) + 1;
+    let blocked_until = null;
+
+    if (newAttempts >= 5) {
+      const blockDate = new Date();
+      blockDate.setMinutes(blockDate.getMinutes() + 10);
+      blocked_until = blockDate.toISOString();
+    }
+
+    const payload: any = {
+      email: cleanEmail,
+      ip_address: ip,
+      attempts: newAttempts,
+      last_attempt: new Date().toISOString(),
+      blocked_until
+    };
+    
+    if (existing?.id) payload.id = existing.id;
+
+    const { data, error } = await supabase
+      .from('login_attempts')
+      .upsert(payload)
+      .select('attempts, blocked_until')
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err: any) {
+    console.error("Security recording failed. Table might be missing.", err.message);
+    // Return dummy data so the UI can still show a local cooldown
+    return { attempts: 1, blocked_until: null };
   }
-
-  // 3. Upsert into database
-  const payload: any = {
-    email: cleanEmail,
-    ip_address: ip,
-    attempts: newAttempts,
-    last_attempt: new Date().toISOString(),
-    blocked_until
-  };
-  
-  if (existing?.id) payload.id = existing.id;
-
-  const { data, error } = await supabase
-    .from('login_attempts')
-    .upsert(payload)
-    .select('attempts, blocked_until')
-    .single();
-
-  if (error) throw error;
-  return data;
 }
 
 export async function clearLoginAttempts(email: string, ip: string) {
-  await supabase
-    .from('login_attempts')
-    .delete()
-    .eq('email', email.toLowerCase().trim())
-    .eq('ip_address', ip);
+  try {
+    await supabase
+      .from('login_attempts')
+      .delete()
+      .eq('email', email.toLowerCase().trim())
+      .eq('ip_address', ip);
+  } catch (e) {
+    // Ignore errors for cleaning up non-existent tables
+  }
 }
 
-// --- Auth Logic (Custom Table Flow) ---
+// --- Auth Logic ---
 
-export async function authSignUp(email: string, pass: string) {
-  const defaultName = `${email.split('@')[0]}'s Kitchen`;
+export async function authSignUp(email: string, pass: string, businessName?: string) {
+  const finalName = (businessName || email.split('@')[0]).trim();
+  
   const { data: rest, error: restErr } = await supabase
     .from('restaurants')
-    .insert([{ name: defaultName }])
+    .insert([{ name: finalName }])
     .select()
     .single();
   
@@ -155,12 +193,10 @@ export async function authSignIn(email: string, pass: string) {
   };
 }
 
-// --- Enterprise Logic ---
-
 export async function updateRestaurant(id: string, name: string) {
   const { data, error } = await supabase
     .from('restaurants')
-    .update({ name })
+    .update({ name: name.trim() })
     .eq('id', id)
     .select()
     .single();
@@ -178,8 +214,6 @@ export async function updateRestaurantTheme(id: string, theme: any) {
   if (error) throw new Error(error.message || "Theme update failed.");
   return data;
 }
-
-// --- Fetching Logic ---
 
 export async function getBranchesForRestaurant(restaurantId: string) {
   const { data, error } = await supabase
@@ -205,7 +239,6 @@ export async function getMenuByRestaurantId(restaurantId: string) {
 
   const menuId = menus[0].id;
 
-  // Fetch categories
   const { data: categories, error: catErr } = await supabase
     .from('categories')
     .select(`id, name, order_index`)
@@ -259,8 +292,6 @@ export async function getMenuForBranch(overrideSubdomain?: string) {
   };
 }
 
-// --- CRUD Operations ---
-
 export async function deleteRestaurant(id: string) {
   const { error } = await supabase.from('restaurants').delete().eq('id', id);
   if (error) throw new Error(error.message || "Purge failed.");
@@ -269,7 +300,7 @@ export async function deleteRestaurant(id: string) {
 export async function insertBranch(name: string, subdomain: string, restaurant_id: string) {
   const { data: menu, error: menuErr } = await supabase
     .from('menus')
-    .insert([{ name: `${name} Menu`, restaurant_id }])
+    .insert([{ name: `${name.trim()} Menu`, restaurant_id }])
     .select()
     .single();
 
@@ -278,7 +309,7 @@ export async function insertBranch(name: string, subdomain: string, restaurant_i
   const { data: branch, error: branchErr } = await supabase
     .from('branches')
     .insert([{ 
-      name, 
+      name: name.trim(), 
       subdomain: subdomain.toLowerCase().trim(), 
       restaurant_id, 
       menu_id: menu.id 
@@ -316,8 +347,6 @@ export async function deleteMenuItem(id: string) {
   const { error } = await supabase.from('items').delete().eq('id', id);
   if (error) throw new Error(error.message || "Dish deletion failed.");
 }
-
-// --- QR Management ---
 
 export async function getQRCodes(restaurantId: string) {
   const { data, error } = await supabase
@@ -369,8 +398,6 @@ export async function getQRCodeByCode(code: string) {
     branches: branches || []
   };
 }
-
-// --- Order Management ---
 
 export async function insertOrders(orders: any[]) {
   const { data, error } = await supabase

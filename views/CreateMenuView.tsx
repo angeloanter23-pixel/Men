@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { MenuItem, Category } from '../types';
 import AdminMenu from './admin/AdminMenu';
+import * as MenuService from '../services/menuService';
 
 // Declare QRious globally as it's loaded from CDN
 declare const QRious: any;
@@ -21,19 +21,13 @@ interface QRAsset {
 
 interface QRPreviewCardProps {
   asset: QRAsset;
-  businessName: string;
   isSelected: boolean;
-  selectionMode: boolean;
-  onSelect: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ 
-  asset, businessName, isSelected, selectionMode, onSelect, onDelete 
-}) => {
+const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ asset, isSelected, onDelete }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timerRef = useRef<number | null>(null);
-  const finalUrl = `mymenu.ph/${businessName.toLowerCase().replace(/\s+/g, '')}/${asset.name.toLowerCase().replace(/\s+/g, '')}?k=${asset.token}`;
+  const finalUrl = `men-m53q.vercel.app/${asset.token}`;
 
   useEffect(() => {
     if (canvasRef.current && typeof QRious !== 'undefined') {
@@ -47,64 +41,18 @@ const QRPreviewCard: React.FC<QRPreviewCardProps> = ({
     }
   }, [finalUrl]);
 
-  const handleDownload = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (canvasRef.current) {
-      const link = document.createElement('a');
-      link.href = canvasRef.current.toDataURL("image/png");
-      link.download = `${asset.name}-QR.png`;
-      link.click();
-    }
-  };
-
-  const handleLongPressStart = () => {
-    timerRef.current = window.setTimeout(() => {
-      onSelect(asset.id);
-    }, 600);
-  };
-
-  const handleLongPressEnd = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  };
-
   return (
-    <div 
-      onMouseDown={handleLongPressStart}
-      onMouseUp={handleLongPressEnd}
-      onTouchStart={handleLongPressStart}
-      onTouchEnd={handleLongPressEnd}
-      onClick={() => selectionMode && onSelect(asset.id)}
-      className={`relative bg-white p-4 rounded-3xl border transition-all flex flex-col items-center group ${isSelected ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-slate-100 shadow-sm hover:border-indigo-200'}`}
-    >
-      {selectionMode && (
-        <div className="absolute top-3 left-3 w-5 h-5 rounded-full border-2 border-indigo-200 flex items-center justify-center bg-white">
-          {isSelected && <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full animate-scale"></div>}
-        </div>
-      )}
-      
+    <div className={`relative bg-white p-4 rounded-3xl border transition-all flex flex-col items-center group ${isSelected ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-slate-100 shadow-sm'}`}>
       <div className="w-full text-center mb-2">
         <p className="text-[9px] font-black uppercase text-slate-800 truncate">{asset.name}</p>
         <p className="text-[7px] font-bold text-slate-300 uppercase tracking-widest">ID: {asset.token}</p>
       </div>
-
       <div className="bg-slate-50 p-2 rounded-2xl border border-slate-50 group-hover:bg-white transition-colors mb-3">
         <canvas ref={canvasRef}></canvas>
       </div>
-
-      <div className="flex gap-2 w-full">
-        <button 
-          onClick={handleDownload}
-          className="flex-1 bg-slate-50 text-slate-400 py-2 rounded-xl text-[8px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all border border-slate-100"
-        >
-          <i className="fa-solid fa-download"></i>
-        </button>
-        <button 
-          onClick={(e) => { e.stopPropagation(); onDelete(asset.id); }}
-          className="w-8 h-8 bg-slate-50 text-slate-300 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all border border-slate-100"
-        >
-          <i className="fa-solid fa-trash-can text-[10px]"></i>
-        </button>
-      </div>
+      <button onClick={(e) => { e.stopPropagation(); onDelete(asset.id); }} className="w-full h-8 bg-slate-50 text-slate-300 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all border border-slate-100">
+        <i className="fa-solid fa-trash-can text-[10px]"></i>
+      </button>
     </div>
   );
 };
@@ -114,577 +62,485 @@ interface CreateMenuViewProps {
   onComplete: (config: any) => void;
 }
 
-type WizardStep = 'info' | 'branches' | 'codes' | 'dishes' | 'design' | 'preview' | 'finish';
+type WizardStep = 'info' | 'branches' | 'codes' | 'dishes' | 'design' | 'preview' | 'account' | 'artifact' | 'billing';
 
-interface Theme {
-  id: string;
-  name: string;
-  primary: string;
-  bg: string;
-  text: string;
-}
+const STEPS_CONFIG: { id: WizardStep; label: string; sub: string; desc: string; note: string }[] = [
+  { 
+    id: 'info', 
+    label: 'Business Name', 
+    sub: 'Step 01', 
+    desc: 'Enter the official name of your restaurant. This name will appear on your menu and your QR codes.',
+    note: 'Your business name will be checked against our database to make sure it is unique.'
+  },
+  { 
+    id: 'branches', 
+    label: 'Branch Locations', 
+    sub: 'Step 02', 
+    desc: 'Add the physical locations of your business. You can manage multiple branches from one account.',
+    note: 'Adding branches helps you track sales and manage menus for different locations.'
+  },
+  { 
+    id: 'codes', 
+    label: 'QR Codes', 
+    sub: 'Step 03', 
+    desc: 'Create unique codes for your tables. Customers scan these to see your menu instantly on their phones.',
+    note: 'We recommend creating a different code for every table in your restaurant.'
+  },
+  { 
+    id: 'dishes', 
+    label: 'Menu Library', 
+    sub: 'Step 04', 
+    desc: 'Build your list of food and drinks. Group them into categories like Main Course or Desserts.',
+    note: 'Clear photos and simple descriptions help your customers choose their food faster.'
+  },
+  { 
+    id: 'design', 
+    label: 'Menu Style', 
+    sub: 'Step 05', 
+    desc: 'Pick a look that matches your restaurant brand. Our themes work perfectly on all mobile phones.',
+    note: 'Choose colors and fonts that make your food look its absolute best.'
+  },
+  { 
+    id: 'preview', 
+    label: 'Menu Preview', 
+    sub: 'Step 06', 
+    desc: 'See exactly how your menu looks on a real phone screen before you finish the setup.',
+    note: 'Try clicking through categories to see how the layout works for your customers.'
+  },
+  { 
+    id: 'account', 
+    label: 'Admin Email', 
+    sub: 'Step 07', 
+    desc: 'Enter your business email. You will use this to log in to your dashboard and manage orders.',
+    note: 'Make sure to use an email address that you check often for important updates.'
+  },
+  { 
+    id: 'artifact', 
+    label: 'Save Backup', 
+    sub: 'Step 08', 
+    desc: 'Download your menu settings as a file. This is your permanent backup in case you need to restore your data.',
+    note: 'You must save this file to your computer to move to the final step.'
+  },
+  { 
+    id: 'billing', 
+    label: 'System Pricing', 
+    sub: 'Step 09', 
+    desc: 'Choose a plan that fits your business. After picking a plan, we will help you schedule a setup appointment.',
+    note: 'Click the finish button to open Gmail and send us your appointment request.'
+  }
+];
 
-const THEMES: Theme[] = [
+const THEMES = [
   { id: 'classic', name: 'Sharp Orange', primary: 'bg-orange-500', bg: 'bg-[#fcfdfe]', text: 'text-orange-600' },
   { id: 'midnight', name: 'Deep Indigo', primary: 'bg-indigo-600', bg: 'bg-[#f8fafc]', text: 'text-indigo-600' },
   { id: 'forest', name: 'Sage Green', primary: 'bg-emerald-600', bg: 'bg-[#f7faf9]', text: 'text-emerald-700' },
-  { id: 'velvet', name: 'Ruby Wine', primary: 'bg-rose-600', bg: 'bg-[#fffafd]', text: 'text-rose-600' },
   { id: 'noir', name: 'Minimalist', primary: 'bg-slate-900', bg: 'bg-white', text: 'text-slate-900' }
-];
-
-const FONTS = [
-  { id: 'font-jakarta', name: 'Jakarta Sans', family: "'Plus Jakarta Sans', sans-serif" },
-  { id: 'font-playfair', name: 'Playfair Serif', family: "'Playfair Display', serif" },
-  { id: 'font-montserrat', name: 'Montserrat', family: "'Montserrat', sans-serif" },
-  { id: 'font-outfit', name: 'Outfit Soft', family: "'Outfit', sans-serif" }
 ];
 
 const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete }) => {
   const [step, setStep] = useState<WizardStep>('info');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // State for Step 1: Info
   const [businessName, setBusinessName] = useState('');
   const [logo, setLogo] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isCheckingName, setIsCheckingName] = useState(false);
+  const [isNameVerified, setIsNameVerified] = useState(false);
   
-  // State for Step 2: Branches
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchSubView, setBranchSubView] = useState<'list' | 'create'>('list');
   const [editingBranch, setEditingBranch] = useState<Partial<Branch> | null>(null);
   
-  // State for Step 3: QR Codes
+  // QR Generation State
   const [qrAssets, setQrAssets] = useState<QRAsset[]>([]);
   const [qrMode, setQrMode] = useState<'single' | 'bulk'>('single');
   const [qrBaseName, setQrBaseName] = useState('Table ');
   const [qrBulkCount, setQrBulkCount] = useState(5);
-  const [selectedQrIds, setSelectedQrIds] = useState<Set<string>>(new Set());
 
-  // State for Step 4: Dishes
-  const [categories, setCategories] = useState<Category[]>([
-    { id: 1, name: 'Main Course' },
-    { id: 2, name: 'Beverages' }
-  ]);
+  const [categories, setCategories] = useState<Category[]>([{ id: 1, name: 'Main Course' }, { id: 2, name: 'Beverages' }]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-
-  // State for Step 5: Design
-  const [selectedTheme, setSelectedTheme] = useState<Theme>(THEMES[0]);
-  const [selectedFont, setSelectedFont] = useState(FONTS[0]);
-
-  // State for Step 7: Finish
+  const [selectedTheme, setSelectedTheme] = useState(THEMES[0]);
   const [userEmail, setUserEmail] = useState('');
   const [hasDownloaded, setHasDownloaded] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'6' | '12'>('12');
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (le) => setLogo(le.target?.result as string);
-      reader.readAsDataURL(e.target.files[0]);
-    }
+  const handleNameChange = (val: string) => { 
+    setBusinessName(val); 
+    setIsNameVerified(false); 
+    setNameError(null); 
   };
 
-  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const config = JSON.parse(event.target?.result as string);
-        
-        // Populate Step 1: Info
-        if (config.business) {
-          setBusinessName(config.business.name || '');
-          setLogo(config.business.logo || null);
-          setBranches(config.business.branches || []);
-          setQrAssets(config.business.qrAssets || []);
-        }
-
-        // Populate Step 4: Menu
-        if (config.menu) {
-          setCategories(config.menu.categories || []);
-          setMenuItems(config.menu.items || []);
-        }
-
-        // Populate Step 5: Design
-        if (config.design) {
-          const matchedTheme = THEMES.find(t => t.id === config.design.theme);
-          if (matchedTheme) setSelectedTheme(matchedTheme);
-          
-          const matchedFont = FONTS.find(f => f.id === config.design.font);
-          if (matchedFont) setSelectedFont(matchedFont);
-        }
-
-        alert("Configuration loaded successfully.");
-      } catch (err) {
-        alert("Failed to parse configuration JSON.");
+  const checkNameAvailability = async () => {
+    if (!businessName.trim()) { setNameError("Please enter a name first."); return; }
+    setIsCheckingName(true);
+    setNameError(null);
+    try {
+      const exists = await MenuService.checkBusinessNameExists(businessName);
+      if (exists) { 
+        setNameError("This restaurant name already exists."); 
+        setIsNameVerified(false); 
       }
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-    reader.readAsText(file);
-  };
-
-  const generateToken = (length = 6) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+      else { 
+        setIsNameVerified(true); 
+        setNameError(null); 
+      }
+    } catch (err: any) { 
+      setNameError("Database check failed."); 
     }
-    return result;
+    finally { setIsCheckingName(false); }
   };
 
   const handleGenerateQRs = () => {
-    const qty = qrMode === 'single' ? 1 : Math.min(qrBulkCount, 50);
-    const newAssets: QRAsset[] = [];
-    for (let i = 1; i <= qty; i++) {
-      newAssets.push({
-        id: Math.random().toString(36).substr(2, 9),
-        name: qrMode === 'single' ? qrBaseName : `${qrBaseName}${i}`,
-        token: generateToken()
-      });
-    }
-    setQrAssets(prev => [...newAssets, ...prev]);
-  };
-
-  const toggleQrSelection = (id: string) => {
-    setSelectedQrIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const deleteSelectedQrs = () => {
-    setQrAssets(prev => prev.filter(asset => !selectedQrIds.has(asset.id)));
-    setSelectedQrIds(new Set());
-  };
-
-  const saveBranch = () => {
-    if (!editingBranch?.name) return alert("Branch name is required.");
-    if (branches.length >= 5 && !editingBranch.id) return alert("Branch limit of 5 reached for this plan.");
-
-    if (editingBranch.id) {
-      setBranches(prev => prev.map(b => b.id === editingBranch.id ? editingBranch as Branch : b));
+    if (qrMode === 'single') {
+        const name = qrBaseName.trim() || 'Table';
+        if (qrAssets.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+            alert("A code with this name already exists in your list.");
+            return;
+        }
+        setQrAssets(prev => [{
+            id: Math.random().toString(36).substr(2, 9),
+            name: name,
+            token: Math.random().toString(36).substr(2, 6).toUpperCase()
+        }, ...prev]);
     } else {
-      const newBranch: Branch = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: editingBranch.name,
-        image_url: editingBranch.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=400',
-        subdomain: editingBranch.subdomain || editingBranch.name.toLowerCase().replace(/\s+/g, '-')
-      };
-      setBranches(prev => [...prev, newBranch]);
+        const qty = Math.min(qrBulkCount, 50);
+        const newAssets: QRAsset[] = [];
+        for (let i = 1; i <= qty; i++) {
+            const name = `${qrBaseName}${i}`;
+            // Skip if duplicate exists to prevent token fragmentation
+            if (qrAssets.some(a => a.name.toLowerCase() === name.toLowerCase())) continue;
+            
+            newAssets.push({
+                id: Math.random().toString(36).substr(2, 9),
+                name: name,
+                token: Math.random().toString(36).substr(2, 6).toUpperCase()
+            });
+        }
+        setQrAssets(prev => [...newAssets, ...prev]);
     }
-    setEditingBranch(null);
-    setBranchSubView('list');
   };
-
-  const fullConfigObj = useMemo(() => {
-    return {
-      business: { name: businessName, logo, branches, qrAssets },
-      menu: { categories, items: menuItems },
-      design: { theme: selectedTheme.id, font: selectedFont.id },
-      user: { email: userEmail }
-    };
-  }, [businessName, logo, branches, qrAssets, categories, menuItems, selectedTheme, selectedFont, userEmail]);
-
-  const configJson = useMemo(() => JSON.stringify(fullConfigObj, null, 2), [fullConfigObj]);
 
   const downloadConfig = () => {
-    const blob = new Blob([configJson], { type: 'application/json' });
+    const config = { 
+      business: { name: businessName, logo, branches, qrAssets }, 
+      menu: { categories, items: menuItems }, 
+      user: { email: userEmail },
+      design: { themeId: selectedTheme.id }
+    };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${businessName.replace(/\s+/g, '_')}_config.json`;
-    a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `${businessName.replace(/\s+/g, '_')}_setup.json`; a.click();
     setHasDownloaded(true);
   };
 
-  const renderInfoStep = () => (
-    <div className="space-y-6 animate-fade-in">
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-        <div className="space-y-1">
-          <div className="flex justify-between items-center mb-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Business Name</label>
-            <span className="text-[8px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">add branch limit to 5</span>
-          </div>
-          <input 
-            type="text" 
-            placeholder="e.g. Steakhouse Prime" 
-            value={businessName} 
-            onChange={e => setBusinessName(e.target.value)}
-            className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none focus:ring-2 ring-indigo-500/10 transition-all border border-transparent"
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Brand Logo</label>
-          <div className="relative group">
-            <input type="file" id="logo-up" className="hidden" onChange={handleLogoUpload} />
-            <button 
-              onClick={() => document.getElementById('logo-up')?.click()}
-              className="w-full bg-slate-50 border border-dashed border-slate-200 py-8 rounded-2xl flex flex-col items-center gap-2 group-hover:border-indigo-400 transition-colors"
-            >
-              {logo ? (
-                <img src={logo} className="h-16 w-16 object-contain rounded-xl shadow-sm" alt="Logo" />
-              ) : (
-                <>
-                  <i className="fa-solid fa-cloud-arrow-up text-xl text-slate-300"></i>
-                  <p className="text-[9px] font-black text-slate-400 uppercase">Click to upload</p>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const launchGmail = () => {
+    const to = "deploy@sharpqr.com";
+    const subject = `Deployment Appointment: ${businessName}`;
+    const planText = selectedPlan === '6' ? '6 Months (₱3,500)' : '12 Months (₱6,000)';
+    const body = `Hello SharpQR Team,\n\nI want to schedule an appointment to deploy my digital menu.\n\nBusiness Name: ${businessName}\nAdmin Email: ${userEmail}\nSelected Plan: ${planText}\n\nI have saved my configuration file and I'm ready to proceed.\n\nThank you.`;
+    
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
+    
+    onComplete({ 
+      business: { name: businessName, logo, branches, qrAssets }, 
+      menu: { categories, items: menuItems }, 
+      user: { email: userEmail },
+      plan: selectedPlan 
+    });
+  };
 
-  const renderBranchesStep = () => (
-    <div className="space-y-8 animate-fade-in">
-      {/* 2 Nav Sub-Navigation */}
-      <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
-        <button 
-          onClick={() => setBranchSubView('list')} 
-          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${branchSubView === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-        >
-          Branch List
-        </button>
-        <button 
-          onClick={() => { setEditingBranch({}); setBranchSubView('create'); }} 
-          className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${branchSubView === 'create' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-        >
-          Create Branch
-        </button>
-      </div>
-
-      {branchSubView === 'create' ? (
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Branch Name</label>
-            <input 
-              type="text" 
-              value={editingBranch?.name || ''} 
-              onChange={e => setEditingBranch({...editingBranch, name: e.target.value})}
-              placeholder="e.g. Makati Branch" 
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent focus:ring-2 ring-indigo-500/10 transition-all" 
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Image URL</label>
-            <input 
-              type="text" 
-              value={editingBranch?.image_url || ''} 
-              onChange={e => setEditingBranch({...editingBranch, image_url: e.target.value})}
-              placeholder="https://images.unsplash..." 
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent focus:ring-2 ring-indigo-500/10 transition-all" 
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Subdomain / Slug</label>
-            <input 
-              type="text" 
-              value={editingBranch?.subdomain || ''} 
-              onChange={e => setEditingBranch({...editingBranch, subdomain: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
-              placeholder="e.g. branch-name" 
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent focus:ring-2 ring-indigo-500/10 transition-all" 
-            />
-          </div>
-          <button 
-            onClick={saveBranch} 
-            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95"
-          >
-            {editingBranch?.id ? 'Update Branch' : 'Commit Branch'}
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center px-2">
-            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Live Territories ({branches.length}/5)</h4>
-          </div>
-          {branches.length === 0 ? (
-            <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-white">
-              <i className="fa-solid fa-map-location-dot text-3xl text-slate-100 mb-3"></i>
-              <p className="text-slate-400 text-[9px] font-black uppercase tracking-widest">No branches deployed yet</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {branches.map(branch => (
-                <div key={branch.id} className="bg-white p-4 rounded-[2rem] border border-slate-100 flex items-center gap-4 shadow-sm group">
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-50 shrink-0">
-                    <img src={branch.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={branch.name} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-xs text-slate-800 uppercase truncate">{branch.name}</h5>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{branch.subdomain}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => { setEditingBranch(branch); setBranchSubView('create'); }} className="p-3 text-indigo-400 hover:bg-indigo-50 rounded-xl transition-all"><i className="fa-solid fa-pen"></i></button>
-                    <button onClick={() => setBranches(prev => prev.filter(b => b.id !== branch.id))} className="p-3 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><i className="fa-solid fa-trash-can"></i></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderQRStep = () => (
-    <div className="space-y-6 animate-fade-in">
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-        <div className="text-center">
-          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Entry Codes</p>
-          <h4 className="text-xl font-black text-slate-900 uppercase italic">QR Generator</h4>
-        </div>
-
-        <div className="bg-slate-50 p-1 rounded-xl flex border border-slate-100">
-          <button onClick={() => setQrMode('single')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${qrMode === 'single' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Single</button>
-          <button onClick={() => setQrMode('bulk')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${qrMode === 'bulk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Bulk</button>
-        </div>
-
-        <div className="space-y-4">
-          <input type="text" value={qrBaseName} onChange={(e) => setQrBaseName(e.target.value)} placeholder="Label (e.g. Table)" className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent focus:ring-2 ring-indigo-500/10 transition-all" />
-          {qrMode === 'bulk' && <input type="number" value={qrBulkCount} onChange={(e) => setQrBulkCount(Number(e.target.value))} min="1" max="50" className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border border-transparent" />}
-          <button onClick={handleGenerateQRs} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95">Generate Now</button>
-        </div>
-      </div>
-
-      {qrAssets.length > 0 && (
-        <div className="space-y-4 pt-2">
-          <div className="flex justify-between items-center px-2">
-            <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] italic">Active Access Points</h5>
-            {selectedQrIds.size > 0 ? (
-              <button onClick={deleteSelectedQrs} className="text-rose-500 text-[10px] font-black uppercase animate-pulse">Purge Selected ({selectedQrIds.size})</button>
-            ) : (
-              <p className="text-[8px] font-bold text-slate-300 uppercase">Long press to select</p>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto no-scrollbar pb-10">
-            {qrAssets.map((asset) => (
-              <QRPreviewCard 
-                key={asset.id} 
-                asset={asset} 
-                businessName={businessName || 'foodie'} 
-                isSelected={selectedQrIds.has(asset.id)}
-                selectionMode={selectedQrIds.size > 0}
-                onSelect={toggleQrSelection}
-                onDelete={(id) => setQrAssets(prev => prev.filter(a => a.id !== id))}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderDesignStep = () => (
-    <div className="space-y-10 animate-fade-in">
-      <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm space-y-10">
-        <div className="space-y-6">
-          <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2 italic">Select Premium Theme</h5>
-          <div className="grid grid-cols-1 gap-3">
-            {THEMES.map(theme => (
-              <button 
-                key={theme.id}
-                onClick={() => setSelectedTheme(theme)}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedTheme.id === theme.id ? 'bg-slate-50 border-indigo-500 ring-2 ring-indigo-50' : 'bg-white border-slate-100'}`}
-              >
-                <div className="flex items-center gap-4">
-                   <div className={`w-10 h-10 rounded-full ${theme.primary} border-4 border-white shadow-sm`}></div>
-                   <span className="text-xs font-black text-slate-800 uppercase italic tracking-tighter">{theme.name}</span>
-                </div>
-                {selectedTheme.id === theme.id && <i className="fa-solid fa-circle-check text-indigo-500"></i>}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2 italic">Select Typography</h5>
-          <div className="grid grid-cols-2 gap-3">
-            {FONTS.map(font => (
-              <button 
-                key={font.id}
-                onClick={() => setSelectedFont(font)}
-                className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${selectedFont.id === font.id ? 'bg-indigo-50 border-indigo-500' : 'bg-slate-50 border-slate-100'}`}
-                style={{ fontFamily: font.family }}
-              >
-                <span className="text-lg mb-1">Aa</span>
-                <span className="text-[8px] font-black uppercase tracking-widest opacity-60">{font.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPreviewStep = () => (
-    <div className="space-y-6 animate-fade-in flex flex-col items-center">
-      <div className="text-center">
-        <h3 className="text-[10px] font-black uppercase text-orange-500 tracking-widest mb-1">Mobile Render</h3>
-        <p className="text-xs font-bold text-slate-400 mb-6 italic">Live Menu Simulation</p>
-      </div>
-      <div className="relative w-[260px] h-[520px] bg-slate-800 border-[8px] border-slate-900 rounded-[3rem] shadow-2xl overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-slate-900 rounded-b-xl z-50"></div>
-        <div className={`h-full w-full ${selectedTheme.bg} flex flex-col ${selectedFont.id}`}>
-           <header className="px-5 pt-8 pb-4 flex items-center justify-between border-b border-black/5">
-              <span className={`text-[12px] font-black uppercase italic tracking-tighter ${selectedTheme.text}`}>{businessName || 'FOODIE.'}</span>
-              <div className="w-8 h-8 flex items-center justify-center bg-black/5 rounded-xl"><i className="fa-solid fa-cart-shopping text-[11px] opacity-40"></i></div>
-           </header>
-           <div className="flex-1 overflow-y-auto no-scrollbar px-5 pt-6 space-y-6">
-              <h4 className="text-xl font-black text-slate-900 leading-none">Choose your <br /><span className={`${selectedTheme.text.replace('text-', 'text-opacity-80 text-')}`}>{categories[0]?.name || 'Dish'}</span></h4>
-              
-              <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
-                {categories.map((c, i) => (
-                  <div key={c.id} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest whitespace-nowrap border ${i === 0 ? `${selectedTheme.primary} text-white border-transparent shadow-sm` : 'bg-white text-slate-400 border-black/5'}`}>{c.name}</div>
-                ))}
-              </div>
-
-              <div className="space-y-4 pb-12">
-                {(menuItems.length > 0 ? menuItems : [1,2,3]).map((it: any) => (
-                  <div key={typeof it === 'number' ? it : it.id} className="bg-white p-3 rounded-3xl border border-black/5 flex gap-4 shadow-sm">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-50 overflow-hidden shrink-0">
-                      {it.image_url ? <img src={it.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-100"></div>}
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div className="flex justify-between items-start mb-2"><span className="text-[10px] font-black text-slate-800 truncate pr-2">{it.name || 'Sample Item'}</span><span className={`text-[10px] font-black ${selectedTheme.text}`}>₱{it.price || '0.00'}</span></div>
-                      <div className="h-1 w-full bg-black/5 rounded-full"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-           </div>
-           <footer className="h-14 bg-white/80 backdrop-blur-md border-t border-black/5 flex items-center justify-around px-8">
-              <i className={`fa-solid fa-house text-[12px] ${selectedTheme.text}`}></i>
-              <i className="fa-solid fa-users text-slate-200 text-[12px]"></i>
-              <i className="fa-solid fa-receipt text-slate-200 text-[12px]"></i>
-           </footer>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderFinishStep = () => (
-    <div className="space-y-8 animate-fade-in">
-       <div className="bg-slate-900 p-8 rounded-[3rem] shadow-xl overflow-hidden relative">
-          <h4 className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mb-4 italic">Step 1: Security & Identity</h4>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-indigo-300 ml-2">Main Email (Signup & Recovery)</label>
-              <input 
-                type="email" 
-                placeholder="Required for account activation..."
-                value={userEmail}
-                onChange={e => setUserEmail(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white text-sm font-bold outline-none focus:ring-4 ring-indigo-500/20"
-              />
-            </div>
-            <p className="text-[8px] text-slate-500 uppercase tracking-widest italic">Note: This will be your primary identity for enterprise sign-in and recovery. Do not lose access to this email.</p>
-          </div>
+  const renderProtocolHeader = (config: typeof STEPS_CONFIG[0]) => (
+    <div className="mb-10 animate-fade-in px-2">
+       <div className="flex items-center gap-3 mb-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic">{config.sub}</p>
        </div>
-
-       <div className="bg-white p-8 rounded-[3rem] border-4 border-orange-500/10 shadow-sm space-y-6 relative overflow-hidden">
-          {!hasDownloaded && (
-            <div className="absolute top-4 right-8 w-4 h-4 bg-orange-500 rounded-full animate-ping"></div>
-          )}
-          <h4 className="text-[10px] font-black uppercase text-orange-500 tracking-widest italic">Step 2: Mandatory Backup</h4>
-          <p className="text-xs font-bold text-slate-500 leading-relaxed">You MUST download your configuration progress now. If you lose this file, your current menu setup cannot be recovered during the verification process.</p>
-          <button 
-            onClick={downloadConfig} 
-            className={`w-full py-5 rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl transition-all active:scale-95 ${hasDownloaded ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white animate-pulse'}`}
-          >
-            {hasDownloaded ? <><i className="fa-solid fa-check-circle mr-2"></i> Progress Secured</> : 'Download & Secure Progress (JSON)'}
-          </button>
-       </div>
-
-       <div className="bg-indigo-50 border border-indigo-100 p-8 rounded-[3rem] shadow-sm space-y-6">
-          <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-widest italic">Step 3: Verification</h4>
-          <p className="text-xs font-bold text-slate-600 leading-relaxed">Final Activation Directive:</p>
-          <div className="bg-white p-6 rounded-2xl border border-indigo-200">
-             <p className="text-[11px] font-black text-slate-800 uppercase italic mb-3">Next Action Required:</p>
-             <p className="text-xs font-medium text-slate-500 mb-6">Forward your downloaded configuration or message us directly at <span className="text-indigo-600 font-bold">geloelolo@gmail.com</span> to activate your enterprise plan and deploy to live servers.</p>
-             <a 
-              href={`mailto:geloelolo@gmail.com?subject=Enterprise Menu Activation: ${businessName}&body=Hi, I would like to activate my menu for ${businessName}. My registered email is ${userEmail}. [Attached Config Required]`}
-              className="w-full inline-flex items-center justify-center gap-3 bg-indigo-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
-             >
-               <i className="fa-solid fa-envelope"></i> Message via Gmail
-             </a>
-          </div>
-       </div>
-
-       <div className="pt-6">
-          <button 
-            disabled={!hasDownloaded || !userEmail}
-            onClick={() => onComplete(fullConfigObj)} 
-            className={`w-full py-6 rounded-[2.5rem] font-black uppercase text-[11px] tracking-widest shadow-2xl transition-all ${(!hasDownloaded || !userEmail) ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' : 'bg-slate-900 text-white hover:bg-black active:scale-95'}`}
-          >
-            Activate Plan & Finalize
-          </button>
-       </div>
+       <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900 mb-4">
+         {config.label.split(' ')[0]} <span className="text-indigo-600">{config.label.split(' ').slice(1).join(' ')}</span>
+       </h2>
+       <p className="text-[13px] text-slate-500 font-medium leading-relaxed">
+         {config.desc}
+       </p>
     </div>
   );
 
-  const stepsList: WizardStep[] = ['info', 'branches', 'codes', 'dishes', 'design', 'preview', 'finish'];
+  const renderNoteCard = (icon: string, text: string) => (
+    <div className="mt-12 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 animate-fade-in">
+       <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center shrink-0"><i className={`fa-solid ${icon} text-xs`}></i></div>
+       <p className="text-[11px] text-slate-500 font-bold leading-relaxed">{text}</p>
+    </div>
+  );
+
+  const currentStepData = STEPS_CONFIG.find(s => s.id === step)!;
+  const stepsList: WizardStep[] = STEPS_CONFIG.map(s => s.id);
   const currentIndex = stepsList.indexOf(step);
+  const isNextDisabled = (step === 'info' && !isNameVerified) || (step === 'account' && !userEmail.includes('@')) || (step === 'artifact' && !hasDownloaded) || (step === 'billing' && !agreedToTerms);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFD] flex flex-col font-['Plus_Jakarta_Sans']">
-      <header className="bg-white border-b border-slate-100 sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-           <button onClick={onCancel} className="p-2 text-slate-300 hover:text-rose-500"><i className="fa-solid fa-xmark"></i></button>
-           <div>
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-900">{step}</h2>
-              <div className="flex gap-1 mt-1">
-                 {stepsList.map((s, i) => (
-                   <div key={s} className={`h-1 w-4 rounded-full transition-all duration-300 ${step === s ? 'bg-indigo-600 w-6' : i < currentIndex ? 'bg-indigo-200' : 'bg-slate-100'}`}></div>
-                 ))}
-              </div>
+    <div className="min-h-screen bg-[#FBFBFD] flex flex-col font-['Plus_Jakarta_Sans'] overflow-x-hidden">
+      <header className="bg-white/80 backdrop-blur-2xl sticky top-0 z-[100] border-b border-slate-100 shadow-sm px-6 py-4">
+        <div className="max-w-xl mx-auto flex items-center justify-between">
+           <button onClick={onCancel} className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all"><i className="fa-solid fa-xmark"></i></button>
+           <div className="flex gap-1.5 overflow-x-auto no-scrollbar max-w-[150px]">
+             {STEPS_CONFIG.map((s, i) => (
+               <div key={s.id} className={`h-1 rounded-full transition-all duration-500 shrink-0 ${step === s.id ? 'bg-indigo-600 w-8' : i < currentIndex ? 'bg-indigo-200 w-4' : 'bg-slate-100 w-2'}`} />
+             ))}
            </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Import JSON Icon */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept=".json" 
-            onChange={handleImportJson} 
-          />
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            title="Load JSON Config"
-            className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <i className="fa-solid fa-file-import"></i>
-          </button>
-          <button onClick={() => { const nextIdx = currentIndex + 1; if (nextIdx < stepsList.length) setStep(stepsList[nextIdx]); }} className={`text-[10px] font-black uppercase text-indigo-600 ${step === 'finish' ? 'opacity-0' : 'opacity-100'}`}>Next Step</button>
+           <div className="w-10"></div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-6 pb-32 no-scrollbar">
+      <main className="flex-1 overflow-y-auto p-8 no-scrollbar pb-40">
         <div className="max-w-md mx-auto">
-          <div className="mb-8 animate-fade-in">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none italic mb-2">Initialize your <br /><span className="text-orange-500">Menu Space.</span></h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Digital Onboarding Flow</p>
-          </div>
+          {renderProtocolHeader(currentStepData)}
 
-          {step === 'info' && renderInfoStep()}
-          {step === 'branches' && renderBranchesStep()}
-          {step === 'codes' && renderQRStep()}
-          {step === 'dishes' && <div className="animate-fade-in scale-95 origin-top"><AdminMenu items={menuItems} setItems={setMenuItems as any} cats={categories} setCats={setCategories as any} isWizard={true} /></div>}
-          {step === 'design' && renderDesignStep()}
-          {step === 'preview' && renderPreviewStep()}
-          {step === 'finish' && renderFinishStep()}
+          <div className="transition-all duration-500">
+            {step === 'info' && (
+              <div className="space-y-6">
+                <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl space-y-4">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Restaurant Name</label>
+                    {isCheckingName && <i className="fa-solid fa-spinner animate-spin text-indigo-400 text-xs"></i>}
+                  </div>
+                  <input type="text" placeholder="e.g. Starbucks" value={businessName} onChange={e => handleNameChange(e.target.value)} className={`w-full p-6 bg-slate-50 rounded-2xl font-black text-lg outline-none border-2 transition-all ${isNameVerified ? 'border-emerald-400' : 'border-transparent'}`} />
+                  <button onClick={checkNameAvailability} disabled={isCheckingName || !businessName.trim()} className={`w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${isNameVerified ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-900 text-white'}`}>
+                    {isNameVerified ? 'Name Available ✓' : 'Check Availability'}
+                  </button>
+                  {nameError && <p className="text-[10px] font-black text-rose-500 px-4 uppercase">{nameError}</p>}
+                </div>
+                {renderNoteCard("fa-building", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'branches' && (
+              <div className="space-y-6">
+                <div className="flex bg-slate-100 p-1 rounded-2xl">
+                  <button onClick={() => setBranchSubView('list')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${branchSubView === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>My List</button>
+                  <button onClick={() => { setEditingBranch({}); setBranchSubView('create'); }} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${branchSubView === 'create' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Add New</button>
+                </div>
+                <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl min-h-[200px] flex flex-col justify-center">
+                  {branchSubView === 'create' ? (
+                    <div className="space-y-4 animate-fade-in">
+                       <input type="text" placeholder="Store name..." value={editingBranch?.name || ''} onChange={e => setEditingBranch({...editingBranch, name: e.target.value})} className="w-full p-5 bg-slate-50 rounded-2xl font-black text-sm outline-none" />
+                       <button onClick={() => { if(editingBranch?.name) setBranches([...branches, {id: Math.random().toString(), name: editingBranch.name, image_url: '', subdomain: ''}]); setBranchSubView('list'); }} className="w-full bg-slate-900 text-white py-5 rounded-2xl text-[10px] font-black uppercase">Save Location</button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                       {branches.map(b => <div key={b.id} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center font-black uppercase text-xs"><span>{b.name}</span><button onClick={() => setBranches(branches.filter(it => it.id !== b.id))} className="text-rose-400">✕</button></div>)}
+                       {branches.length === 0 && <p className="text-center text-slate-300 font-bold text-xs italic">No branches added yet.</p>}
+                    </div>
+                  )}
+                </div>
+                {renderNoteCard("fa-sitemap", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'codes' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="flex bg-slate-100 p-1 rounded-2xl">
+                    <button onClick={() => setQrMode('single')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${qrMode === 'single' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Single</button>
+                    <button onClick={() => setQrMode('bulk')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${qrMode === 'bulk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Bulk</button>
+                </div>
+
+                <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl space-y-6">
+                   {qrMode === 'single' ? (
+                     <div className="space-y-4 animate-fade-in">
+                        <div className="space-y-2">
+                            <label className="text-[8px] font-black text-slate-400 uppercase ml-2 tracking-widest">Table Label</label>
+                            <input type="text" value={qrBaseName} onChange={e => setQrBaseName(e.target.value)} placeholder="e.g. Table 1" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-xs outline-none" />
+                        </div>
+                     </div>
+                   ) : (
+                     <div className="grid grid-cols-2 gap-4 animate-fade-in">
+                        <div className="space-y-2">
+                            <label className="text-[8px] font-black text-slate-400 uppercase ml-2 tracking-widest">Prefix</label>
+                            <input type="text" value={qrBaseName} onChange={e => setQrBaseName(e.target.value)} placeholder="Table" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-xs outline-none" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[8px] font-black text-slate-400 uppercase ml-2 tracking-widest">Total Qty</label>
+                            <input type="number" value={qrBulkCount} onChange={e => setQrBulkCount(Number(e.target.value))} className="w-full p-4 bg-slate-50 rounded-xl font-bold text-xs outline-none" />
+                        </div>
+                     </div>
+                   )}
+                   <button onClick={handleGenerateQRs} className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all">
+                       {qrMode === 'single' ? 'Create Single Code' : 'Generate Sequence'}
+                   </button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto no-scrollbar pb-10">
+                   {qrAssets.map(a => <QRPreviewCard key={a.id} asset={a} isSelected={false} onDelete={id => setQrAssets(qrAssets.filter(q => q.id !== id))} />)}
+                   {qrAssets.length === 0 && (
+                     <div className="col-span-2 py-10 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">No codes generated yet.</p>
+                     </div>
+                   )}
+                </div>
+                {renderNoteCard("fa-qrcode", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'dishes' && (
+              <div className="animate-fade-in">
+                <AdminMenu items={menuItems} setItems={setMenuItems as any} cats={categories} setCats={setCategories as any} isWizard={true} />
+                {renderNoteCard("fa-utensils", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'design' && (
+              <div className="space-y-4">
+                 {THEMES.map(theme => (
+                   <button key={theme.id} onClick={() => setSelectedTheme(theme)} className={`w-full p-6 flex items-center justify-between rounded-[2rem] border transition-all ${selectedTheme.id === theme.id ? 'bg-slate-50 border-indigo-600 shadow-md' : 'bg-white border-slate-100'}`}>
+                      <div className="flex items-center gap-4"><div className={`w-8 h-8 rounded-full ${theme.primary} shadow-lg shadow-indigo-100`}></div><span className="font-black text-slate-800 uppercase italic text-sm">{theme.name}</span></div>
+                      {selectedTheme.id === theme.id && <i className="fa-solid fa-circle-check text-indigo-600"></i>}
+                   </button>
+                 ))}
+                 {renderNoteCard("fa-palette", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'preview' && (
+              <div className="flex flex-col items-center">
+                 <div className="w-[280px] h-[580px] bg-slate-950 rounded-[4rem] border-[12px] border-slate-900 shadow-2xl relative overflow-hidden flex flex-col scale-105">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-slate-900 rounded-b-2xl z-20"></div>
+                    
+                    <div className={`flex-1 ${selectedTheme.bg} flex flex-col`}>
+                       <header className="pt-10 px-6 pb-4 bg-white/80 backdrop-blur-md border-b border-slate-100 shrink-0">
+                          <div className="flex justify-between items-center mb-6">
+                            <i className="fa-solid fa-align-left text-slate-300 text-xs"></i>
+                            <h1 className={`text-sm font-black uppercase italic tracking-tight ${selectedTheme.text}`}>{businessName || 'MY MENU'}</h1>
+                            <i className="fa-solid fa-cart-shopping text-slate-300 text-xs"></i>
+                          </div>
+                          <div className="relative mb-4">
+                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-[10px]"><i className="fa-solid fa-magnifying-glass"></i></div>
+                             <div className="w-full h-8 bg-slate-50 rounded-xl border border-slate-100 text-[8px] flex items-center pl-8 text-slate-300 font-bold uppercase">Search food...</div>
+                          </div>
+                          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                             <span className={`px-4 py-1.5 rounded-full ${selectedTheme.primary} text-white text-[7px] font-black uppercase shadow-lg shadow-indigo-50`}>All Items</span>
+                             {categories.slice(0, 2).map(c => <span key={c.id} className="px-4 py-1.5 rounded-full bg-white border border-slate-50 text-slate-300 text-[7px] font-black uppercase shadow-sm whitespace-nowrap">{c.name}</span>)}
+                          </div>
+                       </header>
+
+                       <div className="flex-1 p-5 space-y-4 overflow-y-auto no-scrollbar">
+                          <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">Special<br/><span className="text-orange-500">Choice.</span></h2>
+                          <div className="grid grid-cols-1 gap-3">
+                             {(menuItems.length > 0 ? menuItems.slice(0, 4) : [{id: 1, name: 'Premium Dish', price: 350}, {id: 2, name: 'Special Meal', price: 520}]).map((item: any) => (
+                               <div key={item.id} className="bg-white p-3 rounded-2xl border border-slate-50 flex gap-4 shadow-sm animate-fade-in">
+                                  <div className="w-14 h-14 bg-slate-50 rounded-xl shrink-0 overflow-hidden">
+                                     {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-200"><i className="fa-solid fa-image"></i></div>}
+                                  </div>
+                                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                     <div className="flex justify-between items-center mb-1">
+                                        <h4 className="font-black text-[10px] uppercase truncate text-slate-800 mb-1 leading-none pr-2">{item.name}</h4>
+                                        <span className="text-[10px] font-black text-indigo-600">₱{item.price}</span>
+                                     </div>
+                                     <div className="h-1.5 w-full bg-slate-50 rounded-full"></div>
+                                  </div>
+                               </div>
+                             ))}
+                          </div>
+                       </div>
+
+                       <div className="h-14 bg-white border-t border-slate-50 flex justify-around items-center px-6">
+                          <i className="fa-solid fa-house text-indigo-600 text-sm"></i>
+                          <i className="fa-solid fa-heart text-slate-200 text-sm"></i>
+                          <i className="fa-solid fa-receipt text-slate-200 text-sm"></i>
+                       </div>
+                    </div>
+                 </div>
+                 {renderNoteCard("fa-mobile-screen", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'account' && (
+              <div className="space-y-6">
+                <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl space-y-4">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Master Email</label>
+                  <input type="email" placeholder="owner@restaurant.com" value={userEmail} onChange={e => setUserEmail(e.target.value)} className="w-full bg-slate-50 p-6 rounded-2xl font-bold text-sm outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" />
+                </div>
+                {renderNoteCard("fa-user-lock", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'artifact' && (
+              <div className="space-y-6">
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl text-center space-y-8">
+                   <p className="text-xs text-slate-500 font-medium leading-relaxed">Save your menu setup file. This is your backup. You need this file to restore your settings later.</p>
+                   <button onClick={downloadConfig} className={`w-full py-6 rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl transition-all ${hasDownloaded ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white animate-pulse'}`}>
+                      {hasDownloaded ? 'Backup Saved ✓' : 'Save Backup File'}
+                   </button>
+                </div>
+                {renderNoteCard("fa-floppy-disk", currentStepData.note)}
+              </div>
+            )}
+
+            {step === 'billing' && (
+              <div className="space-y-8 animate-fade-in">
+                 <div className="grid grid-cols-1 gap-5">
+                    <button 
+                      onClick={() => setSelectedPlan('6')}
+                      className={`p-8 rounded-[3rem] text-left transition-all border-2 relative overflow-hidden group ${selectedPlan === '6' ? 'bg-slate-900 border-indigo-500 text-white shadow-2xl scale-105' : 'bg-white border-slate-100 text-slate-900 shadow-sm'}`}
+                    >
+                       <div className="relative z-10">
+                          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${selectedPlan === '6' ? 'text-indigo-400' : 'text-slate-400'}`}>6 Months Plan</p>
+                          <h3 className="text-3xl font-black italic">₱3,500</h3>
+                          <div className="mt-4 space-y-1">
+                             <p className={`text-[10px] font-bold ${selectedPlan === '6' ? 'text-slate-400' : 'text-slate-500'}`}>153 business owner choose this</p>
+                             <p className={`text-[9px] font-black uppercase tracking-widest ${selectedPlan === '6' ? 'text-indigo-300' : 'text-indigo-600'}`}>Renew 1k every year</p>
+                          </div>
+                       </div>
+                       {selectedPlan === '6' && <i className="fa-solid fa-circle-check absolute top-8 right-8 text-indigo-500 text-xl"></i>}
+                    </button>
+
+                    <button 
+                      onClick={() => setSelectedPlan('12')}
+                      className={`p-8 rounded-[3rem] text-left transition-all border-2 relative overflow-hidden group ${selectedPlan === '12' ? 'bg-slate-900 border-indigo-500 text-white shadow-2xl scale-105' : 'bg-white border-slate-100 text-slate-900 shadow-sm'}`}
+                    >
+                       <div className="absolute top-4 right-8 bg-indigo-600 text-white text-[8px] font-black uppercase px-3 py-1 rounded-full shadow-lg">Recommended</div>
+                       <div className="relative z-10">
+                          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${selectedPlan === '12' ? 'text-indigo-400' : 'text-slate-400'}`}>12 Months Plan</p>
+                          <h3 className="text-3xl font-black italic">₱6,000</h3>
+                          <div className="mt-4 space-y-1">
+                             <p className={`text-[10px] font-bold ${selectedPlan === '12' ? 'text-slate-400' : 'text-slate-500'}`}>778 business owner choose this</p>
+                             <p className={`text-[9px] font-black uppercase tracking-widest ${selectedPlan === '12' ? 'text-indigo-300' : 'text-indigo-600'}`}>Renew 1k a year</p>
+                          </div>
+                       </div>
+                       {selectedPlan === '12' && <i className="fa-solid fa-circle-check absolute top-8 right-8 text-indigo-500 text-xl"></i>}
+                    </button>
+                 </div>
+
+                 <label className="flex items-center gap-4 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm cursor-pointer hover:border-indigo-200 transition-colors">
+                    <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="w-5 h-5 rounded accent-indigo-600 shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-600 leading-tight">I agree to the terms and conditions for my restaurant setup.</span>
+                 </label>
+
+                 <div className="space-y-4">
+                    <button onClick={launchGmail} disabled={!agreedToTerms} className={`w-full py-6 rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl transition-all ${agreedToTerms ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}>
+                       Finish and Open Gmail
+                    </button>
+                    <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-widest italic opacity-50">Note: This will open Gmail to book your appointment.</p>
+                 </div>
+                 {renderNoteCard("fa-credit-card", currentStepData.note)}
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-md border-t border-slate-100 max-w-xl mx-auto flex justify-between items-center z-40">
-         <button onClick={() => { const prevIdx = currentIndex - 1; if (prevIdx >= 0) setStep(stepsList[prevIdx]); else onCancel(); }} className="text-[10px] font-black uppercase text-slate-300 hover:text-slate-900">Back</button>
-         <button onClick={() => { const nextIdx = currentIndex + 1; if (nextIdx < stepsList.length) setStep(stepsList[nextIdx]); }} className="text-[10px] font-black uppercase text-indigo-600">{step === 'finish' ? '' : 'Skip Step →'}</button>
-      </div>
+      <footer className="fixed bottom-0 left-0 right-0 p-8 max-w-xl mx-auto flex items-center justify-between bg-white/90 backdrop-blur-md border-t border-slate-50 z-50">
+        <button onClick={() => { const prev = currentIndex - 1; if (prev >= 0) setStep(stepsList[prev]); else onCancel(); }} className="text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 transition-colors italic">
+          <i className="fa-solid fa-arrow-left mr-2"></i> Back
+        </button>
+        {step !== 'billing' && (
+          <button onClick={() => setStep(stepsList[currentIndex + 1])} disabled={isNextDisabled} className={`px-10 py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl transition-all flex items-center gap-3 ${isNextDisabled ? 'bg-slate-50 text-slate-200' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}>
+            Next Step <i className="fa-solid fa-arrow-right text-[8px]"></i>
+          </button>
+        )}
+      </footer>
+
       <style>{`
-        @keyframes scale { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
-        .animate-scale { animation: scale 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        @keyframes scale { 0% { transform: scale(0.9); } 100% { transform: scale(1); } }
+        .animate-scale { animation: scale(0.2s) ease-out forwards; }
       `}</style>
     </div>
   );
