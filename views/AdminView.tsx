@@ -186,22 +186,34 @@ const AdminView: React.FC<AdminViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-10 animate-fade-in font-jakarta relative overflow-hidden">
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-50 rounded-full blur-[100px] opacity-40"></div>
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-50 rounded-full blur-[100px] opacity-40"></div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 md:p-12 lg:p-20 animate-fade-in font-jakarta relative overflow-hidden">
+      {/* Dynamic Background Elements for Large Screens */}
+      <div className="absolute -top-40 -right-40 w-64 h-64 md:w-96 md:h-96 bg-indigo-50 rounded-full blur-[80px] md:blur-[100px] opacity-40"></div>
+      <div className="absolute -bottom-40 -left-40 w-64 h-64 md:w-96 md:h-96 bg-orange-50 rounded-full blur-[80px] md:blur-[100px] opacity-40"></div>
 
-      <div className="w-full max-w-sm relative z-10 space-y-12">
+      {/* Floating Back Button */}
+      <div className="absolute top-6 left-6 md:top-10 md:left-10 z-[100]">
+        <button 
+          onClick={onExit}
+          className="flex items-center gap-3 px-5 py-3 md:px-6 md:py-3.5 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-100 hover:shadow-2xl hover:bg-slate-50 transition-all group active:scale-95"
+        >
+          <i className="fa-solid fa-arrow-left text-slate-400 group-hover:text-indigo-600 transition-colors"></i>
+          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-900">Back to Site</span>
+        </button>
+      </div>
+
+      <div className="w-full max-w-sm md:max-w-md relative z-10 space-y-12">
         {view === 'login' ? (
           <div className="space-y-10">
-            <header className="space-y-5 text-center">
-              <div className={`inline-flex w-16 h-16 rounded-3xl items-center justify-center text-white shadow-2xl transition-all duration-700 ${isBlocked ? 'bg-rose-500 scale-110 shadow-rose-100 rotate-12' : isCoolingDown ? 'bg-amber-500 rotate-0' : 'bg-slate-900 shadow-slate-100'}`}>
-                <i className={`fa-solid ${isBlocked ? 'fa-lock' : isCoolingDown ? 'fa-hourglass-half' : 'fa-fingerprint'} text-2xl`}></i>
+            <header className="space-y-6 text-center">
+              <div className={`inline-flex w-16 h-16 md:w-20 md:h-20 rounded-[2rem] md:rounded-[2.5rem] items-center justify-center text-white shadow-2xl transition-all duration-700 ${isBlocked ? 'bg-rose-500 scale-110 shadow-rose-100 rotate-12' : isCoolingDown ? 'bg-amber-500 rotate-0' : 'bg-slate-900 shadow-slate-100'}`}>
+                <i className={`fa-solid ${isBlocked ? 'fa-lock' : isCoolingDown ? 'fa-hourglass-half' : 'fa-fingerprint'} text-2xl md:text-3xl`}></i>
               </div>
-              <div className="space-y-2">
-                <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight italic uppercase">
+              <div className="space-y-3">
+                <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">
                   {isBlocked ? 'Locked' : isCoolingDown ? 'Wait' : 'Sign In'}
                 </h2>
-                <p className="text-slate-400 text-sm font-medium">
+                <p className="text-slate-400 text-xs md:text-sm font-medium">
                   {isBlocked ? `Access suspended for ${formatTime(countdown)}` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Enter your merchant details below'}
                 </p>
               </div>
@@ -223,7 +235,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                     required 
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
-                    className="w-full bg-slate-50 border-none rounded-2xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                    className="w-full bg-slate-50 border-none rounded-2xl md:rounded-3xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
                     placeholder="admin@foodie.com" 
                   />
                 </div>
@@ -234,19 +246,19 @@ const AdminView: React.FC<AdminViewProps> = ({
                     required 
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
-                    className="w-full bg-slate-50 border-none rounded-2xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                    className="w-full bg-slate-50 border-none rounded-2xl md:rounded-3xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
                     placeholder="••••••••" 
                   />
                 </div>
               </div>
 
-              {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest animate-fade-in-up bg-rose-50 py-3 rounded-xl border border-rose-100">{error}</p>}
+              {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest animate-fade-in-up bg-rose-50 py-4 rounded-2xl border border-rose-100">{error}</p>}
 
               <div className="pt-4 space-y-4">
                 <button 
                   type="submit" 
                   disabled={loading || isBlocked || isCoolingDown} 
-                  className={`w-full py-6 rounded-3xl font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${isBlocked ? 'bg-slate-100 text-slate-300 shadow-none cursor-not-allowed' : isCoolingDown ? 'bg-amber-100 text-amber-600 cursor-wait' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}
+                  className={`w-full py-6 md:py-7 rounded-3xl md:rounded-[2.5rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${isBlocked ? 'bg-slate-100 text-slate-300 shadow-none cursor-not-allowed' : isCoolingDown ? 'bg-amber-100 text-amber-600 cursor-wait' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}
                 >
                   {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? 'Locked Out' : 'Authenticate'}
                 </button>
@@ -256,23 +268,34 @@ const AdminView: React.FC<AdminViewProps> = ({
           </div>
         ) : (
           <div className="space-y-10 animate-fade-in">
-             <header className="space-y-4 text-center">
-              <div className="inline-flex w-16 h-16 bg-slate-900 rounded-3xl items-center justify-center text-white shadow-xl">
-                <i className="fa-solid fa-envelope-open text-2xl"></i>
+             <header className="space-y-5 text-center">
+              <div className="inline-flex w-16 h-16 md:w-20 md:h-20 bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] items-center justify-center text-white shadow-xl">
+                <i className="fa-solid fa-envelope-open text-2xl md:text-3xl"></i>
               </div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase leading-none">Security<br/><span className="text-indigo-600">Recovery</span></h2>
-              <p className="text-slate-400 text-xs font-medium px-4">Enter your recovery email and we'll send a password reset link.</p>
+              <h2 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase leading-none">Security<br/><span className="text-indigo-600">Recovery</span></h2>
+              <p className="text-slate-400 text-xs md:text-sm font-medium px-4">Enter your recovery email and we'll generate a support ticket.</p>
             </header>
             <div className="space-y-6">
-              <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="w-full bg-slate-50 border-none rounded-2xl p-6 text-sm font-bold outline-none" placeholder="Recovery Email..." />
-              <button onClick={handleRecovery} className="w-full bg-slate-900 text-white py-6 rounded-3xl font-black uppercase text-[10px] tracking-[0.4em]">Send Reset link</button>
+              <input 
+                type="email" 
+                value={forgotEmail} 
+                onChange={e => setForgotEmail(e.target.value)} 
+                className="w-full bg-slate-50 border-none rounded-2xl md:rounded-3xl p-6 text-sm font-bold outline-none shadow-inner" 
+                placeholder="Recovery Email..." 
+              />
+              <button 
+                onClick={handleRecovery} 
+                className="w-full bg-slate-900 text-white py-6 md:py-7 rounded-3xl md:rounded-[2.5rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.4em] shadow-xl hover:bg-indigo-600 transition-all"
+              >
+                Send Reset link
+              </button>
               <button onClick={() => setView('login')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors">Back to Login</button>
             </div>
           </div>
         )}
 
-        <footer className="text-center pt-10">
-          <p className="text-[10px] font-black text-slate-200 uppercase tracking-[0.5em] italic">Platinum Zen Terminal 2.0</p>
+        <footer className="text-center pt-10 border-t border-slate-50">
+          <p className="text-[9px] md:text-[10px] font-black text-slate-200 uppercase tracking-[0.5em] italic">Platinum Zen Terminal 2.0</p>
         </footer>
       </div>
     </div>
