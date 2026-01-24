@@ -217,8 +217,21 @@ export default function App() {
     const session = sessionRaw ? JSON.parse(sessionRaw) : null;
     const sessionRestaurantId = session?.restaurant?.id;
     
-    const restaurant_id = qrDetails?.restaurant_id || sessionRestaurantId || '9148d88e-6701-4475-ae90-c08ef38411df';
-    const qr_token = qrDetails?.token || 'Manual';
+    // Attempt to resolve valid restaurant ID
+    const restaurant_id = qrDetails?.restaurant_id || sessionRestaurantId;
+    const qr_token = qrDetails?.token || 'Demo-Manual';
+
+    // If no real restaurant ID is found, we are in Demo mode.
+    // We bypass the database call to avoid foreign key violation errors.
+    if (!restaurant_id) {
+      console.log("Demo Mode Activated: Bypassing DB order placement.");
+      // In a real demo we might store these in localState to show in OrdersView
+      if (pendingSingleItem) setPendingSingleItem(null);
+      else setCart([]);
+      navigateTo('orders');
+      setSelectedItem(null);
+      return;
+    }
 
     const dbOrders = itemsToProcess.map(item => ({
       restaurant_id: restaurant_id,
@@ -298,7 +311,7 @@ export default function App() {
     }
   };
 
-  const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin'].includes(currentView);
+  const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin', 'menu', 'cart', 'orders', 'group'].includes(currentView);
   const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin'].includes(currentView);
 
   return (
@@ -350,7 +363,7 @@ export default function App() {
       <main className={showNavbar ? "min-h-[80vh]" : ""}>{renderView()}</main>
       
       {!['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView) && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 max-w-xl mx-auto z-40">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 w-full md:max-w-xl md:mx-auto z-40 md:rounded-t-[2rem]">
           {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Favorites' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => (
             <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-brand-primary' : 'text-slate-300 hover:text-orange-300'}`}>
               <i className={`fa-solid ${btn.i} text-xl`}></i>
