@@ -378,7 +378,8 @@ export async function getQRCodeByCode(code: string) {
     .from('qr_codes')
     .select(`
       *,
-      restaurants ( id, name, theme )
+      restaurants ( id, name, theme ),
+      branches ( name )
     `)
     .eq('code', code)
     .maybeSingle();
@@ -386,16 +387,11 @@ export async function getQRCodeByCode(code: string) {
   if (error) throw new Error(error.message || "Access code lookup failed.");
   if (!data) return null;
 
-  const { data: branches } = await supabase
-    .from('branches')
-    .select('name')
-    .eq('restaurant_id', data.restaurant_id);
-
   return {
     ...data,
     restaurant_name: data.restaurants?.name,
-    theme: data.restaurants?.theme,
-    branches: branches || []
+    branch_name: data.branches?.name,
+    theme: data.restaurants?.theme
   };
 }
 

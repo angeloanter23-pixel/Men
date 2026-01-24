@@ -54,7 +54,7 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
-  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, branches: string[], theme?: any} | null>(null);
+  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, branchName?: string, theme?: any} | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // Dynamic Theme State
@@ -99,7 +99,7 @@ export default function App() {
               label: details.label,
               token: details.code,
               restaurantName: details.restaurant_name || 'Premium Merchant',
-              branches: details.branches.map((b: any) => b.name),
+              branchName: details.branch_name,
               theme: details.theme
             };
             setQrDetails(qrSession);
@@ -346,10 +346,22 @@ export default function App() {
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Authenticated Session</p>
                 <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Welcome to <span className="text-brand-primary">{qrDetails.restaurantName}</span></h2>
               </div>
-              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 italic">Location Context</p>
-                <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 opacity-60 italic">Token: {qrDetails.token}</p>
+              
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+                {qrDetails.branchName && (
+                  <div className="space-y-1">
+                    <p className="text-[8px] font-black uppercase text-brand-primary tracking-widest italic leading-none">Operating Territory</p>
+                    <p className="text-sm font-black text-slate-600 uppercase italic">{qrDetails.branchName}</p>
+                  </div>
+                )}
+                
+                <div className="h-px bg-slate-200/50 w-full"></div>
+                
+                <div className="space-y-1">
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest italic leading-none">Assigned Station</p>
+                  <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
+                </div>
+                <p className="text-[8px] font-bold text-slate-300 uppercase mt-1 opacity-60 italic">Node ID: {qrDetails.token}</p>
               </div>
             </div>
             <button onClick={() => setShowWelcomeModal(false)} className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Start Ordering</button>
