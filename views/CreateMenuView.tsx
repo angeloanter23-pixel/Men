@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { MenuItem, Category } from '../types';
 import AdminMenu from './admin/AdminMenu';
@@ -17,15 +18,17 @@ interface QRAsset {
   id: string;
   name: string;
   token: string;
+  branch_id?: string;
 }
 
 interface QRPreviewCardProps {
   asset: QRAsset;
   isSelected: boolean;
   onDelete: (id: string) => void;
+  branchName?: string;
 }
 
-const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ asset, isSelected, onDelete }) => {
+const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ asset, isSelected, onDelete, branchName }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const finalUrl = `men-m53q.vercel.app/${asset.token}`;
 
@@ -45,7 +48,8 @@ const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ asset, isSelected, onDele
     <div className={`relative bg-white p-4 rounded-3xl border transition-all flex flex-col items-center group ${isSelected ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-slate-100 shadow-sm'}`}>
       <div className="w-full text-center mb-2">
         <p className="text-[9px] font-black uppercase text-slate-800 truncate">{asset.name}</p>
-        <p className="text-[7px] font-bold text-slate-300 uppercase tracking-widest">ID: {asset.token}</p>
+        <p className="text-[7px] font-bold text-slate-300 uppercase tracking-widest mb-1">ID: {asset.token}</p>
+        {branchName && <span className="text-[6px] font-black uppercase bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md">{branchName}</span>}
       </div>
       <div className="bg-slate-50 p-2 rounded-2xl border border-slate-50 group-hover:bg-white transition-colors mb-3">
         <canvas ref={canvasRef}></canvas>
@@ -84,7 +88,7 @@ const STEPS_CONFIG: { id: WizardStep; label: string; sub: string; desc: string; 
     label: 'QR Codes', 
     sub: 'Step 03', 
     desc: 'Create unique codes for your tables. Customers scan these to see your menu instantly on their phones.',
-    note: 'We recommend creating a different code for every table in your restaurant.'
+    note: 'Each code is assigned to a specific branch to ensure accurate order routing.'
   },
   { 
     id: 'dishes', 
@@ -145,7 +149,9 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   const [isCheckingName, setIsCheckingName] = useState(false);
   const [isNameVerified, setIsNameVerified] = useState(false);
   
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([
+    { id: 'main-hq', name: 'Main HQ', subdomain: 'main', image_url: '' }
+  ]);
   const [branchSubView, setBranchSubView] = useState<'list' | 'create'>('list');
   const [editingBranch, setEditingBranch] = useState<Partial<Branch> | null>(null);
   
@@ -154,6 +160,7 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   const [qrMode, setQrMode] = useState<'single' | 'bulk'>('single');
   const [qrBaseName, setQrBaseName] = useState('Table ');
   const [qrBulkCount, setQrBulkCount] = useState(5);
+  const [qrBranchId, setQrBranchId] = useState<string>('');
 
   const [categories, setCategories] = useState<Category[]>([{ id: 1, name: 'Main Course' }, { id: 2, name: 'Beverages' }]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -162,6 +169,12 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'6' | '12'>('12');
+
+  useEffect(() => {
+    if (branches.length > 0 && !qrBranchId) {
+      setQrBranchId(branches[0].id);
+    }
+  }, [branches]);
 
   const handleNameChange = (val: string) => { 
     setBusinessName(val); 
@@ -190,16 +203,22 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   };
 
   const handleGenerateQRs = () => {
+    if (!qrBranchId) {
+      alert("Please select a branch for these codes.");
+      return;
+    }
+
     if (qrMode === 'single') {
         const name = qrBaseName.trim() || 'Table';
-        if (qrAssets.some(a => a.name.toLowerCase() === name.toLowerCase())) {
-            alert("A code with this name already exists in your list.");
+        if (qrAssets.some(a => a.name.toLowerCase() === name.toLowerCase() && a.branch_id === qrBranchId)) {
+            alert("A code with this name already exists for this branch.");
             return;
         }
         setQrAssets(prev => [{
             id: Math.random().toString(36).substr(2, 9),
             name: name,
-            token: Math.random().toString(36).substr(2, 6).toUpperCase()
+            token: Math.random().toString(36).substr(2, 6).toUpperCase(),
+            branch_id: qrBranchId
         }, ...prev]);
     } else {
         const qty = Math.min(qrBulkCount, 50);
@@ -207,12 +226,13 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
         for (let i = 1; i <= qty; i++) {
             const name = `${qrBaseName}${i}`;
             // Skip if duplicate exists to prevent token fragmentation
-            if (qrAssets.some(a => a.name.toLowerCase() === name.toLowerCase())) continue;
+            if (qrAssets.some(a => a.name.toLowerCase() === name.toLowerCase() && a.branch_id === qrBranchId)) continue;
             
             newAssets.push({
                 id: Math.random().toString(36).substr(2, 9),
                 name: name,
-                token: Math.random().toString(36).substr(2, 6).toUpperCase()
+                token: Math.random().toString(36).substr(2, 6).toUpperCase(),
+                branch_id: qrBranchId
             });
         }
         setQrAssets(prev => [...newAssets, ...prev]);
@@ -322,11 +342,11 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
                   {branchSubView === 'create' ? (
                     <div className="space-y-4 animate-fade-in">
                        <input type="text" placeholder="Store name..." value={editingBranch?.name || ''} onChange={e => setEditingBranch({...editingBranch, name: e.target.value})} className="w-full p-5 bg-slate-50 rounded-2xl font-black text-sm outline-none" />
-                       <button onClick={() => { if(editingBranch?.name) setBranches([...branches, {id: Math.random().toString(), name: editingBranch.name, image_url: '', subdomain: ''}]); setBranchSubView('list'); }} className="w-full bg-slate-900 text-white py-5 rounded-2xl text-[10px] font-black uppercase">Save Location</button>
+                       <button onClick={() => { if(editingBranch?.name) setBranches([...branches, {id: Math.random().toString(36).substr(2, 9), name: editingBranch.name, image_url: '', subdomain: editingBranch.name.toLowerCase().replace(/\s+/g, '-')}]); setBranchSubView('list'); }} className="w-full bg-slate-900 text-white py-5 rounded-2xl text-[10px] font-black uppercase">Save Location</button>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                       {branches.map(b => <div key={b.id} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center font-black uppercase text-xs"><span>{b.name}</span><button onClick={() => setBranches(branches.filter(it => it.id !== b.id))} className="text-rose-400">✕</button></div>)}
+                       {branches.map(b => <div key={b.id} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center font-black uppercase text-xs"><span>{b.name}</span>{b.id !== 'main-hq' && <button onClick={() => setBranches(branches.filter(it => it.id !== b.id))} className="text-rose-400">✕</button>}</div>)}
                        {branches.length === 0 && <p className="text-center text-slate-300 font-bold text-xs italic">No branches added yet.</p>}
                     </div>
                   )}
@@ -343,6 +363,19 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
                 </div>
 
                 <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl space-y-6">
+                   <div className="space-y-2">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2 tracking-widest">Select Target Branch</label>
+                      <select 
+                        value={qrBranchId} 
+                        onChange={(e) => setQrBranchId(e.target.value)}
+                        className="w-full p-4 bg-slate-50 rounded-xl font-bold text-xs outline-none cursor-pointer border-r-[12px] border-transparent"
+                      >
+                        {branches.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                   </div>
+
                    {qrMode === 'single' ? (
                      <div className="space-y-4 animate-fade-in">
                         <div className="space-y-2">
@@ -368,7 +401,15 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto no-scrollbar pb-10">
-                   {qrAssets.map(a => <QRPreviewCard key={a.id} asset={a} isSelected={false} onDelete={id => setQrAssets(qrAssets.filter(q => q.id !== id))} />)}
+                   {qrAssets.map(a => (
+                     <QRPreviewCard 
+                      key={a.id} 
+                      asset={a} 
+                      isSelected={false} 
+                      onDelete={id => setQrAssets(qrAssets.filter(q => q.id !== id))} 
+                      branchName={branches.find(b => b.id === a.branch_id)?.name}
+                     />
+                   ))}
                    {qrAssets.length === 0 && (
                      <div className="col-span-2 py-10 text-center border-2 border-dashed border-slate-100 rounded-3xl">
                         <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">No codes generated yet.</p>
@@ -381,7 +422,7 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
 
             {step === 'dishes' && (
               <div className="animate-fade-in">
-                <AdminMenu items={menuItems} setItems={setMenuItems as any} cats={categories} setCats={setCategories as any} isWizard={true} />
+                <AdminMenu items={menuItems} setItems={setMenuItems as any} cats={categories} setCats={setCategories as any} isWizard={true} availableBranches={branches} />
                 {renderNoteCard("fa-utensils", currentStepData.note)}
               </div>
             )}

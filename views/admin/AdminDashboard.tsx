@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
@@ -36,6 +37,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<AdminTab>('menu');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [availableBranches, setAvailableBranches] = useState<any[]>([]);
   
   // Import States
   const [isImporting, setIsImporting] = useState(false);
@@ -81,10 +83,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!restaurantId || restaurantId === "undefined") return;
     setIsSyncing(true);
     try {
-      const cloudMenu = await MenuService.getMenuByRestaurantId(restaurantId);
+      const [cloudMenu, branches] = await Promise.all([
+        MenuService.getMenuByRestaurantId(restaurantId),
+        MenuService.getBranchesForRestaurant(restaurantId)
+      ]);
+      
       if (cloudMenu) {
         setMenuItems(cloudMenu.items || []);
         setCategories(cloudMenu.categories || []);
+      }
+      if (branches) {
+        setAvailableBranches(branches);
       }
       await syncSalesOnly();
     } catch (err: any) {
@@ -245,10 +254,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} />;
+      case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} availableBranches={availableBranches} />;
       case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} />;
       case 'branches': return <AdminBranches />;
-      case 'qr': return <AdminQR />;
+      case 'qr': return <AdminQR availableBranches={availableBranches} />;
       case 'orders': return <AdminOrders />;
       case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onImportClick={() => fileInputRef.current?.click()} />;
       case 'import-preview': return (

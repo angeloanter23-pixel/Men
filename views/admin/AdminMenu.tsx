@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { MenuItem, Category } from '../../types';
 import * as MenuService from '../../services/menuService';
 
@@ -8,9 +9,10 @@ interface AdminMenuProps {
   cats: Category[];
   setCats: React.Dispatch<React.SetStateAction<Category[]>>;
   isWizard?: boolean; 
+  availableBranches?: any[];
 }
 
-const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, isWizard = false }) => {
+const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, isWizard = false, availableBranches = [] }) => {
   const [activeTab, setActiveTab] = useState<'items' | 'add' | 'categories'>('items');
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
@@ -18,14 +20,25 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
   const [catDeleteOption, setCatDeleteOption] = useState<'delete_all' | 'keep_items'>('keep_items');
   const [newCatName, setNewCatName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  
+  // Filtering state
+  const [branchFilter, setBranchFilter] = useState<string>('all');
 
   const sessionRaw = localStorage.getItem('foodie_supabase_session');
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
 
   const initialFormState = {
-    name: '', desc: '', ingredients: '', price: '', cat: '', people: '1 Person', mins: '15 mins', image: '', isPopular: false
+    name: '', desc: '', ingredients: '', price: '', cat: '', people: '1 Person', mins: '15 mins', image: '', isPopular: false, branch_ids: availableBranches.length > 0 ? [availableBranches[0].id] : []
   };
   const [formData, setFormData] = useState(initialFormState);
+
+  // Sync branch defaults if availableBranches load after init
+  useEffect(() => {
+    if (availableBranches.length > 0 && formData.branch_ids.length === 0 && !editingItem) {
+      setFormData(prev => ({ ...prev, branch_ids: [availableBranches[0].id] }));
+    }
+  }, [availableBranches]);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -35,6 +48,15 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
       };
       reader.readAsDataURL(e.target.files[0]);
     }
+  };
+
+  const toggleBranch = (id: string) => {
+    setFormData(prev => {
+      const ids = prev.branch_ids.includes(id) 
+        ? prev.branch_ids.filter(bid => bid !== id) 
+        : [...prev.branch_ids, id];
+      return { ...prev, branch_ids: ids };
+    });
   };
 
   const handleSaveItem = async () => {
@@ -56,7 +78,8 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
         category_id: targetCategory ? targetCategory.id : null,
         pax: formData.people,
         serving_time: formData.mins,
-        is_popular: formData.isPopular
+        is_popular: formData.isPopular,
+        branch_ids: formData.branch_ids
       };
 
       if (isWizard) {
@@ -101,7 +124,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
     setFormData({
       name: item.name, desc: item.description, ingredients: formattedIngredients, price: item.price.toString(),
       cat: item.cat_name === 'Uncategorized' ? '' : item.cat_name, people: item.pax, mins: item.serving_time,
-      image: item.image_url, isPopular: !!item.is_popular
+      image: item.image_url, isPopular: !!item.is_popular, branch_ids: item.branch_ids || []
     });
     setActiveTab('add');
   };
@@ -174,6 +197,11 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
 
   const getItemsCountForCat = (catId: number) => items.filter(i => i.category_id === catId).length;
 
+  const filteredItems = items.filter(item => {
+    if (branchFilter === 'all') return true;
+    return item.branch_ids?.includes(branchFilter);
+  });
+
   return (
     <div className="flex flex-col h-full animate-fade-in relative bg-white font-['Plus_Jakarta_Sans']">
       <div className="bg-slate-50 border-b border-slate-100 p-6 lg:p-8 space-y-6 sticky top-0 z-[40]">
@@ -182,10 +210,30 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1 italic">Content Engine</p>
               <h3 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">Menu Lab</h3>
            </div>
-           <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
-             <button onClick={() => setActiveTab('categories')} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'categories' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>Groups</button>
-             <button onClick={() => setActiveTab('items')} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'items' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>Items</button>
-             <button onClick={() => { setEditingItem(null); setFormData(initialFormState); setActiveTab('add'); }} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'add' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>{editingItem ? 'Edit' : 'Add'}</button>
+           
+           <div className="flex items-center gap-3">
+              {/* Branch Filter Dropdown */}
+              {activeTab === 'items' && availableBranches.length > 0 && (
+                <div className="relative group">
+                   <select 
+                    value={branchFilter}
+                    onChange={(e) => setBranchFilter(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none appearance-none pr-10 cursor-pointer shadow-sm hover:border-indigo-300 transition-all text-slate-600 focus:ring-4 ring-indigo-500/5"
+                   >
+                     <option value="all">Global View (All)</option>
+                     {availableBranches.map(b => (
+                       <option key={b.id} value={b.id}>{b.name}</option>
+                     ))}
+                   </select>
+                   <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-300 pointer-events-none group-hover:text-indigo-400"></i>
+                </div>
+              )}
+
+              <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
+                <button onClick={() => setActiveTab('categories')} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'categories' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>Groups</button>
+                <button onClick={() => setActiveTab('items')} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'items' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>Items</button>
+                <button onClick={() => { setEditingItem(null); setFormData(initialFormState); setActiveTab('add'); }} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'add' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>{editingItem ? 'Edit' : 'Add'}</button>
+              </div>
            </div>
         </div>
       </div>
@@ -217,9 +265,13 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
 
         {activeTab === 'items' && (
           <div className="space-y-4 max-w-4xl mx-auto">
-            <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest px-4 italic">Master List ({items.length})</h4>
-            {items.map(item => (
-              <div key={item.id} className="bg-white p-5 rounded-[2.5rem] border border-slate-50 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+            <div className="flex justify-between items-center px-4 mb-2">
+               <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest italic">
+                  {branchFilter === 'all' ? 'Master Archive' : `Inventory: ${availableBranches.find(b => b.id === branchFilter)?.name}`} ({filteredItems.length})
+               </h4>
+            </div>
+            {filteredItems.map(item => (
+              <div key={item.id} className="bg-white p-5 rounded-[2.5rem] border border-slate-50 flex items-center justify-between shadow-sm hover:shadow-md transition-all animate-fade-in">
                 <div className="flex items-center gap-6 min-w-0">
                    <div className="w-16 h-16 rounded-[1.8rem] bg-slate-50 overflow-hidden border border-slate-100"><img src={item.image_url} className="w-full h-full object-cover" /></div>
                    <div className="min-w-0">
@@ -233,7 +285,14 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
                 </div>
               </div>
             ))}
-            {items.length === 0 && <p className="text-center py-40 text-slate-200 font-black uppercase tracking-[0.4em] italic opacity-50">Empty Archive</p>}
+            {filteredItems.length === 0 && (
+              <div className="py-40 text-center flex flex-col items-center">
+                 <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-slate-100 text-2xl mb-4 shadow-sm border border-slate-50">
+                    <i className="fa-solid fa-box-open"></i>
+                 </div>
+                 <p className="text-slate-200 font-black uppercase tracking-[0.4em] italic opacity-50">No items in this filter</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -250,9 +309,21 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
                </div>
                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Title</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Sharp Burger" className="w-full bg-slate-50 p-6 rounded-2xl font-black text-sm italic outline-none shadow-inner" /></div>
                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Context</label><textarea value={formData.desc} onChange={e => setFormData({...formData, desc: e.target.value})} placeholder="Ingredients, story, etc." className="w-full bg-slate-50 p-7 rounded-[2.5rem] text-sm h-32 outline-none resize-none shadow-inner italic leading-relaxed" /></div>
+               
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Value (₱)</label><input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full bg-slate-50 p-6 rounded-2xl font-black text-sm outline-none shadow-inner" /></div>
                   <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Group</label><select value={formData.cat} onChange={e => setFormData({...formData, cat: e.target.value})} className="w-full bg-slate-50 p-6 rounded-2xl font-black text-[10px] uppercase outline-none shadow-inner">{cats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}<option value="">None</option></select></div>
+               </div>
+
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Operational Range</label>
+                  <button 
+                    onClick={() => setShowBranchModal(true)}
+                    className="w-full bg-slate-50 p-6 rounded-2xl font-black text-[10px] uppercase tracking-widest outline-none shadow-inner flex justify-between items-center hover:bg-slate-100 transition-colors"
+                  >
+                    <span>{formData.branch_ids.length} Branch{formData.branch_ids.length !== 1 ? 'es' : ''} Selected</span>
+                    <i className="fa-solid fa-chevron-right text-indigo-500"></i>
+                  </button>
                </div>
             </div>
             <div className="pt-6 space-y-4">
@@ -262,6 +333,65 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, i
           </div>
         )}
       </div>
+
+      {/* Branch Selection Dialog */}
+      {showBranchModal && (
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in">
+           <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl space-y-8">
+              <header className="flex justify-between items-start">
+                 <div>
+                    <p className="text-[9px] font-black uppercase text-indigo-500 mb-2 italic">Assignment Protocol</p>
+                    <h4 className="text-2xl font-black uppercase italic tracking-tighter">Select Branch</h4>
+                 </div>
+                 <button onClick={() => setShowBranchModal(false)} className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 hover:text-slate-900 transition-colors"><i className="fa-solid fa-xmark"></i></button>
+              </header>
+
+              <div className="space-y-2 max-h-[300px] overflow-y-auto no-scrollbar">
+                 <button 
+                   onClick={() => {
+                     const allIds = availableBranches.map(b => b.id);
+                     setFormData(prev => ({ 
+                       ...prev, 
+                       branch_ids: prev.branch_ids.length === allIds.length ? [] : allIds 
+                     }));
+                   }}
+                   className="w-full p-4 rounded-2xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-4 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                 >
+                   {formData.branch_ids.length === availableBranches.length ? 'Deselect All' : 'Select All Branches'}
+                 </button>
+
+                 {availableBranches.map(branch => (
+                   <button 
+                     key={branch.id} 
+                     onClick={() => toggleBranch(branch.id)}
+                     className={`w-full p-5 rounded-2xl flex justify-between items-center transition-all group ${formData.branch_ids.includes(branch.id) ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                   >
+                     <div className="text-left">
+                        <p className={`text-sm font-black uppercase italic ${formData.branch_ids.includes(branch.id) ? 'text-white' : 'text-slate-800'}`}>{branch.name}</p>
+                        <p className={`text-[8px] font-bold uppercase tracking-widest ${formData.branch_ids.includes(branch.id) ? 'text-indigo-200' : 'text-slate-300'}`}>{branch.subdomain}</p>
+                     </div>
+                     <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.branch_ids.includes(branch.id) ? 'bg-white/20 border-white text-white' : 'border-slate-200 text-transparent group-hover:border-slate-300'}`}>
+                        <i className="fa-solid fa-check text-[10px]"></i>
+                     </div>
+                   </button>
+                 ))}
+
+                 {availableBranches.length === 0 && (
+                   <div className="py-10 text-center text-slate-300 font-bold italic text-xs">
+                     Please define branch locations in Step 2.
+                   </div>
+                 )}
+              </div>
+
+              <button 
+                onClick={() => setShowBranchModal(false)}
+                className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all"
+              >
+                Confirm Selection
+              </button>
+           </div>
+        </div>
+      )}
 
       {itemToDelete && (
         <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setItemToDelete(null)}>

@@ -17,6 +17,7 @@ export interface MenuItem {
   ingredients: any[];
   pax: string;
   serving_time: string;
+  branch_ids?: string[];
 }
 
 export type OrderMode = 'Dine-in' | 'Takeout' | 'Delivery';

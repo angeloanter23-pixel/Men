@@ -351,7 +351,7 @@ export async function deleteMenuItem(id: string) {
 export async function getQRCodes(restaurantId: string) {
   const { data, error } = await supabase
     .from('qr_codes')
-    .select('*')
+    .select('*, branches(id, name)')
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message || "QR fetch failed.");
