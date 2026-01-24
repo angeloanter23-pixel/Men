@@ -29,7 +29,7 @@ const ShareModal: React.FC<{
         if (canvasRef.current && typeof QRious !== 'undefined') {
             new QRious({
                 element: canvasRef.current,
-                size: 240,
+                size: 260,
                 value: finalUrl,
                 level: 'H',
                 foreground: '#0f172a'
@@ -52,66 +52,145 @@ const ShareModal: React.FC<{
         }
     };
 
+    const shareData = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Menu Access: ${restaurantName}`,
+                    text: `Scan to view the menu for ${asset.label} at ${branchName}`,
+                    url: finalUrl,
+                });
+            } catch (err) {
+                console.log("Share failed or cancelled");
+            }
+        } else {
+            handleCopy();
+        }
+    };
+
     return (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl animate-fade-in" onClick={onClose}>
-            <div className="bg-white w-full max-w-md rounded-[4rem] p-10 shadow-2xl relative overflow-hidden space-y-8 animate-scale" onClick={e => e.stopPropagation()}>
-                {/* Brand Background Element */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-[5rem] -translate-y-6 translate-x-6 z-0"></div>
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 md:p-6 bg-slate-900/80 backdrop-blur-2xl animate-fade-in" onClick={onClose}>
+            <div className="bg-white w-full max-w-lg rounded-[4rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative animate-scale" onClick={e => e.stopPropagation()}>
+                {/* Visual Header / Brand Bar */}
+                <div className="h-2 bg-brand-primary w-full"></div>
                 
-                <header className="relative z-10 flex justify-between items-start">
-                    <div>
-                        <p className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.4em] mb-2 italic">Node Verification</p>
-                        <h3 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 leading-tight">
-                            Share <span className="text-indigo-600">Access</span>
-                        </h3>
-                    </div>
-                    <button onClick={onClose} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all border border-slate-100"><i className="fa-solid fa-xmark"></i></button>
-                </header>
-
-                <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 shadow-inner space-y-6">
-                    <div className="flex flex-col items-center">
-                        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl mb-6">
-                            <canvas ref={canvasRef}></canvas>
-                        </div>
-                        <div className="text-center space-y-1">
-                            <h4 className="text-lg font-black uppercase italic text-slate-800">{restaurantName}</h4>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full inline-block">{branchName || 'Main Territory'}</p>
-                        </div>
-                    </div>
-
-                    <div className="h-px bg-slate-200/50 w-full"></div>
-
-                    <div className="flex justify-between items-center px-2">
+                <div className="p-8 md:p-12 space-y-10">
+                    <header className="flex justify-between items-start">
                         <div>
-                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Identity Label</p>
-                            <p className="text-sm font-black text-slate-700 uppercase italic">{asset.label}</p>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] italic">Access Node Verified</p>
+                            </div>
+                            <h3 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 leading-tight">
+                                Share <span className="text-brand-primary">Node</span>
+                            </h3>
                         </div>
-                        <div className="text-right">
-                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Token ID</p>
-                            <p className="text-[10px] font-mono font-bold text-indigo-600 uppercase">{asset.code}</p>
+                        <button onClick={onClose} className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all border border-slate-100 shadow-sm active:scale-90">
+                            <i className="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                        {/* QR Presentation */}
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-brand-primary/5 rounded-[3.5rem] blur-2xl group-hover:bg-brand-primary/10 transition-all duration-700"></div>
+                            <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border border-slate-50 relative z-10 flex flex-col items-center">
+                                <div className="relative">
+                                    <canvas ref={canvasRef} className="rounded-2xl"></canvas>
+                                    {/* Scanning Animation Overlay */}
+                                    <div className="absolute inset-0 border-2 border-brand-primary/20 rounded-2xl overflow-hidden pointer-events-none">
+                                        <div className="w-full h-1 bg-brand-primary/40 shadow-[0_0_15px_rgba(255,107,0,0.5)] animate-scan absolute left-0"></div>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex items-center gap-3">
+                                    <i className="fa-solid fa-expand text-slate-200 text-xs"></i>
+                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Live Digital Key</p>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Metadata Section */}
+                        <div className="space-y-8">
+                            <div className="space-y-6">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Merchant Context</p>
+                                    <h4 className="text-2xl font-black uppercase italic text-slate-900 leading-none">{restaurantName}</h4>
+                                    <p className="text-xs font-bold text-brand-primary uppercase tracking-tighter opacity-80">{branchName || 'Master Location'}</p>
+                                </div>
+
+                                <div className="h-px bg-slate-100 w-full"></div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-1">
+                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Identity Label</p>
+                                        <p className="text-sm font-black text-slate-800 uppercase italic leading-none">{asset.label}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Node ID</p>
+                                        <p className="text-xs font-mono font-bold text-indigo-500 uppercase leading-none">{asset.code}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest italic text-center">Node Security Specs</p>
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+                                            <span className="uppercase opacity-60">Protocol</span>
+                                            <span className="text-emerald-500">HTTPS (TLS 1.3)</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+                                            <span className="uppercase opacity-60">Encryption</span>
+                                            <span>SHA-256</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+                                            <span className="uppercase opacity-60">Status</span>
+                                            <span className="text-brand-primary animate-pulse">ACTIVE</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <button 
+                            onClick={shareData}
+                            className="bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-brand-primary"
+                        >
+                            <i className="fa-solid fa-share-nodes"></i>
+                            Share Node
+                        </button>
+                        <button 
+                            onClick={handleCopy}
+                            className={`py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3 border ${isCopied ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-slate-900 border-slate-100 hover:bg-slate-50 shadow-slate-100'}`}
+                        >
+                            <i className={`fa-solid ${isCopied ? 'fa-check' : 'fa-link'}`}></i>
+                            {isCopied ? 'Link Copied' : 'Copy URL'}
+                        </button>
+                        <button 
+                            onClick={handleDownload}
+                            className="bg-slate-100 text-slate-600 py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-indigo-600 hover:text-white shadow-inner"
+                        >
+                            <i className="fa-solid fa-download"></i>
+                            Save Image
+                        </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <button 
-                        onClick={handleCopy}
-                        className={`py-5 rounded-3xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-lg flex items-center justify-center gap-3 ${isCopied ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-slate-900 text-white shadow-slate-200'}`}
-                    >
-                        <i className={`fa-solid ${isCopied ? 'fa-check' : 'fa-link'}`}></i>
-                        {isCopied ? 'Copied' : 'Copy Link'}
-                    </button>
-                    <button 
-                        onClick={handleDownload}
-                        className="bg-indigo-600 text-white py-5 rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-3"
-                    >
-                        <i className="fa-solid fa-download"></i>
-                        PNG Format
-                    </button>
+                <div className="bg-slate-50 px-8 py-5 border-t border-slate-100 flex justify-between items-center">
+                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.3em] italic">Platinum Core Authentication Suite</p>
+                    <div className="flex gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-brand-primary"></div>
+                    </div>
                 </div>
-                
-                <p className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-50">Authorized Menu Node Generation</p>
             </div>
+            <style>{`
+                @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+                .animate-scan { animation: scan 3s ease-in-out infinite alternate; }
+            `}</style>
         </div>
     );
 };
@@ -168,12 +247,12 @@ const QRBlock: React.FC<{
             value={localLabel} 
             onBlur={handleSyncUpdate}
             onChange={(e) => setLocalLabel(e.target.value)}
-            className="text-xl font-black uppercase italic tracking-tighter text-indigo-600 bg-transparent border-b-2 border-transparent hover:border-indigo-100 focus:border-indigo-600 outline-none transition-all w-full mb-1" 
+            className="text-xl font-black uppercase italic tracking-tighter text-brand-primary bg-transparent border-b-2 border-transparent hover:border-indigo-100 focus:border-brand-primary outline-none transition-all w-full mb-1" 
             placeholder="Label..." 
           />
           <div className="flex flex-col gap-2">
             {branchName && (
-              <span className="text-[8px] font-black uppercase text-indigo-500 tracking-widest bg-indigo-50 px-2 py-0.5 rounded-lg w-fit">
+              <span className="text-[8px] font-black uppercase text-brand-primary tracking-widest bg-brand-secondary px-2 py-0.5 rounded-lg w-fit">
                 {branchName}
               </span>
             )}
@@ -187,7 +266,7 @@ const QRBlock: React.FC<{
           </div>
         </div>
         <div className="flex gap-2">
-            <button onClick={() => onShare(asset)} className="w-10 h-10 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all flex items-center justify-center shadow-lg"><i className="fa-solid fa-share-nodes text-xs"></i></button>
+            <button onClick={() => onShare(asset)} className="w-10 h-10 rounded-xl bg-slate-900 text-white hover:bg-brand-primary transition-all flex items-center justify-center shadow-lg"><i className="fa-solid fa-share-nodes text-xs"></i></button>
             <button onClick={() => onDelete(asset)} className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center shadow-sm"><i className="fa-solid fa-trash-can text-xs"></i></button>
         </div>
       </div>
@@ -382,14 +461,14 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
                 <select 
                   value={branchFilter}
                   onChange={(e) => setBranchFilter(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest outline-none appearance-none pr-8 cursor-pointer hover:border-indigo-300 transition-all text-slate-600"
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest outline-none appearance-none pr-8 cursor-pointer hover:border-brand-primary transition-all text-slate-600"
                 >
                   <option value="all">All Branches</option>
                   {availableBranches.map(b => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
-                <i className="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[8px] text-slate-300 pointer-events-none group-hover:text-indigo-400"></i>
+                <i className="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[8px] text-slate-300 pointer-events-none group-hover:text-brand-primary"></i>
               </div>
             )}
             {savedQrs.length > 0 && (
@@ -397,7 +476,7 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
                 <div className="flex items-center gap-2">
                    <button 
                     onClick={handleSelectAll}
-                    className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${selectedIds.length === savedQrs.length && savedQrs.length > 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300 text-transparent hover:border-indigo-400'}`}
+                    className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${selectedIds.length === savedQrs.length && savedQrs.length > 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300 text-transparent hover:border-brand-primary'}`}
                    >
                      <i className="fa-solid fa-check text-[8px]"></i>
                    </button>
@@ -434,8 +513,8 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
           <section className="space-y-10 max-w-2xl">
             <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-10">
               <div className="bg-slate-50 p-1.5 rounded-2xl flex border border-slate-100 shadow-inner">
-                <button onClick={() => setMode('single')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'single' ? 'bg-white text-indigo-600 shadow-md border border-slate-50' : 'text-slate-400'}`}>Single Code</button>
-                <button onClick={() => setMode('bulk')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-md border border-slate-50' : 'text-slate-400'}`}>Bulk Create</button>
+                <button onClick={() => setMode('single')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'single' ? 'bg-white text-indigo-600 shadow-sm border border-slate-50' : 'text-slate-400'}`}>Single Code</button>
+                <button onClick={() => setMode('bulk')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-sm border border-slate-50' : 'text-slate-400'}`}>Bulk Create</button>
               </div>
               
               <div className="space-y-6">
@@ -445,7 +524,7 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
                     <select 
                       value={genBranchId} 
                       onChange={(e) => setGenBranchId(e.target.value)}
-                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner appearance-none pr-12 cursor-pointer"
+                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-brand-primary/5 transition-all shadow-inner appearance-none pr-12 cursor-pointer"
                     >
                       <option value="" disabled>Select Branch...</option>
                       {availableBranches.map(b => (
@@ -458,17 +537,17 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Table Name (e.g. Table 1)</label>
-                  <input type="text" value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Enter label..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" />
+                  <input type="text" value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Enter label..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-brand-primary/5 transition-all shadow-inner" />
                 </div>
                 
                 {mode === 'bulk' && (
                   <div className="animate-fade-in space-y-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">How many codes?</label>
-                    <input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} min="1" max="50" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" />
+                    <input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} min="1" max="50" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-brand-primary/5 transition-all shadow-inner" />
                   </div>
                 )}
                 
-                <button disabled={loading || !genBranchId} onClick={handleGenerate} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600 disabled:opacity-50">
+                <button disabled={loading || !genBranchId} onClick={handleGenerate} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-brand-primary disabled:opacity-50">
                   {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Create QR Code'}
                 </button>
               </div>
@@ -501,7 +580,7 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
         )}
       </div>
 
-      {/* Immersive Share Modal */}
+      {/* Enhanced Immersive Share Modal */}
       {qrToShare && (
         <ShareModal 
             asset={qrToShare} 
