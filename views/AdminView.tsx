@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
@@ -43,23 +42,34 @@ const AdminView: React.FC<AdminViewProps> = ({
     MenuService.getClientIp().then(setClientIp);
   }, []);
 
-  // Update tries when email changes
+  // Sync security status when email or IP changes
   useEffect(() => {
     if (email && clientIp !== '0.0.0.0') {
       MenuService.getLoginStatus(email, clientIp).then(status => {
-        setRemainingTries(Math.max(0, 5 - status.attempts));
+        const tries = Math.max(0, 5 - status.attempts);
+        setRemainingTries(tries);
+        
         if (status.blocked_until) {
-            const diff = Math.ceil((new Date(status.blocked_until).getTime() - Date.now()) / 1000);
+            const blockEnd = new Date(status.blocked_until).getTime();
+            const now = Date.now();
+            const diff = Math.ceil((blockEnd - now) / 1000);
+            
             if (diff > 0) {
                 setIsBlocked(true);
                 setCountdown(diff);
+            } else {
+                setIsBlocked(false);
+                setCountdown(0);
             }
+        } else {
+          setIsBlocked(false);
+          setCountdown(0);
         }
       });
     }
   }, [email, clientIp]);
 
-  // Block Timer
+  // Block Timer effect
   useEffect(() => {
     let timer: number;
     if (countdown > 0) {
@@ -78,7 +88,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Per-attempt Cooldown Timer
+  // Per-attempt minor cooldown timer
   useEffect(() => {
     let timer: number;
     if (isCoolingDown && cooldownSeconds > 0) {
@@ -102,7 +112,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     setLoading(true);
     setError('');
 
-    // Pre-check block status
+    // Pre-check block status before attempting auth
     const status = await MenuService.getLoginStatus(email, clientIp);
     if (status.blocked_until) {
       const diff = Math.ceil((new Date(status.blocked_until).getTime() - Date.now()) / 1000);
@@ -110,31 +120,36 @@ const AdminView: React.FC<AdminViewProps> = ({
         setIsBlocked(true);
         setCountdown(diff);
         setLoading(false);
+        setError("Security lock active.");
         return;
       }
     }
 
     try {
-      // Primary Auth
+      // Primary Auth Call
       const dbResponse = await MenuService.authSignIn(email, password);
+      
+      // Success: Clear security record
       await MenuService.clearLoginAttempts(email, clientIp);
       localStorage.setItem('foodie_supabase_session', JSON.stringify(dbResponse));
       setIsAuthenticated(true);
     } catch (dbErr: any) {
-      // Record Failure
+      // Record failure and get updated security data
       const failData = await MenuService.recordLoginFailure(email, clientIp);
-      const triesLeft = 5 - (failData?.attempts || 1);
-      setRemainingTries(Math.max(0, triesLeft));
+      const attemptsDone = failData?.attempts || (5 - (remainingTries - 1));
+      const triesLeft = Math.max(0, 5 - attemptsDone);
+      
+      setRemainingTries(triesLeft);
 
       if (failData?.blocked_until) {
         const diff = Math.ceil((new Date(failData.blocked_until).getTime() - Date.now()) / 1000);
         setIsBlocked(true);
         setCountdown(diff);
-        setError("Too many mistakes. Account locked.");
+        setError("Account locked due to multiple failed attempts.");
       } else {
         setIsCoolingDown(true);
-        setCooldownSeconds(3); 
-        setError(`Incorrect password. ${triesLeft} tries left.`);
+        setCooldownSeconds(3); // Enforce small wait between tries
+        setError(`Incorrect password. ${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} remaining.`);
       }
     } finally {
       setLoading(false);
@@ -160,7 +175,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
   };
 
   if (isAuthenticated) {
@@ -187,11 +202,10 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 md:p-12 lg:p-20 animate-fade-in font-jakarta relative overflow-hidden">
-      {/* Dynamic Background Elements for Large Screens */}
+      {/* Background decoration */}
       <div className="absolute -top-40 -right-40 w-64 h-64 md:w-96 md:h-96 bg-indigo-50 rounded-full blur-[80px] md:blur-[100px] opacity-40"></div>
       <div className="absolute -bottom-40 -left-40 w-64 h-64 md:w-96 md:h-96 bg-orange-50 rounded-full blur-[80px] md:blur-[100px] opacity-40"></div>
 
-      {/* Floating Back Button */}
       <div className="absolute top-6 left-6 md:top-10 md:left-10 z-[100]">
         <button 
           onClick={onExit}
@@ -214,7 +228,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                   {isBlocked ? 'Locked' : isCoolingDown ? 'Wait' : 'Sign In'}
                 </h2>
                 <p className="text-slate-400 text-xs md:text-sm font-medium">
-                  {isBlocked ? `Access suspended for ${formatTime(countdown)}` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Enter your merchant details below'}
+                  {isBlocked ? `System locked for security. Try again in ${formatTime(countdown)}` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Enter your merchant details below'}
                 </p>
               </div>
             </header>
@@ -225,8 +239,8 @@ const AdminView: React.FC<AdminViewProps> = ({
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Email Address</label>
                     {remainingTries < 5 && !isBlocked && (
-                      <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest animate-pulse">
-                        {remainingTries} Attempts Left
+                      <span className={`text-[9px] font-black uppercase tracking-widest animate-pulse ${remainingTries <= 1 ? 'text-rose-600' : 'text-amber-500'}`}>
+                        {remainingTries} {remainingTries === 1 ? 'Attempt' : 'Attempts'} Left
                       </span>
                     )}
                   </div>
@@ -252,7 +266,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </div>
 
-              {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest animate-fade-in-up bg-rose-50 py-4 rounded-2xl border border-rose-100">{error}</p>}
+              {error && <p className={`text-[10px] font-black text-center uppercase tracking-widest animate-fade-in-up py-4 rounded-2xl border ${isBlocked ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-amber-600 bg-amber-50 border-amber-100'}`}>{error}</p>}
 
               <div className="pt-4 space-y-4">
                 <button 
@@ -260,7 +274,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                   disabled={loading || isBlocked || isCoolingDown} 
                   className={`w-full py-6 md:py-7 rounded-3xl md:rounded-[2.5rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${isBlocked ? 'bg-slate-100 text-slate-300 shadow-none cursor-not-allowed' : isCoolingDown ? 'bg-amber-100 text-amber-600 cursor-wait' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}
                 >
-                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? 'Locked Out' : 'Authenticate'}
+                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? `Locked • ${formatTime(countdown)}` : 'Authenticate'}
                 </button>
                 <button type="button" onClick={() => setView('forgot')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors">Forgot Credentials?</button>
               </div>

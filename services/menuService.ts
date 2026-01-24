@@ -1,4 +1,3 @@
-
 import { supabase } from '../lib/supabase';
 
 // --- Global Utilities ---
@@ -42,6 +41,23 @@ export async function getClientIp() {
   }
 }
 
+/**
+ * Local Fallback Logic for Security
+ * Used if the 'login_attempts' table is missing in Supabase
+ */
+const getLocalSecurityKey = (email: string, ip: string) => `foodie_sec_${btoa(email + ip).slice(0, 16)}`;
+
+function getLocalStatus(email: string, ip: string) {
+  const key = getLocalSecurityKey(email, ip);
+  const raw = localStorage.getItem(key);
+  if (!raw) return { attempts: 0, blocked_until: null };
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return { attempts: 0, blocked_until: null };
+  }
+}
+
 export async function getLoginStatus(email: string, ip: string) {
   if (!email) return { attempts: 0, blocked_until: null };
   try {
@@ -52,26 +68,24 @@ export async function getLoginStatus(email: string, ip: string) {
       .eq('ip_address', ip)
       .maybeSingle();
     
-    // If table doesn't exist, we just return a default safe state
-    if (error && error.code === 'PGRST116') return { attempts: 0, blocked_until: null };
-    if (error) {
-      console.warn("Security table missing or inaccessible. Brute-force protection is offline.");
-      return { attempts: 0, blocked_until: null };
-    }
+    if (error) throw error;
     
     return {
       attempts: data?.attempts || 0,
       blocked_until: data?.blocked_until || null
     };
   } catch (err) {
-    return { attempts: 0, blocked_until: null };
+    // Graceful fallback to local tracking if table is missing
+    return getLocalStatus(email, ip);
   }
 }
 
 export async function recordLoginFailure(email: string, ip: string) {
   const cleanEmail = email.toLowerCase().trim();
+  const localStatus = getLocalStatus(cleanEmail, ip);
   
   try {
+    // Try to get existing record from DB
     const { data: existing, error: fetchErr } = await supabase
       .from('login_attempts')
       .select('id, attempts')
@@ -81,10 +95,10 @@ export async function recordLoginFailure(email: string, ip: string) {
 
     if (fetchErr) throw fetchErr;
 
-    const newAttempts = (existing?.attempts || 0) + 1;
+    const nextAttempts = (existing?.attempts || localStatus.attempts || 0) + 1;
     let blocked_until = null;
 
-    if (newAttempts >= 5) {
+    if (nextAttempts >= 5) {
       const blockDate = new Date();
       blockDate.setMinutes(blockDate.getMinutes() + 10);
       blocked_until = blockDate.toISOString();
@@ -93,37 +107,49 @@ export async function recordLoginFailure(email: string, ip: string) {
     const payload: any = {
       email: cleanEmail,
       ip_address: ip,
-      attempts: newAttempts,
+      attempts: nextAttempts,
       last_attempt: new Date().toISOString(),
-      blocked_until
+      blocked_until: blocked_until
     };
     
     if (existing?.id) payload.id = existing.id;
 
     const { data, error } = await supabase
       .from('login_attempts')
-      .upsert(payload)
+      .upsert(payload, { onConflict: 'email,ip_address' })
       .select('attempts, blocked_until')
       .single();
 
     if (error) throw error;
     return data;
   } catch (err: any) {
-    console.error("Security recording failed. Table might be missing.", err.message);
-    // Return dummy data so the UI can still show a local cooldown
-    return { attempts: 1, blocked_until: null };
+    // If table missing or DB error, handle everything in LocalStorage
+    const nextAttempts = (localStatus.attempts || 0) + 1;
+    let blocked_until = null;
+    
+    if (nextAttempts >= 5) {
+      const blockDate = new Date();
+      blockDate.setMinutes(blockDate.getMinutes() + 10);
+      blocked_until = blockDate.toISOString();
+    }
+
+    const newLocalStatus = { attempts: nextAttempts, blocked_until };
+    localStorage.setItem(getLocalSecurityKey(cleanEmail, ip), JSON.stringify(newLocalStatus));
+    return newLocalStatus;
   }
 }
 
 export async function clearLoginAttempts(email: string, ip: string) {
+  const cleanEmail = email.toLowerCase().trim();
+  localStorage.removeItem(getLocalSecurityKey(cleanEmail, ip));
   try {
     await supabase
       .from('login_attempts')
       .delete()
-      .eq('email', email.toLowerCase().trim())
+      .eq('email', cleanEmail)
       .eq('ip_address', ip);
   } catch (e) {
-    // Ignore errors for cleaning up non-existent tables
+    // Ignore cleanup errors
   }
 }
 
