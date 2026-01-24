@@ -42,10 +42,14 @@ const AdminView: React.FC<AdminViewProps> = ({
     MenuService.getClientIp().then(setClientIp);
   }, []);
 
-  // Sync security status when email or IP changes
+  /**
+   * Cross-Browser Sync:
+   * When email changes, check database for existing failed attempts
+   */
   useEffect(() => {
-    if (email && clientIp !== '0.0.0.0') {
-      MenuService.getLoginStatus(email, clientIp).then(status => {
+    if (email && email.includes('@') && clientIp !== '0.0.0.0') {
+      const syncSecurityStatus = async () => {
+        const status = await MenuService.getLoginStatus(email, clientIp);
         const tries = Math.max(0, 5 - status.attempts);
         setRemainingTries(tries);
         
@@ -65,7 +69,11 @@ const AdminView: React.FC<AdminViewProps> = ({
           setIsBlocked(false);
           setCountdown(0);
         }
-      });
+      };
+
+      // Delay check slightly to avoid hitting DB on every keystroke
+      const timer = setTimeout(syncSecurityStatus, 500);
+      return () => clearTimeout(timer);
     }
   }, [email, clientIp]);
 
@@ -134,7 +142,7 @@ const AdminView: React.FC<AdminViewProps> = ({
       localStorage.setItem('foodie_supabase_session', JSON.stringify(dbResponse));
       setIsAuthenticated(true);
     } catch (dbErr: any) {
-      // Record failure and get updated security data
+      // Record failure and get updated security data (now email-bound)
       const failData = await MenuService.recordLoginFailure(email, clientIp);
       const attemptsDone = failData?.attempts || (5 - (remainingTries - 1));
       const triesLeft = Math.max(0, 5 - attemptsDone);
