@@ -44,118 +44,139 @@ export async function getClientIp() {
 /**
  * Local Fallback Logic (Legacy browser-only persistence)
  */
-const getLocalSecurityKey = (email: string) => `foodie_sec_v2_${btoa(email.toLowerCase().trim()).slice(0, 16)}`;
+const getLocalSecurityKey = (email: string | null, ip: string) => `foodie_sec_v3_${btoa((email || 'device') + ip).slice(0, 16)}`;
 
-function getLocalStatus(email: string) {
-  const key = getLocalSecurityKey(email);
+function getLocalStatus(email: string | null, ip: string) {
+  const key = getLocalSecurityKey(email, ip);
   const raw = localStorage.getItem(key);
-  if (!raw) return { attempts: 0, blocked_until: null };
+  if (!raw) return { attempts: 0, locked_until: null };
   try {
     return JSON.parse(raw);
   } catch (e) {
-    return { attempts: 0, blocked_until: null };
+    return { attempts: 0, locked_until: null };
   }
 }
 
 /**
- * Cross-Browser Persistence: Get status by Email
+ * Multi-layered Security Status Check
+ * 1. Check Device Block (IP only, email is null)
+ * 2. Check Account Block (Email + IP)
  */
 export async function getLoginStatus(email: string, ip: string) {
-  if (!email || !email.includes('@')) return { attempts: 0, blocked_until: null };
-  const cleanEmail = email.toLowerCase().trim();
+  if (!ip) return { attempts: 0, locked_until: null };
+  const cleanEmail = email?.toLowerCase().trim();
   
   try {
-    const { data, error } = await supabase
+    // Check Device first (IP only, email IS NULL)
+    const { data: deviceData } = await supabase
       .from('login_attempts')
-      .select('attempts, blocked_until')
-      .eq('email', cleanEmail)
+      .select('attempts, locked_until')
+      .is('email', null)
+      .eq('ip_address', ip)
       .maybeSingle();
+
+    if (deviceData?.locked_until && new Date(deviceData.locked_until) > new Date()) {
+        return { ...deviceData, type: 'device' };
+    }
+
+    // Check Account specific (Email + IP)
+    if (cleanEmail && cleanEmail.includes('@')) {
+        const { data: accountData } = await supabase
+            .from('login_attempts')
+            .select('attempts, locked_until')
+            .eq('email', cleanEmail)
+            .eq('ip_address', ip)
+            .maybeSingle();
+        
+        return accountData || { attempts: 0, locked_until: null, type: 'account' };
+    }
     
-    if (error) throw error;
-    
-    return {
-      attempts: data?.attempts || 0,
-      blocked_until: data?.blocked_until || null
-    };
+    return deviceData || { attempts: 0, locked_until: null, type: 'device' };
   } catch (err) {
     // Fallback to browser-local if table doesn't exist
-    return getLocalStatus(cleanEmail);
+    return getLocalStatus(cleanEmail, ip);
   }
 }
 
 /**
- * Record failure globally by Email
+ * Record failure globally using dual-upsert logic
  */
 export async function recordLoginFailure(email: string, ip: string) {
   const cleanEmail = email.toLowerCase().trim();
-  const localStatus = getLocalStatus(cleanEmail);
   
-  try {
-    // 1. Fetch current global state for this email
-    const { data: existing, error: fetchErr } = await supabase
-      .from('login_attempts')
-      .select('id, attempts')
-      .eq('email', cleanEmail)
-      .maybeSingle();
+  const updateEntity = async (targetEmail: string | null, threshold: number, lockMins: number) => {
+    try {
+        // 1. Fetch current
+        const query = supabase.from('login_attempts').select('id, attempts').eq('ip_address', ip);
+        if (targetEmail) query.eq('email', targetEmail);
+        else query.is('email', null);
+        
+        const { data: existing } = await query.maybeSingle();
+        
+        const nextAttempts = (existing?.attempts || 0) + 1;
+        let locked_until = null;
 
-    if (fetchErr) throw fetchErr;
+        if (nextAttempts >= threshold) {
+          const blockDate = new Date();
+          blockDate.setMinutes(blockDate.getMinutes() + lockMins);
+          locked_until = blockDate.toISOString();
+        }
 
-    // 2. Increment correctly (Global > Local > 0)
-    const nextAttempts = (existing?.attempts || localStatus.attempts || 0) + 1;
-    let blocked_until = null;
+        const payload: any = {
+          email: targetEmail,
+          ip_address: ip,
+          attempts: nextAttempts,
+          last_attempt: new Date().toISOString(),
+          locked_until: locked_until
+        };
+        
+        if (existing?.id) payload.id = existing.id;
 
-    if (nextAttempts >= 5) {
-      const blockDate = new Date();
-      blockDate.setMinutes(blockDate.getMinutes() + 10);
-      blocked_until = blockDate.toISOString();
+        const { data, error } = await supabase
+          .from('login_attempts')
+          .upsert(payload, { onConflict: targetEmail ? 'email,ip_address' : 'ip_address' })
+          .select('attempts, locked_until')
+          .single();
+
+        if (error) throw error;
+        localStorage.setItem(getLocalSecurityKey(targetEmail, ip), JSON.stringify(data));
+        return data;
+    } catch (e) {
+        // Local backup if DB fail
+        const local = getLocalStatus(targetEmail, ip);
+        const next = (local.attempts || 0) + 1;
+        let lock = null;
+        if (next >= threshold) {
+            const d = new Date(); d.setMinutes(d.getMinutes() + lockMins);
+            lock = d.toISOString();
+        }
+        const state = { attempts: next, locked_until: lock };
+        localStorage.setItem(getLocalSecurityKey(targetEmail, ip), JSON.stringify(state));
+        return state;
     }
+  };
 
-    const payload: any = {
-      email: cleanEmail,
-      ip_address: ip, // Store IP for auditing
-      attempts: nextAttempts,
-      last_attempt: new Date().toISOString(),
-      blocked_until: blocked_until
-    };
-    
-    if (existing?.id) payload.id = existing.id;
-
-    const { data, error } = await supabase
-      .from('login_attempts')
-      .upsert(payload, { onConflict: 'email' })
-      .select('attempts, blocked_until')
-      .single();
-
-    if (error) throw error;
-    
-    // Sync local storage as well
-    localStorage.setItem(getLocalSecurityKey(cleanEmail), JSON.stringify(data));
-    return data;
-  } catch (err: any) {
-    // Emergency browser-local fallback
-    const nextAttempts = (localStatus.attempts || 0) + 1;
-    let blocked_until = null;
-    
-    if (nextAttempts >= 5) {
-      const blockDate = new Date();
-      blockDate.setMinutes(blockDate.getMinutes() + 10);
-      blocked_until = blockDate.toISOString();
-    }
-
-    const newLocalStatus = { attempts: nextAttempts, blocked_until };
-    localStorage.setItem(getLocalSecurityKey(cleanEmail), JSON.stringify(newLocalStatus));
-    return newLocalStatus;
-  }
+  // Run both updates
+  const accountResult = await updateEntity(cleanEmail, 5, 10);
+  await updateEntity(null, 10, 15); // Device-wide attempt
+  
+  return accountResult;
 }
 
 export async function clearLoginAttempts(email: string, ip: string) {
   const cleanEmail = email.toLowerCase().trim();
-  localStorage.removeItem(getLocalSecurityKey(cleanEmail));
+  localStorage.removeItem(getLocalSecurityKey(cleanEmail, ip));
+  localStorage.removeItem(getLocalSecurityKey(null, ip));
   try {
+    // Clear account specific
     await supabase
       .from('login_attempts')
       .delete()
-      .eq('email', cleanEmail);
+      .eq('email', cleanEmail)
+      .eq('ip_address', ip);
+    
+    // Note: We typically DON'T clear device-wide failures on a single success 
+    // to prevent brute forcing multiple accounts.
   } catch (e) {
     // Ignore cleanup errors
   }

@@ -32,6 +32,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   
   // Security States
   const [isBlocked, setIsBlocked] = useState(false);
+  const [blockType, setBlockType] = useState<'account' | 'device'>('account');
   const [countdown, setCountdown] = useState<number>(0);
   const [remainingTries, setRemainingTries] = useState<number>(5);
   const [isCoolingDown, setIsCoolingDown] = useState(false);
@@ -44,22 +45,26 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   /**
    * Cross-Browser Sync:
-   * When email changes, check database for existing failed attempts
+   * Fetch current attempt status from DB whenever email or IP changes
    */
   useEffect(() => {
-    if (email && email.includes('@') && clientIp !== '0.0.0.0') {
+    if (clientIp !== '0.0.0.0') {
       const syncSecurityStatus = async () => {
         const status = await MenuService.getLoginStatus(email, clientIp);
-        const tries = Math.max(0, 5 - status.attempts);
+        
+        // Handle Tries Remaining Logic
+        const threshold = status.type === 'device' ? 10 : 5;
+        const tries = Math.max(0, threshold - status.attempts);
         setRemainingTries(tries);
         
-        if (status.blocked_until) {
-            const blockEnd = new Date(status.blocked_until).getTime();
+        if (status.locked_until) {
+            const blockEnd = new Date(status.locked_until).getTime();
             const now = Date.now();
             const diff = Math.ceil((blockEnd - now) / 1000);
             
             if (diff > 0) {
                 setIsBlocked(true);
+                setBlockType(status.type || 'account');
                 setCountdown(diff);
             } else {
                 setIsBlocked(false);
@@ -71,7 +76,6 @@ const AdminView: React.FC<AdminViewProps> = ({
         }
       };
 
-      // Delay check slightly to avoid hitting DB on every keystroke
       const timer = setTimeout(syncSecurityStatus, 500);
       return () => clearTimeout(timer);
     }
@@ -85,7 +89,6 @@ const AdminView: React.FC<AdminViewProps> = ({
         setCountdown(prev => {
           if (prev <= 1) {
             setIsBlocked(false);
-            setRemainingTries(5);
             setError('');
             return 0;
           }
@@ -120,17 +123,16 @@ const AdminView: React.FC<AdminViewProps> = ({
     setLoading(true);
     setError('');
 
-    // Pre-check block status before attempting auth
+    // Pre-check block status before auth call
     const status = await MenuService.getLoginStatus(email, clientIp);
-    if (status.blocked_until) {
-      const diff = Math.ceil((new Date(status.blocked_until).getTime() - Date.now()) / 1000);
-      if (diff > 0) {
-        setIsBlocked(true);
-        setCountdown(diff);
-        setLoading(false);
-        setError("Security lock active.");
-        return;
-      }
+    if (status.locked_until && new Date(status.locked_until) > new Date()) {
+      const diff = Math.ceil((new Date(status.locked_until).getTime() - Date.now()) / 1000);
+      setIsBlocked(true);
+      setBlockType(status.type || 'account');
+      setCountdown(diff);
+      setLoading(false);
+      setError(`${status.type === 'device' ? 'Device' : 'Account'} locked.`);
+      return;
     }
 
     try {
@@ -142,21 +144,22 @@ const AdminView: React.FC<AdminViewProps> = ({
       localStorage.setItem('foodie_supabase_session', JSON.stringify(dbResponse));
       setIsAuthenticated(true);
     } catch (dbErr: any) {
-      // Record failure and get updated security data (now email-bound)
+      // Record failure globally
       const failData = await MenuService.recordLoginFailure(email, clientIp);
-      const attemptsDone = failData?.attempts || (5 - (remainingTries - 1));
-      const triesLeft = Math.max(0, 5 - attemptsDone);
+      const threshold = failData?.type === 'device' ? 10 : 5;
+      const triesLeft = Math.max(0, threshold - (failData?.attempts || 1));
       
       setRemainingTries(triesLeft);
 
-      if (failData?.blocked_until) {
-        const diff = Math.ceil((new Date(failData.blocked_until).getTime() - Date.now()) / 1000);
+      if (failData?.locked_until) {
+        const diff = Math.ceil((new Date(failData.locked_until).getTime() - Date.now()) / 1000);
         setIsBlocked(true);
+        setBlockType(failData.type || 'account');
         setCountdown(diff);
-        setError("Account locked due to multiple failed attempts.");
+        setError(`${failData.type === 'device' ? 'Device' : 'Account'} locked due to multiple failed attempts.`);
       } else {
         setIsCoolingDown(true);
-        setCooldownSeconds(3); // Enforce small wait between tries
+        setCooldownSeconds(3); // Protection delay
         setError(`Incorrect password. ${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} remaining.`);
       }
     } finally {
@@ -236,7 +239,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                   {isBlocked ? 'Locked' : isCoolingDown ? 'Wait' : 'Sign In'}
                 </h2>
                 <p className="text-slate-400 text-xs md:text-sm font-medium">
-                  {isBlocked ? `System locked for security. Try again in ${formatTime(countdown)}` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Enter your merchant details below'}
+                  {isBlocked ? `${blockType === 'device' ? 'Device' : 'Account'} locked for security. Try again in ${formatTime(countdown)}` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Enter your merchant details below'}
                 </p>
               </div>
             </header>
@@ -246,7 +249,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Email Address</label>
-                    {remainingTries < 5 && !isBlocked && (
+                    {remainingTries < (blockType === 'device' ? 10 : 5) && !isBlocked && (
                       <span className={`text-[9px] font-black uppercase tracking-widest animate-pulse ${remainingTries <= 1 ? 'text-rose-600' : 'text-amber-500'}`}>
                         {remainingTries} {remainingTries === 1 ? 'Attempt' : 'Attempts'} Left
                       </span>
