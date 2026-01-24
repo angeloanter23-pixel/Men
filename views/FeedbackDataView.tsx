@@ -37,19 +37,19 @@ const FeedbackDataView: React.FC<FeedbackDataViewProps> = ({ feedbacks, onAddFee
           datasets: [{
             data: getGlobalAvgScores(),
             fill: true,
-            backgroundColor: 'rgba(99, 102, 241, 0.05)',
-            borderColor: '#6366f1',
+            backgroundColor: 'rgba(255, 107, 0, 0.1)',
+            borderColor: '#FF6B00',
             borderWidth: 2,
             pointRadius: 4,
             pointBackgroundColor: '#fff',
-            pointBorderColor: '#6366f1'
+            pointBorderColor: '#FF6B00'
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            r: { min: 0, max: 5, grid: { circular: false, color: '#f1f5f9' }, pointLabels: { font: { size: 10, weight: '900' }, color: '#94a3b8' }, ticks: { display: false, stepSize: 1 } }
+            r: { min: 0, max: 5, grid: { circular: false, color: '#f1f5f9' }, pointLabels: { font: { size: 10, weight: '800' }, color: '#94a3b8' }, ticks: { display: false, stepSize: 1 } }
           },
           plugins: { legend: { display: false } }
         }
@@ -58,85 +58,92 @@ const FeedbackDataView: React.FC<FeedbackDataViewProps> = ({ feedbacks, onAddFee
   }, [feedbacks]);
 
   return (
-    <div className="p-6 pb-24 animate-fade-in bg-[#fcfdfe] min-h-screen">
-      <header className="mb-8">
-        <h1 className="text-3xl font-black tracking-tighter text-slate-800">Visualizer</h1>
-        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">
-          {getGlobalAvg()} AVG SCORE • {feedbacks.length} ENTRIES
-        </p>
+    <div className="p-6 pb-32 animate-fade-in bg-[#FBFBFD] min-h-screen font-['Plus_Jakarta_Sans']">
+      <header className="mb-10 max-w-2xl mx-auto">
+        <p className="text-[10px] font-black text-brand-primary uppercase tracking-[0.4em] mb-2">Guest Feedback</p>
+        <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 uppercase">Reviews</h1>
       </header>
 
-      <div className="bg-white rounded-[3rem] p-6 shadow-xl border border-slate-100 mb-6">
+      <div className="max-w-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+         <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center justify-center text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Average Score</p>
+            <h2 className="text-6xl font-black text-brand-primary tracking-tighter leading-none">{getGlobalAvg()}</h2>
+            <div className="mt-4 flex gap-0.5 text-amber-400">
+               {'★'.repeat(Math.round(Number(getGlobalAvg()))).padEnd(5, '☆')}
+            </div>
+         </div>
+         <div className="bg-slate-900 p-8 rounded-[3rem] shadow-xl text-white flex flex-col items-center justify-center text-center">
+            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Total Reviews</p>
+            <h2 className="text-6xl font-black tracking-tighter leading-none">{feedbacks.length}</h2>
+            <p className="text-[10px] font-bold text-slate-500 uppercase mt-4">Verified Transactions</p>
+         </div>
+      </div>
+
+      <div className="bg-white rounded-[3.5rem] p-8 shadow-xl border border-slate-100 mb-12 max-w-2xl mx-auto">
+        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest text-center mb-8">Rating Matrix</h3>
         <div className="h-[40vh] w-full">
           <canvas ref={chartRef}></canvas>
         </div>
-        <button onClick={onAddFeedback} className="w-full mt-6 bg-slate-50 hover:bg-indigo-50 text-indigo-600 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest border border-indigo-100 transition-colors">
-          + Add New Feedback Entry
+        <button onClick={onAddFeedback} className="w-full mt-10 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all">
+          Write a Review
         </button>
       </div>
 
-      <div className="space-y-4 mb-10">
-        <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest px-4">Live Feedback Feed</h3>
+      <div className="space-y-6 mb-20 max-w-2xl mx-auto">
+        <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest px-4">Recent Feedback</h3>
         <div className="grid grid-cols-1 gap-4">
-          {feedbacks.slice(0, 5).map(f => {
-            // Fix: Cast Object.values result to number array to resolve arithmetic operation error
+          {feedbacks.map(f => {
             const avg = ((Object.values(f.scores) as number[]).reduce((a, b) => a + b, 0) / categories.length).toFixed(1);
             return (
-              <div key={f.id} onClick={() => setSelectedReview(f)} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 cursor-pointer hover:border-indigo-200 transition-all">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-black text-sm text-slate-800">{f.name}</h4>
-                  <span className="text-indigo-600 font-black text-xs">{avg}</span>
+              <div key={f.id} onClick={() => setSelectedReview(f)} className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all group">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-black text-base text-slate-800 uppercase tracking-tight">{f.name}</h4>
+                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">{f.date}</p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-brand-primary font-black text-lg tracking-tighter leading-none">{avg}</span>
+                    <div className="text-[8px] flex text-amber-400 mt-1">{'★'.repeat(Math.round(Number(avg)))}</div>
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold line-clamp-1">{f.note}</p>
+                <p className="text-sm text-slate-500 font-medium line-clamp-2 leading-relaxed">"{f.note}"</p>
               </div>
             );
           })}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest px-4">Database</h3>
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="p-5 text-[10px] font-black uppercase text-slate-400">User</th>
-                <th className="p-5 text-[10px] font-black uppercase text-slate-400">Avg</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {feedbacks.map(f => {
-                // Fix: Cast Object.values result to number array to resolve arithmetic operation error
-                const avg = ((Object.values(f.scores) as number[]).reduce((a, b) => a + b, 0) / categories.length).toFixed(1);
-                return (
-                  <tr key={f.id} className="hover:bg-indigo-50/50 cursor-pointer transition-colors" onClick={() => setSelectedReview(f)}>
-                    <td className="p-5">
-                      <div className="font-bold text-xs text-slate-800">{f.name}</div>
-                      <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">{f.date}</div>
-                    </td>
-                    <td className="p-5 font-black text-indigo-600 text-xs">{avg}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {feedbacks.length === 0 && (
+             <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[3rem] bg-white">
+                <i className="fa-solid fa-comment-slash text-3xl text-slate-100 mb-4"></i>
+                <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest">No reviews yet</p>
+             </div>
+          )}
         </div>
       </div>
 
       {selectedReview && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setSelectedReview(null)}>
-          <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative" onClick={e => e.stopPropagation()}>
-            <h2 className="text-2xl font-black text-slate-800 mb-4">{selectedReview.name}</h2>
-            <div className="bg-slate-50 p-4 rounded-2xl mb-4 italic text-sm text-slate-600">"{selectedReview.note}"</div>
-            <div className="space-y-2">
+        <div className="fixed inset-0 z-[500] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setSelectedReview(null)}>
+          <div className="bg-white w-full max-w-md rounded-[3.5rem] p-10 lg:p-12 shadow-2xl relative animate-scale" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-8">
+               <div>
+                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">{selectedReview.name}</h2>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedReview.date}</p>
+               </div>
+               <button onClick={() => setSelectedReview(null)} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-slate-900 transition-colors"><i className="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div className="bg-brand-secondary/30 p-8 rounded-[2.5rem] mb-10 border border-brand-primary/5">
+               <p className="text-slate-700 text-lg leading-relaxed font-medium">"{selectedReview.note}"</p>
+            </div>
+
+            <div className="space-y-3 px-2">
               {categories.map(cat => (
-                <div key={cat} className="flex justify-between border-b border-slate-50 py-1">
+                <div key={cat} className="flex justify-between items-center border-b border-slate-50 py-2.5">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{cat}</span>
-                  <span className="text-xs font-black text-slate-800">{selectedReview.scores[cat]?.toFixed(1)}</span>
+                  <span className="text-sm font-black text-brand-primary tabular-nums">{selectedReview.scores[cat]?.toFixed(1)}</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => setSelectedReview(null)} className="w-full mt-6 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px]">Close</button>
+            
+            <button onClick={() => setSelectedReview(null)} className="w-full mt-12 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl">Close Review</button>
           </div>
         </div>
       )}

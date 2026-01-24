@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ViewState } from '../types';
 
@@ -21,25 +20,27 @@ const Navbar: React.FC<NavbarProps> = ({
   cartCount 
 }) => {
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-6 py-4 flex justify-between items-center border-b border-gray-50">
-      <button onClick={onMenuClick} className="p-2 hover:bg-gray-100 rounded-xl transition">
+    <nav className="sticky top-0 z-[60] bg-white/90 backdrop-blur-3xl px-6 py-4 flex justify-between items-center border-b border-gray-50 h-[72px]">
+      <button onClick={onMenuClick} className="p-2 hover:bg-gray-100 rounded-xl transition active:scale-90">
         <i className="fa-solid fa-align-left text-xl text-slate-700"></i>
       </button>
       
-      <div className="cursor-pointer flex items-center" onClick={onLogoClick}>
+      <div className="cursor-pointer flex items-center h-full" onClick={onLogoClick}>
         {logo ? (
-          <img src={logo} alt="Logo" className="h-10 w-auto object-contain max-w-[140px]" />
+          <img src={logo} alt="Logo" className="h-8 w-auto object-contain max-w-[140px]" />
         ) : (
-          <h1 className="font-black text-2xl tracking-tighter text-orange-600">FOODIE.</h1>
+          <h1 className="font-black text-2xl tracking-tighter text-brand-primary uppercase italic">FOODIE.</h1>
         )}
       </div>
       
       <div className="flex items-center gap-2">
-        {/* Cart Action */}
-        <button onClick={onCartClick} className={`relative p-2 transition-all ${currentView === 'cart' ? 'text-orange-500' : 'text-slate-700'}`}>
+        <button 
+          onClick={onCartClick} 
+          className={`relative p-2 transition-all active:scale-90 ${currentView === 'cart' ? 'text-brand-primary' : 'text-slate-700'}`}
+        >
           <i className="fa-solid fa-cart-shopping text-xl"></i>
           {cartCount > 0 && (
-            <span className="absolute top-0 right-0 bg-orange-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center border-2 border-white font-bold animate-bounce">
+            <span className="absolute -top-1 -right-1 bg-brand-primary text-white text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-black animate-pulse">
               {cartCount}
             </span>
           )}

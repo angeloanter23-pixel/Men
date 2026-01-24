@@ -13,10 +13,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
   const navItem = (view: ViewState, icon: string, label: string) => (
     <button 
       onClick={() => { onNavigate(view); onClose(); }} 
-      className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold transition group text-left ${currentView === view ? 'bg-orange-50 text-orange-600' : 'text-slate-600 hover:bg-slate-50'}`}
+      className={`w-full flex items-center gap-5 p-5 rounded-2xl font-black transition group text-left ${currentView === view ? 'bg-orange-50 text-brand-primary shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
     >
-      <i className={`fa-solid ${icon} ${currentView === view ? 'text-orange-500' : 'text-slate-400 group-hover:text-orange-500'}`}></i> 
-      {label}
+      <i className={`fa-solid ${icon} text-lg ${currentView === view ? 'text-brand-primary' : 'text-slate-400 group-hover:text-brand-primary'}`}></i> 
+      <span className="text-[13px] uppercase tracking-widest">{label}</span>
     </button>
   );
 
@@ -26,49 +26,36 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
         onClick={onClose}
         className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       />
-      <aside className={`fixed top-0 left-0 h-full w-72 bg-white z-[110] shadow-2xl transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-8 h-full flex flex-col">
-          <div className="flex justify-between items-center mb-10">
-            <h2 className="font-black text-2xl text-orange-600 tracking-tighter italic">FOODIE.</h2>
-            <button onClick={onClose} className="p-2 text-slate-400 hover:text-orange-500 transition">
-              <i className="fa-solid fa-xmark text-xl"></i>
+      <aside className={`fixed top-0 left-0 h-full w-80 bg-white z-[110] shadow-2xl transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-10 h-full flex flex-col">
+          <div className="flex justify-between items-center mb-12">
+            <h2 className="font-black text-3xl text-brand-primary tracking-tighter uppercase">FOODIE</h2>
+            <button onClick={onClose} className="p-3 text-slate-300 hover:text-brand-primary transition-all active:scale-90">
+              <i className="fa-solid fa-xmark text-2xl"></i>
             </button>
           </div>
           
-          <nav className="space-y-1 flex-1 overflow-y-auto no-scrollbar">
-            <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Discovery</p>
-            {navItem('landing', 'fa-sparkles', 'Product Tour')}
-            {navItem('menu', 'fa-utensils', 'Main Menu')}
-            {navItem('test-supabase', 'fa-cloud', 'Test Supabase Menu')}
+          <nav className="space-y-2 flex-1 overflow-y-auto no-scrollbar">
+            <p className="px-5 text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-4">Discovery</p>
+            {navItem('menu', 'fa-utensils', 'Menu')}
+            {navItem('group', 'fa-users', 'Group Order')}
             
-            <div className="my-6 border-t border-slate-100 pt-6 space-y-1">
-              <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">My Account</p>
-              {navItem('orders', 'fa-clock-rotate-left', 'Order History')}
-              {navItem('favorites', 'fa-heart', 'Saved Favorites')}
-              {navItem('feedback', 'fa-comment-dots', 'Give Feedback')}
-            </div>
-
-            <div className="my-6 border-t border-slate-100 pt-6 space-y-1">
-              <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Support</p>
-              {navItem('privacy', 'fa-shield-halved', 'Privacy Policy')}
-              {navItem('terms', 'fa-file-contract', 'Terms & Conditions')}
+            <div className="my-8 border-t border-slate-100 pt-8 space-y-2">
+              <p className="px-5 text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-4">Account</p>
+              {navItem('orders', 'fa-clock-rotate-left', 'History')}
+              {navItem('favorites', 'fa-heart', 'Saved')}
+              {navItem('feedback', 'fa-comment-dots', 'Feedback')}
             </div>
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-slate-100 text-center space-y-3">
+          <div className="mt-auto pt-8 border-t border-slate-100 text-center">
             <button 
               onClick={() => { onNavigate('admin'); onClose(); }} 
-              className="p-5 bg-indigo-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 transition flex items-center justify-center gap-2 w-full shadow-xl shadow-indigo-100"
+              className="p-6 bg-slate-900 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl active:scale-95 w-full"
             >
-              <i className="fa-solid fa-user-lock"></i> Merchant Access
+              Merchant Access
             </button>
-            <button 
-              onClick={() => { onNavigate('super-admin'); onClose(); }} 
-              className="p-5 bg-slate-900 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black transition flex items-center justify-center gap-2 w-full shadow-xl"
-            >
-              <i className="fa-solid fa-shield-halved"></i> Super Admin
-            </button>
-            <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest mt-4">v2.5 Sharp Pro System</p>
+            <p className="text-[9px] text-slate-300 font-bold uppercase tracking-[0.4em] mt-8 leading-none">Version 3.3 Premium Clean</p>
           </div>
         </div>
       </aside>

@@ -52,19 +52,19 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
         datasets: [{
           data: categories.map(c => scores[c]),
           fill: true,
-          backgroundColor: 'rgba(99, 102, 241, 0.1)',
-          borderColor: '#6366f1',
+          backgroundColor: 'rgba(255, 107, 0, 0.1)',
+          borderColor: '#FF6B00',
           borderWidth: 2,
           pointRadius: 4,
           pointBackgroundColor: '#fff',
-          pointBorderColor: '#6366f1'
+          pointBorderColor: '#FF6B00'
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          r: { min: 0, max: 5, grid: { circular: false, color: '#f1f5f9' }, pointLabels: { font: { size: 10, weight: '900' }, color: '#94a3b8' }, ticks: { display: false, stepSize: 1 } }
+          r: { min: 0, max: 5, grid: { circular: false, color: '#f1f5f9' }, pointLabels: { font: { size: 10, weight: '800' }, color: '#94a3b8' }, ticks: { display: false, stepSize: 1 } }
         },
         plugins: { legend: { display: false } }
       }
@@ -83,24 +83,24 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white p-6 pb-32 animate-fade-in flex flex-col font-['Plus_Jakarta_Sans']">
-      <header className="mb-10 text-center">
-        <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-sm border border-emerald-100">
-          <i className="fa-solid fa-circle-check"></i>
+    <div className="min-h-screen bg-[#FBFBFD] p-6 pb-40 animate-fade-in flex flex-col font-['Plus_Jakarta_Sans']">
+      <header className="mb-12 text-center">
+        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl shadow-sm border border-emerald-100">
+          <i className="fa-solid fa-check"></i>
         </div>
-        <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none uppercase italic">Thanks for <span className="text-orange-500">paying!</span></h1>
-        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3">We'd love to hear about your experience today.</p>
+        <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none uppercase">Thanks for <span className="text-brand-primary">dining!</span></h1>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3">We value your honest feedback</p>
         
-        <div className="mt-6 flex items-center justify-center gap-2">
-           <span className="text-4xl font-black text-indigo-600">{calculateAvg()}</span>
-           <div className="text-amber-400 flex text-lg">
+        <div className="mt-8 flex flex-col items-center">
+           <span className="text-5xl font-black text-brand-primary tracking-tighter leading-none">{calculateAvg()}</span>
+           <div className="mt-2 text-amber-400 flex text-xl gap-0.5">
              {'★'.repeat(Math.round(Number(calculateAvg()))).padEnd(5, '☆')}
            </div>
         </div>
       </header>
 
-      <div className="space-y-10">
-        <div className="space-y-4">
+      <div className="max-w-xl mx-auto w-full space-y-12">
+        <div className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Full Name (Optional)</label>
             <input 
@@ -108,28 +108,28 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
               placeholder="e.g. John Doe" 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-5 rounded-[2rem] bg-slate-50 border border-slate-100 font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" 
+              className="w-full p-5 rounded-2xl bg-white border border-slate-200 font-bold outline-none focus:ring-4 ring-brand-primary/5 transition-all shadow-sm" 
             />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Your Thoughts</label>
             <textarea 
-              placeholder="Tell us about the food, the vibe, or the service..." 
+              placeholder="How was the food and service?" 
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full p-6 rounded-[2.5rem] bg-slate-50 border border-slate-100 font-bold text-sm h-32 outline-none resize-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
+              className="w-full p-6 rounded-[2rem] bg-white border border-slate-200 font-bold text-sm h-32 outline-none resize-none focus:ring-4 ring-brand-primary/5 transition-all shadow-sm"
             ></textarea>
           </div>
         </div>
 
-        <div className="space-y-8 bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100">
-          <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] text-center mb-4 italic">Performance Matrix</h3>
-          <div className="grid grid-cols-1 gap-8">
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-xl shadow-slate-100 space-y-10">
+          <h3 className="text-[10px] font-black uppercase text-slate-900 tracking-[0.3em] text-center mb-4">Rate your experience</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
             {categories.map(cat => (
               <div key={cat} className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black uppercase text-slate-800 tracking-widest">{cat}</label>
-                  <span className="text-indigo-600 font-black text-xs">{scores[cat].toFixed(1)}</span>
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{cat}</label>
+                  <span className="text-brand-primary font-black text-xs bg-brand-secondary px-2 py-0.5 rounded-lg">{scores[cat].toFixed(1)}</span>
                 </div>
                 <input 
                   type="range" 
@@ -138,30 +138,30 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
                   step="0.5" 
                   value={scores[cat]} 
                   onChange={(e) => setScores(prev => ({...prev, [cat]: parseFloat(e.target.value)}))}
-                  className="accent-indigo-600"
+                  className="accent-brand-primary w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer"
                 />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-[3rem] p-6 h-[45vh] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-full bg-indigo-50/10 pointer-events-none group-hover:bg-indigo-50/20 transition-all"></div>
+        <div className="bg-white rounded-[3.5rem] p-8 h-[40vh] border border-slate-100 shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-full bg-slate-50/10 pointer-events-none group-hover:bg-slate-50/20 transition-all"></div>
           <canvas ref={chartRef}></canvas>
         </div>
 
         <div className="space-y-4 pt-4">
           <button 
             onClick={handleSubmit} 
-            className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-95 transition-all hover:bg-indigo-600"
+            className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-95 transition-all hover:bg-black"
           >
-            Submit Feedback
+            Submit Review
           </button>
           <button 
             onClick={onCancel} 
             className="w-full py-4 rounded-[2rem] font-black uppercase text-[10px] text-slate-300 hover:text-rose-500 tracking-widest transition-all"
           >
-            Not Now, Maybe Later
+            Skip for now
           </button>
         </div>
       </div>

@@ -1,16 +1,13 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
 import * as MenuService from './services/menuService';
 import { menuItems as mockupItems, categories as mockupCategories } from './data';
 
-// Components
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import DetailPanel from './components/DetailPanel';
 import FeedbackForm from './components/FeedbackForm';
 
-// Views
 import MenuView from './views/MenuView';
 import CartView from './views/CartView';
 import OrdersView from './views/OrdersView';
@@ -38,7 +35,6 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // SESSION-AWARE DATA INITIALIZATION
   const hasMerchantSession = !!localStorage.getItem('foodie_supabase_session');
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>(hasMerchantSession ? [] : mockupItems);
@@ -48,7 +44,7 @@ export default function App() {
   const [salesHistory, setSalesHistory] = useState<SalesRecord[]>([]);
   const [adminCreds, setAdminCreds] = useState({ email: 'admin@foodie.com', password: 'password123' });
   const [logo, setLogo] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isBooting, setIsBooting] = useState(true);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<OrderInstance[]>([]);
@@ -57,7 +53,6 @@ export default function App() {
   const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, branchName?: string, theme?: any} | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
-  // Dynamic Theme State
   const [appTheme, setAppTheme] = useState<any>({
     primary_color: '#FF6B00',
     secondary_color: '#FFF3E0',
@@ -69,11 +64,7 @@ export default function App() {
     if (!themeData || typeof themeData !== 'object') return;
     const merged = { ...appTheme, ...themeData };
     setAppTheme(merged);
-    
-    // Set Logo if provided in theme
     if (merged.logo_url) setLogo(merged.logo_url);
-    
-    // Inject CSS variables for dynamic coloring
     document.documentElement.style.setProperty('--brand-primary', merged.primary_color);
     document.documentElement.style.setProperty('--brand-secondary', merged.secondary_color);
     document.documentElement.style.setProperty('--brand-font', merged.font_family);
@@ -81,16 +72,12 @@ export default function App() {
 
   const syncStateWithURL = async () => {
     const path = window.location.pathname;
-
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
       const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu', 'test-supabase'];
-      
       if (!reserved.includes(token.toLowerCase())) {
         try {
-          setIsLoading(true);
           const details = await MenuService.getQRCodeByCode(token);
-          
           if (details) {
             setActiveTable(details.label);
             const qrSession = {
@@ -98,41 +85,34 @@ export default function App() {
               restaurant_id: details.restaurant_id,
               label: details.label,
               token: details.code,
-              restaurantName: details.restaurant_name || 'Premium Merchant',
+              restaurantName: details.restaurant_name || 'Merchant',
               branchName: details.branch_name,
               theme: details.theme
             };
             setQrDetails(qrSession);
             localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
-            
             if (details.theme) applyTheme(details.theme);
-
             const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
             setMenuItems(cloudMenu.items || []);
             setCategories(cloudMenu.categories || []);
-            
             setShowWelcomeModal(true);
             setCurrentView('menu');
             window.history.replaceState({}, '', '/#/menu');
             return;
           }
         } catch (err) {
-          console.error("Token resolve error:", err);
-        } finally {
-          setIsLoading(false);
+          console.error("Token error:", err);
         }
       }
     }
-
+    
     const hashPart = window.location.hash.replace(/^#\/?/, '').split('?')[0];
     const parts = hashPart.split('/').filter(p => p !== '');
-
     if (parts.length === 0 || parts[0] === 'menu') {
       setCurrentView('menu');
       setSelectedItem(null);
       return;
     }
-
     const route = parts[0].toLowerCase();
     const viewMap: Record<string, ViewState> = {
       'landing': 'landing', 'menu': 'menu', 'cart': 'cart', 'orders': 'orders',
@@ -141,27 +121,23 @@ export default function App() {
       'payment': 'payment', 'qr-verify': 'qr-verify', 'group': 'group',
       'test-supabase': 'test-supabase', 'super-admin': 'super-admin'
     };
-
     if (viewMap[route]) {
       setCurrentView(viewMap[route]);
-      setSelectedItem(null);
     } else {
       setCurrentView(activeTable ? 'menu' : 'landing');
-      setSelectedItem(null);
     }
   };
 
   useEffect(() => {
     window.addEventListener('hashchange', syncStateWithURL);
-    
     const initializeData = async () => {
-      setIsLoading(true);
+      setIsBooting(true);
       try {
         const savedQR = localStorage.getItem('foodie_active_qr');
         const sessionRaw = localStorage.getItem('foodie_supabase_session');
         const session = sessionRaw ? JSON.parse(sessionRaw) : null;
         const merchantRid = session?.restaurant?.id;
-
+        
         if (savedQR) {
           const parsed = JSON.parse(savedQR);
           if (parsed.restaurant_id && parsed.restaurant_id !== "undefined") {
@@ -176,22 +152,22 @@ export default function App() {
           const res = await MenuService.getMenuByRestaurantId(merchantRid);
           setMenuItems(res.items || []); 
           setCategories(res.categories || []); 
-          // If logged in as admin, fetch latest restaurant theme
           if (session?.restaurant?.theme) applyTheme(session.restaurant.theme);
         }
       } catch (err) {
-        console.error("Initialization sync failed:", err);
+        console.error("Sync failed:", err);
       } finally {
-        setIsLoading(false);
+        setIsBooting(false);
       }
     };
-
     initializeData();
     syncStateWithURL();
     return () => window.removeEventListener('hashchange', syncStateWithURL);
   }, []);
 
   const navigateTo = (view: ViewState) => {
+    setCurrentView(view);
+    setSelectedItem(null);
     window.location.hash = `/${view}`;
   };
 
@@ -199,40 +175,21 @@ export default function App() {
     setSelectedItem(item);
   };
 
-  useEffect(() => {
-    const savedFeedbacks = localStorage.getItem('foodie_feedbacks');
-    const savedAdmin = localStorage.getItem('foodie_admin_creds');
-    const savedLogo = localStorage.getItem('foodie_business_logo');
-
-    if (savedFeedbacks) setFeedbacks(JSON.parse(savedFeedbacks));
-    if (savedAdmin) setAdminCreds(JSON.parse(savedAdmin));
-    if (savedLogo) setLogo(savedLogo);
-  }, []);
-
   const finalizeOrder = async () => {
     const itemsToProcess = pendingSingleItem ? [pendingSingleItem] : cart;
     if (itemsToProcess.length === 0) { navigateTo('menu'); return; }
-
     const sessionRaw = localStorage.getItem('foodie_supabase_session');
     const session = sessionRaw ? JSON.parse(sessionRaw) : null;
     const sessionRestaurantId = session?.restaurant?.id;
-    
-    // Attempt to resolve valid restaurant ID
     const restaurant_id = qrDetails?.restaurant_id || sessionRestaurantId;
-    const qr_token = qrDetails?.token || 'Demo-Manual';
-
-    // If no real restaurant ID is found, we are in Demo mode.
-    // We bypass the database call to avoid foreign key violation errors.
+    const qr_token = qrDetails?.token || 'Demo';
     if (!restaurant_id) {
-      console.log("Demo Mode Activated: Bypassing DB order placement.");
-      // In a real demo we might store these in localState to show in OrdersView
       if (pendingSingleItem) setPendingSingleItem(null);
       else setCart([]);
       navigateTo('orders');
       setSelectedItem(null);
       return;
     }
-
     const dbOrders = itemsToProcess.map(item => ({
       restaurant_id: restaurant_id,
       item_id: String(item.id),
@@ -247,7 +204,6 @@ export default function App() {
       instructions: item.customInstructions || '',
       qr_code_token: qr_token
     }));
-
     try {
       await MenuService.insertOrders(dbOrders);
       if (pendingSingleItem) setPendingSingleItem(null);
@@ -267,33 +223,13 @@ export default function App() {
 
   const handleFeedbackSubmit = (feedback: Feedback) => {
     setFeedbacks(prev => [feedback, ...prev]);
-    setOrders([]);
     navigateTo('feedback-data');
-    alert('Thank you for your feedback!');
-  };
-
-  const handleImportConfig = (config: any) => {
-    if (config.menu?.categories) setCategories(config.menu.categories);
-    if (config.menu?.items) setMenuItems(config.menu.items);
-    if (config.business?.name) localStorage.setItem('foodie_business_name', config.business.name);
-    if (config.business?.logo) {
-      setLogo(config.business.logo);
-      localStorage.setItem('foodie_business_logo', config.business.logo);
-    }
-    navigateTo('menu');
   };
 
   const renderView = () => {
-    if (isLoading) return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 animate-fade-in">
-        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="font-black text-indigo-600 uppercase tracking-[0.4em] text-[10px]">Merchant Syncing...</p>
-      </div>
-    );
-
     switch (currentView) {
-      case 'landing': return <LandingView onStart={() => navigateTo('menu')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={handleImportConfig} />;
-      case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={(config) => { handleImportConfig(config); navigateTo('admin'); }} />;
+      case 'landing': return <LandingView onStart={() => navigateTo('menu')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={(c) => { navigateTo('menu'); }} />;
+      case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={(config) => { navigateTo('admin'); }} />;
       case 'menu': return <MenuView popularItems={menuItems.filter(i => i.is_popular)} categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
       case 'cart': return <CartView cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))} onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => navigateTo('qr-verify')} onGoBack={() => navigateTo('menu')} />;
       case 'payment': return <PaymentView total={0} onClose={() => navigateTo('orders')} onSuccess={() => { alert("Payment Successful!"); navigateTo('feedback'); }} />;
@@ -301,24 +237,26 @@ export default function App() {
       case 'orders': return <OrdersView restaurantId={qrDetails?.restaurant_id} tableNumber={activeTable} onPayNow={() => navigateTo('payment')} onGoToMenu={() => navigateTo('menu')} />;
       case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => navigateTo('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} />;
-      case 'test-supabase': return <TestSupabaseView />;
-      case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
-      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onExit={() => navigateTo('menu')} onLogoUpdate={setLogo} />;
-      case 'privacy': return <LegalView title="Privacy Policy" />;
-      case 'terms': return <LegalView title="Terms & Agreement" />;
       case 'group': return <GroupView />;
+      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onExit={() => navigateTo('menu')} onLogoUpdate={setLogo} />;
+      case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
       default: return null;
     }
   };
 
+  if (isBooting) return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-8 bg-white animate-fade-in">
+      <div className="w-16 h-16 border-4 border-slate-50 border-t-brand-primary rounded-full animate-spin"></div>
+      <p className="font-black text-slate-400 uppercase tracking-[0.5em] text-[10px] leading-none">Starting up...</p>
+    </div>
+  );
+
   const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin', 'menu', 'cart', 'orders', 'group'].includes(currentView);
   const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin'].includes(currentView);
+  const showBottomNav = !['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView);
 
   return (
-    <div 
-      className={`min-h-screen bg-white relative overflow-x-hidden ${isDesktopFullWidthView ? 'w-full' : 'max-w-xl mx-auto shadow-2xl pb-24'}`}
-      style={{ fontFamily: 'var(--brand-font, "Plus Jakarta Sans")' }}
-    >
+    <div className={`min-h-screen bg-white relative overflow-x-hidden ${isDesktopFullWidthView ? 'w-full' : 'max-w-xl mx-auto shadow-2xl pb-24'}`}>
       <style>{`
         :root {
           --brand-primary: ${appTheme.primary_color};
@@ -329,59 +267,63 @@ export default function App() {
         .bg-brand-primary { background-color: var(--brand-primary); }
         .text-brand-secondary { color: var(--brand-secondary); }
         .bg-brand-secondary { background-color: var(--brand-secondary); }
-        /* Override generic orange-500 if theme is set */
-        ${appTheme ? `
-          .text-orange-500, .text-orange-600 { color: var(--brand-primary); }
-          .bg-orange-500, .bg-orange-600 { background-color: var(--brand-primary); }
-          .bg-orange-50 { background-color: var(--brand-secondary); }
-        ` : ''}
       `}</style>
 
       {showWelcomeModal && qrDetails && (
-        <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
-          <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl space-y-6">
-            <div className="w-20 h-20 bg-brand-secondary text-brand-primary rounded-full flex items-center justify-center mx-auto mb-2"><i className="fa-solid fa-utensils text-3xl"></i></div>
-            <div className="space-y-4">
+        <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-3xl flex items-center justify-center p-8 animate-fade-in">
+          <div className="bg-white rounded-[4rem] p-12 w-full max-w-sm text-center shadow-2xl space-y-10">
+            <div className="w-24 h-24 bg-brand-secondary text-brand-primary rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm"><i className="fa-solid fa-utensils text-4xl"></i></div>
+            <div className="space-y-8">
               <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-1">Authenticated Session</p>
-                <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Welcome to <span className="text-brand-primary">{qrDetails.restaurantName}</span></h2>
+                <p className="text-[12px] font-black uppercase text-slate-400 tracking-[0.5em] mb-3 leading-none">Welcome</p>
+                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">Welcome to <span className="text-brand-primary">{qrDetails.restaurantName}</span></h2>
               </div>
-              
-              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+              <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-100 space-y-8">
                 {qrDetails.branchName && (
-                  <div className="space-y-1">
-                    <p className="text-[8px] font-black uppercase text-brand-primary tracking-widest italic leading-none">Operating Territory</p>
-                    <p className="text-sm font-black text-slate-600 uppercase italic">{qrDetails.branchName}</p>
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase text-brand-primary tracking-widest leading-none">Store</p>
+                    <p className="text-lg font-black text-slate-600 uppercase leading-none">{qrDetails.branchName}</p>
                   </div>
                 )}
-                
                 <div className="h-px bg-slate-200/50 w-full"></div>
-                
-                <div className="space-y-1">
-                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest italic leading-none">Assigned Station</p>
-                  <p className="text-lg font-black text-slate-800 uppercase italic">{qrDetails.label}</p>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Table</p>
+                  <p className="text-3xl font-black text-slate-800 uppercase leading-none">{qrDetails.label}</p>
                 </div>
-                <p className="text-[8px] font-bold text-slate-300 uppercase mt-1 opacity-60 italic">Node ID: {qrDetails.token}</p>
               </div>
             </div>
-            <button onClick={() => setShowWelcomeModal(false)} className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Start Ordering</button>
+            <button onClick={() => setShowWelcomeModal(false)} className="w-full bg-slate-900 text-white h-20 rounded-[2.5rem] font-black uppercase text-[12px] tracking-[0.4em] shadow-xl active:scale-95 transition-all">Start Ordering</button>
           </div>
         </div>
       )}
 
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
       <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => handleItemSelect(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
-      {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={handleImportConfig} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
-      <main className={showNavbar ? "min-h-[80vh]" : ""}>{renderView()}</main>
+      {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
       
-      {!['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView) && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around py-4 w-full md:max-w-xl md:mx-auto z-40 md:rounded-t-[2rem]">
-          {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Favorites' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => (
-            <button key={btn.v} onClick={() => navigateTo(btn.v as ViewState)} className={`flex flex-col items-center gap-1 transition ${currentView === btn.v ? 'text-brand-primary' : 'text-slate-300 hover:text-orange-300'}`}>
-              <i className={`fa-solid ${btn.i} text-xl`}></i>
-              <span className="text-[10px] font-black uppercase tracking-widest leading-none">{btn.l}</span>
-            </button>
-          ))}
+      <main className={showNavbar ? "min-h-[85vh] animate-fade-in" : ""}>{renderView()}</main>
+      
+      {showBottomNav && (
+        <div className={`fixed bottom-0 ${isDesktopFullWidthView ? 'left-0 right-0' : 'left-1/2 -translate-x-1/2 w-full max-w-xl'} bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around px-4 h-14 z-40 shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.03)]`}>
+          {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Saved' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => {
+            const isActive = currentView === btn.v;
+            return (
+              <button 
+                key={btn.v} 
+                onClick={() => navigateTo(btn.v as ViewState)} 
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all duration-200 ease-out transform
+                  ${isActive ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-110' : 'text-slate-400 hover:text-slate-600'}
+                `}
+              >
+                <i className={`fa-solid ${btn.i} ${isActive ? 'text-base' : 'text-sm'}`}></i>
+                {isActive && (
+                  <span className="text-[9px] font-black uppercase tracking-wider whitespace-nowrap">
+                    {btn.l}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
