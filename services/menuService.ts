@@ -1,3 +1,4 @@
+
 import { supabase } from '../lib/supabase';
 
 // --- Global Utilities ---
@@ -396,6 +397,26 @@ export async function deleteRestaurant(id: string) {
     if (error) throw error;
 }
 
+// --- Staff Management ---
+
+export async function getStaffByRestaurantId(restaurantId: string) {
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteStaffMember(userId: string) {
+    const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+    if (error) throw error;
+}
+
 // --- Invitation Logic ---
 
 export async function createStaffInvite(email: string, role: string, restaurantId: string) {
@@ -403,7 +424,6 @@ export async function createStaffInvite(email: string, role: string, restaurantI
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // Removed 'name' column from insertion
     const { data, error } = await supabase
         .from('users')
         .insert([{
@@ -438,7 +458,6 @@ export async function verifyStaffInvite(token: string, email: string) {
 }
 
 export async function acceptStaffInvite(token: string, password: string) {
-    // Removed 'name' column from update
     const { data, error } = await supabase
         .from('users')
         .update({
@@ -505,14 +524,10 @@ export async function authSignIn(email: string, pass: string) {
 
   if (userErr || !user) throw new Error("Invalid credentials or inactive account.");
 
-  const { data: menu } = await supabase
-    .from('menus')
-    .select('id')
-    .eq('restaurant_id', user.restaurant_id)
-    .maybeSingle();
+  const { data: menu } = await supabase.from('menus').select('id').eq('restaurant_id', user.restaurant_id).maybeSingle();
 
   return { 
-    user: { id: user.id, email: user.email, role: user.role }, 
+    user: { id: user.id, email: user.email, role: user.role, branch_id: user.branch_id }, 
     restaurant: user.restaurants,
     defaultMenuId: menu?.id
   };

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, Feedback, SalesRecord, ViewState } from './types';
 import * as MenuService from './services/menuService';
@@ -7,6 +8,7 @@ import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import DetailPanel from './components/DetailPanel';
 import FeedbackForm from './components/FeedbackForm';
+import GourmetAssistant from './components/GourmetAssistant';
 
 import MenuView from './views/MenuView';
 import CartView from './views/CartView';
@@ -35,6 +37,7 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   
   const hasMerchantSession = !!localStorage.getItem('foodie_supabase_session');
 
@@ -301,10 +304,23 @@ export default function App() {
 
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
       <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => handleItemSelect(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
+      <GourmetAssistant isOpen={isAIAssistantOpen} onClose={() => setIsAIAssistantOpen(false)} menuItems={menuItems} onSelectItem={(it) => { handleItemSelect(it); setIsAIAssistantOpen(false); }} />
+
       {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
       
       <main className={showNavbar ? "min-h-[85vh] animate-fade-in" : ""}>{renderView()}</main>
       
+      {/* Floating AI Assistant Toggle */}
+      {currentView === 'menu' && (
+        <button 
+          onClick={() => setIsAIAssistantOpen(true)}
+          className="fixed bottom-20 right-6 z-[45] w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all group"
+        >
+          <div className="absolute inset-0 bg-brand-primary rounded-full animate-ping opacity-20 group-hover:opacity-40"></div>
+          <i className="fa-solid fa-wand-magic-sparkles text-xl"></i>
+        </button>
+      )}
+
       {showBottomNav && (
         <div className={`fixed bottom-0 ${isDesktopFullWidthView ? 'left-0 right-0' : 'left-1/2 -translate-x-1/2 w-full max-w-xl'} bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around px-4 h-14 z-40 shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.03)]`}>
           {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Saved' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => {

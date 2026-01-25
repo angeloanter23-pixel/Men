@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as MenuService from '../../services/menuService';
 
@@ -321,6 +322,9 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   const restaurantId = session?.restaurant?.id;
   const restaurantName = session?.restaurant?.name || 'My Restaurant';
+  const userRole = session?.user?.role || 'waiter';
+  const userBranchId = session?.user?.branch_id;
+  const isSuperAdmin = userRole === 'super-admin';
 
   useEffect(() => {
     if (restaurantId && restaurantId !== "undefined") {
@@ -329,10 +333,13 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
   }, [restaurantId]);
 
   useEffect(() => {
-    if (availableBranches.length > 0 && !genBranchId) {
+    // Lock logic: If not super admin, lock generator to their branch
+    if (!isSuperAdmin && userBranchId) {
+      setGenBranchId(userBranchId);
+    } else if (availableBranches.length > 0 && !genBranchId) {
       setGenBranchId(availableBranches[0].id);
     }
-  }, [availableBranches]);
+  }, [availableBranches, isSuperAdmin, userBranchId]);
 
   const fetchQRCodes = async () => {
     if (!restaurantId || restaurantId === "undefined") return;
@@ -522,17 +529,20 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Target Branch</label>
                   <div className="relative group">
                     <select 
+                      disabled={!isSuperAdmin}
                       value={genBranchId} 
                       onChange={(e) => setGenBranchId(e.target.value)}
-                      className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-brand-primary/5 transition-all shadow-inner appearance-none pr-12 cursor-pointer"
+                      className={`w-full px-6 py-5 rounded-2xl border-none outline-none font-black text-sm italic transition-all shadow-inner appearance-none pr-12 ${!isSuperAdmin ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-50 cursor-pointer focus:ring-4 ring-brand-primary/5'}`}
                     >
                       <option value="" disabled>Select Branch...</option>
                       {availableBranches.map(b => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </select>
-                    <i className="fa-solid fa-chevron-down absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
+                    {isSuperAdmin && <i className="fa-solid fa-chevron-down absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>}
+                    {!isSuperAdmin && <i className="fa-solid fa-lock absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none text-xs"></i>}
                   </div>
+                  {!isSuperAdmin && <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-4 mt-2">Locked to your assigned territory</p>}
                 </div>
 
                 <div className="space-y-2">

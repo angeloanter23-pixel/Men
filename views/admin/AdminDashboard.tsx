@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
@@ -132,7 +133,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setImportLogs([{ msg: 'Analyzing local configuration...', status: 'info' }]);
     
     try {
-      // Step 1: Pre-fetch current state to build local lookup maps for duplicate prevention
       addLog('Fetching existing cloud entities...', 'info');
       const [existingBranches, existingQRs, cloudMenu] = await Promise.all([
         MenuService.getBranchesForRestaurant(restaurantId),
@@ -147,7 +147,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       setImportProgress(20);
 
-      // 2. Process Branches
       if (previewData.business?.branches) {
         addLog('Processing Branches...', 'info');
         for (const branch of previewData.business.branches) {
@@ -162,7 +161,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
       setImportProgress(40);
 
-      // 3. Process QR Codes
       if (previewData.business?.qrAssets) {
         addLog('Syncing QR Infrastructure...', 'info');
         for (const qr of previewData.business.qrAssets) {
@@ -183,7 +181,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
       setImportProgress(60);
 
-      // 4. Process Categories
       if (previewData.menu?.categories) {
         addLog('Organizing Menu Groups...', 'info');
         for (const cat of previewData.menu.categories) {
@@ -206,7 +203,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const updatedMenu = await MenuService.getMenuByRestaurantId(restaurantId);
       const updatedCatMap = new Map(updatedMenu.categories.map((c: any) => [c.name.toLowerCase(), c.id]));
 
-      // 5. Process Items
       if (previewData.menu?.items) {
         addLog('Archiving Menu Items...', 'info');
         for (const item of previewData.menu.items) {
@@ -257,7 +253,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'branches': return <AdminBranches />;
       case 'qr': return <AdminQR availableBranches={availableBranches} />;
       case 'orders': return <AdminOrders />;
-      case 'accounts': return <AdminAccounts branches={availableBranches} />;
+      case 'accounts': return <AdminAccounts branches={availableBranches} setActiveTab={setActiveTab} />;
       case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onImportClick={() => fileInputRef.current?.click()} />;
       case 'import-preview': return (
         <div className="p-10 max-w-2xl mx-auto space-y-8 animate-fade-in">
@@ -307,7 +303,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleLoadConfig} />
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-black/50 z-[90] backdrop-blur-sm" />}
       
-      {/* Enhanced Import Progress Dialog */}
       {isImporting && (
         <div className="fixed inset-0 z-[300] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl flex flex-col items-center">
@@ -347,7 +342,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Sticky Dashboard Header */}
         <header className="sticky top-0 z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 shadow-sm">
           <div className="flex items-center gap-4">
              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-600"><i className="fa-solid fa-bars-staggered"></i></button>

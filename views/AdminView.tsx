@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
@@ -25,6 +26,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [view, setView] = useState<'login' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,16 +45,10 @@ const AdminView: React.FC<AdminViewProps> = ({
     MenuService.getClientIp().then(setClientIp);
   }, []);
 
-  /**
-   * Cross-Browser Sync:
-   * Fetch current attempt status from DB whenever email or IP changes
-   */
   useEffect(() => {
     if (clientIp !== '0.0.0.0') {
       const syncSecurityStatus = async () => {
         const status = await MenuService.getLoginStatus(email, clientIp);
-        
-        // Handle Tries Remaining Logic
         const threshold = status.type === 'device' ? 10 : 5;
         const tries = Math.max(0, threshold - status.attempts);
         setRemainingTries(tries);
@@ -81,7 +77,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
   }, [email, clientIp]);
 
-  // Block Timer effect
   useEffect(() => {
     let timer: number;
     if (countdown > 0) {
@@ -99,7 +94,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Per-attempt minor cooldown timer
   useEffect(() => {
     let timer: number;
     if (isCoolingDown && cooldownSeconds > 0) {
@@ -123,7 +117,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     setLoading(true);
     setError('');
 
-    // Pre-check block status before auth call
     const status = await MenuService.getLoginStatus(email, clientIp);
     if (status.locked_until && new Date(status.locked_until) > new Date()) {
       const diff = Math.ceil((new Date(status.locked_until).getTime() - Date.now()) / 1000);
@@ -136,19 +129,14 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
 
     try {
-      // Primary Auth Call
       const dbResponse = await MenuService.authSignIn(email, password);
-      
-      // Success: Clear security record
       await MenuService.clearLoginAttempts(email, clientIp);
       localStorage.setItem('foodie_supabase_session', JSON.stringify(dbResponse));
       setIsAuthenticated(true);
     } catch (dbErr: any) {
-      // Record failure globally
       const failData = await MenuService.recordLoginFailure(email, clientIp);
       const threshold = failData?.type === 'device' ? 10 : 5;
       const triesLeft = Math.max(0, threshold - (failData?.attempts || 1));
-      
       setRemainingTries(triesLeft);
 
       if (failData?.locked_until) {
@@ -156,11 +144,11 @@ const AdminView: React.FC<AdminViewProps> = ({
         setIsBlocked(true);
         setBlockType(failData.type || 'account');
         setCountdown(diff);
-        setError(`${failData.type === 'device' ? 'Device' : 'Account'} locked due to multiple failed attempts.`);
+        setError(`${failData.type === 'device' ? 'Device' : 'Account'} locked.`);
       } else {
         setIsCoolingDown(true);
-        setCooldownSeconds(3); // Protection delay
-        setError(`Incorrect password. ${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} remaining.`);
+        setCooldownSeconds(3);
+        setError(`Incorrect credentials. ${triesLeft} tries left.`);
       }
     } finally {
       setLoading(false);
@@ -169,17 +157,13 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   const handleRecovery = () => {
     if (!forgotEmail.includes('@')) {
-      alert("Please enter a valid email address.");
+      alert("Invalid email.");
       return;
     }
     const to = "geloelolo@gmail.com";
-    const subject = "Merchant Account Recovery Request";
-    const body = `Hello Support Team,\n\nI am requesting recovery for my Foodie Premium merchant account.\n\nAccount Email: ${forgotEmail}\n\nPlease send me a password reset link or updated credentials.\n\nThank you.`;
-    
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailUrl, '_blank');
-    
-    alert('A recovery request email has been generated in Gmail. Please send it to proceed.');
+    const subject = "Merchant Recovery Request";
+    const body = `Hello Support Team,\n\nI am requesting recovery for: ${forgotEmail}`;
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
     setView('login');
   };
 
@@ -192,10 +176,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   if (isAuthenticated) {
     return (
       <AdminDashboard 
-        onLogout={() => {
-          setIsAuthenticated(false);
-          onExit();
-        }} 
+        onLogout={() => { setIsAuthenticated(false); onExit(); }} 
         menuItems={menuItems} 
         setMenuItems={setMenuItems} 
         categories={categories} 
@@ -212,18 +193,17 @@ const AdminView: React.FC<AdminViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 md:p-12 lg:p-20 animate-fade-in font-jakarta relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute -top-40 -right-40 w-64 h-64 md:w-96 md:h-96 bg-indigo-50 rounded-full blur-[80px] md:blur-[100px] opacity-40"></div>
-      <div className="absolute -bottom-40 -left-40 w-64 h-64 md:w-96 md:h-96 bg-orange-50 rounded-full blur-[80px] md:blur-[100px] opacity-40"></div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 md:p-12 animate-fade-in font-jakarta relative overflow-hidden">
+      <div className="absolute -top-40 -right-40 w-64 h-64 bg-indigo-50 rounded-full blur-[100px] opacity-40"></div>
+      <div className="absolute -bottom-40 -left-40 w-64 h-64 bg-orange-50 rounded-full blur-[100px] opacity-40"></div>
 
       <div className="absolute top-6 left-6 md:top-10 md:left-10 z-[100]">
         <button 
           onClick={onExit}
-          className="flex items-center gap-3 px-5 py-3 md:px-6 md:py-3.5 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-100 hover:shadow-2xl hover:bg-slate-50 transition-all group active:scale-95"
+          className="flex items-center gap-3 px-6 py-3.5 bg-white border border-slate-100 rounded-2xl shadow-xl hover:bg-slate-50 transition-all active:scale-95 group"
         >
           <i className="fa-solid fa-arrow-left text-slate-400 group-hover:text-indigo-600 transition-colors"></i>
-          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-900">Back to Site</span>
+          <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">Back to Site</span>
         </button>
       </div>
 
@@ -231,15 +211,15 @@ const AdminView: React.FC<AdminViewProps> = ({
         {view === 'login' ? (
           <div className="space-y-10">
             <header className="space-y-6 text-center">
-              <div className={`inline-flex w-16 h-16 md:w-20 md:h-20 rounded-[2rem] md:rounded-[2.5rem] items-center justify-center text-white shadow-2xl transition-all duration-700 ${isBlocked ? 'bg-rose-500 scale-110 shadow-rose-100 rotate-12' : isCoolingDown ? 'bg-amber-500 rotate-0' : 'bg-slate-900 shadow-slate-100'}`}>
-                <i className={`fa-solid ${isBlocked ? 'fa-lock' : isCoolingDown ? 'fa-hourglass-half' : 'fa-fingerprint'} text-2xl md:text-3xl`}></i>
+              <div className={`inline-flex w-20 h-20 rounded-[2.5rem] items-center justify-center text-white shadow-2xl transition-all duration-700 ${isBlocked ? 'bg-rose-500 scale-110' : isCoolingDown ? 'bg-amber-500' : 'bg-slate-900'}`}>
+                <i className={`fa-solid ${isBlocked ? 'fa-lock' : isCoolingDown ? 'fa-hourglass-half' : 'fa-fingerprint'} text-3xl`}></i>
               </div>
               <div className="space-y-3">
-                <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">
+                <h2 className="text-5xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">
                   {isBlocked ? 'Locked' : isCoolingDown ? 'Wait' : 'Sign In'}
                 </h2>
-                <p className="text-slate-400 text-xs md:text-sm font-medium">
-                  {isBlocked ? `${blockType === 'device' ? 'Device' : 'Account'} locked for security. Try again in ${formatTime(countdown)}` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Enter your merchant details below'}
+                <p className="text-slate-400 text-sm font-medium">
+                  {isBlocked ? `Wait ${formatTime(countdown)} for security.` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Access Merchant Terminal'}
                 </p>
               </div>
             </header>
@@ -247,80 +227,82 @@ const AdminView: React.FC<AdminViewProps> = ({
             <form onSubmit={handleLogin} className="space-y-8">
               <div className={`space-y-6 transition-all duration-700 ${(isBlocked || isCoolingDown) ? 'opacity-30 blur-[2px] pointer-events-none' : 'opacity-100'}`}>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Email Address</label>
-                    {remainingTries < (blockType === 'device' ? 10 : 5) && !isBlocked && (
-                      <span className={`text-[9px] font-black uppercase tracking-widest animate-pulse ${remainingTries <= 1 ? 'text-rose-600' : 'text-amber-500'}`}>
-                        {remainingTries} {remainingTries === 1 ? 'Attempt' : 'Attempts'} Left
-                      </span>
-                    )}
-                  </div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 italic">Master Email</label>
                   <input 
                     type="email" 
                     required 
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
-                    className="w-full bg-slate-50 border-none rounded-2xl md:rounded-3xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                    className="w-full bg-slate-50 border-none rounded-3xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner italic" 
                     placeholder="admin@foodie.com" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Password</label>
-                  <input 
-                    type="password" 
-                    required 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    className="w-full bg-slate-50 border-none rounded-2xl md:rounded-3xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
-                    placeholder="••••••••" 
-                  />
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 italic">Security Key</label>
+                  <div className="relative group">
+                    <input 
+                      type={showPassword ? "text" : "password"}
+                      required 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      className="w-full bg-slate-50 border-none rounded-3xl p-6 pr-14 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                      placeholder="••••••••" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-600 transition-colors"
+                    >
+                      <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-lg`}></i>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {error && <p className={`text-[10px] font-black text-center uppercase tracking-widest animate-fade-in-up py-4 rounded-2xl border ${isBlocked ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-amber-600 bg-amber-50 border-amber-100'}`}>{error}</p>}
+              {error && <p className={`text-[10px] font-black text-center uppercase tracking-widest py-4 rounded-2xl border ${isBlocked ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-amber-600 bg-amber-50 border-amber-100'}`}>{error}</p>}
 
               <div className="pt-4 space-y-4">
                 <button 
                   type="submit" 
                   disabled={loading || isBlocked || isCoolingDown} 
-                  className={`w-full py-6 md:py-7 rounded-3xl md:rounded-[2.5rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${isBlocked ? 'bg-slate-100 text-slate-300 shadow-none cursor-not-allowed' : isCoolingDown ? 'bg-amber-100 text-amber-600 cursor-wait' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}
+                  className={`w-full py-7 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${isBlocked ? 'bg-slate-100 text-slate-300' : isCoolingDown ? 'bg-amber-100 text-amber-600' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}
                 >
-                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? `Locked • ${formatTime(countdown)}` : 'Authenticate'}
+                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? `Locked • ${formatTime(countdown)}` : 'Authenticate Node'}
                 </button>
-                <button type="button" onClick={() => setView('forgot')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors">Forgot Credentials?</button>
+                <button type="button" onClick={() => setView('forgot')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors italic">Lost access credentials?</button>
               </div>
             </form>
           </div>
         ) : (
           <div className="space-y-10 animate-fade-in">
              <header className="space-y-5 text-center">
-              <div className="inline-flex w-16 h-16 md:w-20 md:h-20 bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] items-center justify-center text-white shadow-xl">
-                <i className="fa-solid fa-envelope-open text-2xl md:text-3xl"></i>
+              <div className="inline-flex w-20 h-20 bg-slate-900 rounded-[2.5rem] items-center justify-center text-white shadow-xl">
+                <i className="fa-solid fa-envelope-open text-3xl"></i>
               </div>
-              <h2 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase leading-none">Security<br/><span className="text-indigo-600">Recovery</span></h2>
-              <p className="text-slate-400 text-xs md:text-sm font-medium px-4">Enter your recovery email and we'll generate a support ticket.</p>
+              <h2 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase leading-none">Identity<br/><span className="text-indigo-600">Recovery</span></h2>
+              <p className="text-slate-400 text-sm font-medium px-4">Generate an encrypted recovery request.</p>
             </header>
             <div className="space-y-6">
               <input 
                 type="email" 
                 value={forgotEmail} 
                 onChange={e => setForgotEmail(e.target.value)} 
-                className="w-full bg-slate-50 border-none rounded-2xl md:rounded-3xl p-6 text-sm font-bold outline-none shadow-inner" 
+                className="w-full bg-slate-50 border-none rounded-3xl p-6 text-sm font-bold outline-none shadow-inner" 
                 placeholder="Recovery Email..." 
               />
               <button 
                 onClick={handleRecovery} 
-                className="w-full bg-slate-900 text-white py-6 md:py-7 rounded-3xl md:rounded-[2.5rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.4em] shadow-xl hover:bg-indigo-600 transition-all"
+                className="w-full bg-slate-900 text-white py-7 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-xl hover:bg-indigo-600 transition-all"
               >
-                Send Reset link
+                Send Request
               </button>
-              <button onClick={() => setView('login')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors">Back to Login</button>
+              <button onClick={() => setView('login')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors italic">Back to Login</button>
             </div>
           </div>
         )}
 
         <footer className="text-center pt-10 border-t border-slate-50">
-          <p className="text-[9px] md:text-[10px] font-black text-slate-200 uppercase tracking-[0.5em] italic">Platinum Zen Terminal 2.0</p>
+          <p className="text-[10px] font-black text-slate-200 uppercase tracking-[0.5em] italic">Platinum Terminal Engine 4.0</p>
         </footer>
       </div>
     </div>
