@@ -45,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
               {navItem('orders', 'fa-clock-rotate-left', 'History')}
               {navItem('favorites', 'fa-heart', 'Saved')}
               {navItem('feedback', 'fa-comment-dots', 'Feedback')}
+              {navItem('super-admin', 'fa-shield-halved', 'System Control')}
             </div>
           </nav>
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import * as MenuService from '../../services/menuService';
 
@@ -22,7 +21,8 @@ const ShareModal: React.FC<{
 }> = ({ asset, restaurantName, onClose, branchName }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isCopied, setIsCopied] = useState(false);
-    const productionBase = "https://men-m53q.vercel.app/";
+    // Updated production base URL
+    const productionBase = "https://men-brown.vercel.app/";
     const finalUrl = `${productionBase}${asset.code}`;
 
     useEffect(() => {
@@ -206,7 +206,7 @@ const QRBlock: React.FC<{
 }> = ({ asset, isSelected, onSelect, onDelete, onUpdate, onShare, branchName }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [localLabel, setLocalLabel] = useState(asset.label);
-  const productionBase = "https://men-m53q.vercel.app/";
+  const productionBase = "https://men-brown.vercel.app/";
   const finalUrl = `${productionBase}${asset.code}`;
 
   useEffect(() => {

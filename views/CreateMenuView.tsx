@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { MenuItem, Category } from '../types';
 import AdminMenu from './admin/AdminMenu';
@@ -30,7 +29,8 @@ interface QRPreviewCardProps {
 
 const QRPreviewCard: React.FC<QRPreviewCardProps> = ({ asset, isSelected, onDelete, branchName }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const finalUrl = `men-m53q.vercel.app/${asset.token}`;
+  // Updated base URL for generated tokens
+  const finalUrl = `https://men-brown.vercel.app/${asset.token}`;
 
   useEffect(() => {
     if (canvasRef.current && typeof QRious !== 'undefined') {

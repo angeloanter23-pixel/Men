@@ -30,6 +30,17 @@ export async function checkBusinessNameExists(name: string) {
   return !!data;
 }
 
+export async function checkEmailExists(email: string) {
+    const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+    
+    if (error) return false;
+    return !!data;
+}
+
 export async function getClientIp() {
   try {
     const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
@@ -163,6 +174,288 @@ export async function clearLoginAttempts(email: string, ip: string) {
   }
 }
 
+// --- Menu & Business Logic ---
+
+export async function getQRCodeByCode(token: string) {
+  const { data, error } = await supabase
+    .from('qr_codes')
+    .select('*, restaurants(*), branches(*)')
+    .eq('code', token)
+    .maybeSingle();
+  
+  if (error || !data) return null;
+  
+  return {
+    id: data.id,
+    restaurant_id: data.restaurant_id,
+    label: data.label,
+    code: data.code,
+    restaurant_name: data.restaurants?.name,
+    branch_name: data.branches?.name,
+    theme: data.restaurants?.theme
+  };
+}
+
+export async function getMenuByRestaurantId(restaurantId: string) {
+  const { data: menu, error: menuErr } = await supabase
+    .from('menus')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  
+  if (menuErr || !menu) return { items: [], categories: [] };
+  
+  const [itemsRes, catsRes] = await Promise.all([
+    supabase.from('items').select('*, categories(name)').order('name'),
+    supabase.from('categories').select('*').eq('menu_id', menu.id).order('order_index')
+  ]);
+  
+  const items = (itemsRes.data || []).map((it: any) => ({
+    ...it,
+    cat_name: it.categories?.name || 'Uncategorized'
+  }));
+  
+  return { items, categories: catsRes.data || [] };
+}
+
+export async function getMenuForBranch(subdomain: string) {
+  const { data: branch, error: bErr } = await supabase
+    .from('branches')
+    .select('*, restaurants(*)')
+    .eq('subdomain', subdomain)
+    .maybeSingle();
+  
+  if (bErr || !branch) throw new Error("Branch not found");
+
+  const menuData = await getMenuByRestaurantId(branch.restaurant_id);
+  
+  const { data: menu } = await supabase.from('menus').select('id').eq('restaurant_id', branch.restaurant_id).maybeSingle();
+
+  return {
+    ...branch,
+    menu_id: menu?.id,
+    items: menuData.items,
+    categories: menuData.categories
+  };
+}
+
+export async function getBranchesForRestaurant(restaurantId: string) {
+  const { data, error } = await supabase
+    .from('branches')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('name');
+  if (error) throw error;
+  return data;
+}
+
+export async function getQRCodes(restaurantId: string) {
+  const { data, error } = await supabase
+    .from('qr_codes')
+    .select('*, branches(name)')
+    .eq('restaurant_id', restaurantId)
+    .order('label');
+  if (error) throw error;
+  return data;
+}
+
+export async function insertBranch(name: string, subdomain: string, restaurantId: string) {
+  const { data, error } = await supabase
+    .from('branches')
+    .insert([{ name, subdomain, restaurant_id: restaurantId }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBranch(id: string) {
+    const { error } = await supabase.from('branches').delete().eq('id', id);
+    if (error) throw error;
+}
+
+export async function upsertCategory(payload: any) {
+  const { data, error } = await supabase
+    .from('categories')
+    .upsert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCategory(id: string) {
+  const { error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function upsertMenuItem(payload: any) {
+  const { data, error } = await supabase
+    .from('items')
+    .upsert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteMenuItem(id: string) {
+  const { error } = await supabase.from('items').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function upsertQRCode(payload: any) {
+  const { data, error } = await supabase
+    .from('qr_codes')
+    .upsert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteQRCode(id: string) {
+  const { error } = await supabase.from('qr_codes').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// --- Order Management ---
+
+export async function insertOrders(orders: any[]) {
+  const { data, error } = await supabase
+    .from('orders')
+    .insert(orders)
+    .select();
+  if (error) throw error;
+  return data;
+}
+
+export async function getOrdersByTable(restaurantId: string, tableNumber: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .eq('table_number', tableNumber)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function getMerchantOrders(restaurantId: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function updateOrder(id: string, updates: any) {
+  const { data, error } = await supabase
+    .from('orders')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteOrder(id: string) {
+  const { error } = await supabase.from('orders').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// --- Restaurant Identity & Theme ---
+
+export async function updateRestaurant(id: string, name: string) {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .update({ name })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateRestaurantTheme(id: string, theme: any) {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .update({ theme })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteRestaurant(id: string) {
+    const { error } = await supabase.from('restaurants').delete().eq('id', id);
+    if (error) throw error;
+}
+
+// --- Invitation Logic ---
+
+export async function createStaffInvite(email: string, role: string, restaurantId: string) {
+    const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    // Removed 'name' column from insertion
+    const { data, error } = await supabase
+        .from('users')
+        .insert([{
+            email: email.toLowerCase().trim(),
+            role: role,
+            status: 'pending',
+            invite_token: token,
+            invite_expires_at: expiresAt.toISOString(),
+            restaurant_id: restaurantId
+        }])
+        .select()
+        .single();
+    
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+export async function verifyStaffInvite(token: string, email: string) {
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('invite_token', token)
+        .eq('email', email.toLowerCase().trim())
+        .eq('status', 'pending')
+        .maybeSingle();
+    
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+
+    if (new Date(data.invite_expires_at) < new Date()) return null;
+    return data;
+}
+
+export async function acceptStaffInvite(token: string, password: string) {
+    // Removed 'name' column from update
+    const { data, error } = await supabase
+        .from('users')
+        .update({
+            password: password,
+            status: 'active',
+            invite_consumed_at: new Date().toISOString(),
+            invite_token: null,
+            invite_expires_at: null
+        })
+        .eq('invite_token', token)
+        .select()
+        .single();
+    
+    if (error) throw new Error(error.message);
+    return data;
+}
+
 // --- Auth Logic ---
 
 export async function authSignUp(email: string, pass: string, businessName?: string) {
@@ -189,305 +482,38 @@ export async function authSignUp(email: string, pass: string, businessName?: str
     .insert([{ 
       email: email.toLowerCase().trim(), 
       password: pass, 
-      restaurant_id: rest.id 
+      restaurant_id: rest.id,
+      role: 'super-admin',
+      status: 'active'
     }])
     .select()
     .single();
-
-  if (userErr) {
-    await supabase.from('restaurants').delete().eq('id', rest.id);
-    throw new Error(userErr.message || "User enrollment failed.");
-  }
+  
+  if (userErr) throw new Error(userErr.message || "Failed to create user account.");
 
   return { user, restaurant: rest, defaultMenuId: menu.id };
 }
 
-export async function createStaffUser(email: string, pass: string, restaurantId: string) {
-    const { data, error } = await supabase
-        .from('users')
-        .insert([{
-            email: email.toLowerCase().trim(),
-            password: pass,
-            restaurant_id: restaurantId
-        }])
-        .select()
-        .single();
-    
-    if (error) throw new Error(error.message || "Failed to create account.");
-    return data;
-}
-
 export async function authSignIn(email: string, pass: string) {
-  const { data, error } = await supabase
+  const { data: user, error: userErr } = await supabase
     .from('users')
-    .select(`
-      id, email, restaurant_id,
-      restaurants ( id, name, theme )
-    `)
+    .select('*, restaurants(*)')
     .eq('email', email.toLowerCase().trim())
     .eq('password', pass)
+    .eq('status', 'active')
     .maybeSingle();
 
-  if (error) throw new Error(error.message || "Authentication error.");
-  if (!data) throw new Error("Incorrect email or password.");
+  if (userErr || !user) throw new Error("Invalid credentials or inactive account.");
 
-  const { data: menus } = await supabase
+  const { data: menu } = await supabase
     .from('menus')
     .select('id')
-    .eq('restaurant_id', data.restaurant_id)
-    .order('created_at', { ascending: true });
-
-  return {
-    user: { id: data.id, email: data.email, restaurant_id: data.restaurant_id },
-    restaurant: data.restaurants,
-    defaultMenuId: menus && menus.length > 0 ? menus[0].id : null
-  };
-}
-
-export async function updateRestaurant(id: string, name: string) {
-  const { data, error } = await supabase
-    .from('restaurants')
-    .update({ name: name.trim() })
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message || "Update failed.");
-  return data;
-}
-
-export async function updateRestaurantTheme(id: string, theme: any) {
-  const { data, error } = await supabase
-    .from('restaurants')
-    .update({ theme })
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message || "Theme update failed.");
-  return data;
-}
-
-export async function getBranchesForRestaurant(restaurantId: string) {
-  const { data, error } = await supabase
-    .from('branches')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('name');
-  if (error) throw new Error(error.message || "Fetch failed.");
-  return data || [];
-}
-
-export async function getMenuByRestaurantId(restaurantId: string) {
-  if (!restaurantId || restaurantId === "undefined") return { categories: [], items: [] };
-
-  const { data: menus, error: menuErr } = await supabase
-    .from('menus')
-    .select('id')
-    .eq('restaurant_id', restaurantId)
-    .order('created_at', { ascending: true });
-
-  if (menuErr) throw new Error(menuErr.message);
-  if (!menus || menus.length === 0) return { categories: [], items: [] };
-
-  const menuId = menus[0].id;
-
-  const { data: categories, error: catErr } = await supabase
-    .from('categories')
-    .select(`id, name, order_index`)
-    .eq('menu_id', menuId)
-    .order('order_index');
-
-  if (catErr) throw new Error(catErr.message || "Catalog fetch failed.");
-
-  const { data: items, error: itemErr } = await supabase
-    .from('items')
-    .select('*');
-
-  if (itemErr) throw new Error(itemErr.message || "Items fetch failed.");
-
-  const catMap = new Map((categories || []).map(c => [c.id, c.name]));
-  
-  const allItems = (items || []).filter(item => {
-    return item.category_id === null || catMap.has(item.category_id);
-  }).map(item => ({
-    ...item,
-    cat_name: item.category_id ? (catMap.get(item.category_id) || 'Uncategorized') : 'Uncategorized'
-  }));
-
-  const processedCats = (categories || []).map(cat => ({
-    ...cat,
-    items: allItems.filter(i => i.category_id === cat.id)
-  }));
-
-  return { categories: processedCats, items: allItems };
-}
-
-export async function getMenuForBranch(overrideSubdomain?: string) {
-  const subdomain = overrideSubdomain || getSubdomain();
-  if (!subdomain) return null;
-
-  const { data: branch, error: branchErr } = await supabase
-    .from('branches')
-    .select('*')
-    .eq('subdomain', subdomain)
+    .eq('restaurant_id', user.restaurant_id)
     .maybeSingle();
-
-  if (branchErr) throw new Error(branchErr.message || "Branch lookup failed.");
-  if (!branch) return { error: 'Branch not found', detectedSubdomain: subdomain };
-
-  const { categories, items } = await getMenuByRestaurantId(branch.restaurant_id);
 
   return { 
-    ...branch, 
-    categories,
-    items 
+    user: { id: user.id, email: user.email, role: user.role }, 
+    restaurant: user.restaurants,
+    defaultMenuId: menu?.id
   };
-}
-
-export async function deleteRestaurant(id: string) {
-  const { error } = await supabase.from('restaurants').delete().eq('id', id);
-  if (error) throw new Error(error.message || "Purge failed.");
-}
-
-export async function insertBranch(name: string, subdomain: string, restaurant_id: string) {
-  const { data: menu, error: menuErr } = await supabase
-    .from('menus')
-    .insert([{ name: `${name.trim()} Menu`, restaurant_id }])
-    .select()
-    .single();
-
-  if (menuErr) throw new Error(menuErr.message || "Branch menu creation failed.");
-
-  const { data: branch, error: branchErr } = await supabase
-    .from('branches')
-    .insert([{ 
-      name: name.trim(), 
-      subdomain: subdomain.toLowerCase().trim(), 
-      restaurant_id, 
-      menu_id: menu.id 
-    }])
-    .select()
-    .single();
-
-  if (branchErr) throw new Error(branchErr.message || "Branch deployment failed.");
-  return branch;
-}
-
-export async function deleteBranch(id: string) {
-  const { error } = await supabase.from('branches').delete().eq('id', id);
-  if (error) throw new Error(error.message || "Branch deletion failed.");
-}
-
-export async function upsertCategory(category: any) {
-  const { data, error } = await supabase.from('categories').upsert(category).select().single();
-  if (error) throw new Error(error.message || "Category sync failed.");
-  return data;
-}
-
-export async function deleteCategory(id: string) {
-  const { error } = await supabase.from('categories').delete().eq('id', id);
-  if (error) throw new Error(error.message || "Category deletion failed.");
-}
-
-export async function upsertMenuItem(item: any) {
-  const { data, error } = await supabase.from('items').upsert(item).select().single();
-  if (error) throw new Error(error.message || "Dish sync failed.");
-  return data;
-}
-
-export async function deleteMenuItem(id: string) {
-  const { error } = await supabase.from('items').delete().eq('id', id);
-  if (error) throw new Error(error.message || "Dish deletion failed.");
-}
-
-export async function getQRCodes(restaurantId: string) {
-  const { data, error } = await supabase
-    .from('qr_codes')
-    .select('*, branches(id, name)')
-    .eq('restaurant_id', restaurantId)
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message || "QR fetch failed.");
-  return data || [];
-}
-
-export async function upsertQRCode(qr: any) {
-  const { data, error } = await supabase
-    .from('qr_codes')
-    .upsert(qr)
-    .select()
-    .single();
-  if (error) throw new Error(error.message || "QR sync failed.");
-  return data;
-}
-
-export async function deleteQRCode(id: string) {
-  const { error } = await supabase.from('qr_codes').delete().eq('id', id);
-  if (error) throw new Error(error.message || "QR deletion failed.");
-}
-
-export async function getQRCodeByCode(code: string) {
-  const { data, error } = await supabase
-    .from('qr_codes')
-    .select(`
-      *,
-      restaurants ( id, name, theme ),
-      branches ( name )
-    `)
-    .eq('code', code)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message || "Access code lookup failed.");
-  if (!data) return null;
-
-  return {
-    ...data,
-    restaurant_name: data.restaurants?.name,
-    branch_name: data.branches?.name,
-    theme: data.restaurants?.theme
-  };
-}
-
-export async function insertOrders(orders: any[]) {
-  const { data, error } = await supabase
-    .from('orders')
-    .insert(orders)
-    .select();
-  if (error) throw new Error(error.message || "Order placement failed.");
-  return data;
-}
-
-export async function getOrdersByTable(restaurantId: string, tableLabel: string) {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .eq('table_number', tableLabel)
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message || "Table order fetch failed.");
-  return data || [];
-}
-
-export async function getMerchantOrders(restaurantId: string) {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('restaurant_id', restaurantId)
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message || "Merchant order fetch failed.");
-  return data || [];
-}
-
-export async function updateOrder(id: string, updates: any) {
-  const { data, error } = await supabase
-    .from('orders')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message || "Order update failed.");
-  return data;
-}
-
-export async function deleteOrder(id: string) {
-  const { error } = await supabase.from('orders').delete().eq('id', id);
-  if (error) throw new Error(error.message || "Order deletion failed.");
 }
