@@ -5,10 +5,11 @@ import AdminQR from './AdminQR';
 import AdminSettings from './AdminSettings';
 import AdminBranches from './AdminBranches';
 import AdminOrders from './AdminOrders';
+import AdminAccounts from './AdminAccounts';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 
-type AdminTab = 'menu' | 'analytics' | 'branches' | 'qr' | 'settings' | 'orders' | 'import-preview';
+type AdminTab = 'menu' | 'analytics' | 'branches' | 'qr' | 'settings' | 'orders' | 'accounts' | 'import-preview';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -256,6 +257,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'branches': return <AdminBranches />;
       case 'qr': return <AdminQR availableBranches={availableBranches} />;
       case 'orders': return <AdminOrders />;
+      case 'accounts': return <AdminAccounts branches={availableBranches} />;
       case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onImportClick={() => fileInputRef.current?.click()} />;
       case 'import-preview': return (
         <div className="p-10 max-w-2xl mx-auto space-y-8 animate-fade-in">
@@ -331,6 +333,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {navItem('analytics', 'fa-chart-pie', 'Sales & Stats')}
           {navItem('branches', 'fa-sitemap', 'Branches')}
           {navItem('qr', 'fa-qrcode', 'QR Codes')}
+          {navItem('accounts', 'fa-user-group', 'Staff & Accounts')}
           {navItem('settings', 'fa-gears', 'Settings')}
         </nav>
         <div className="mt-auto pt-6 border-t border-slate-800 px-2">

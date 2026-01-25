@@ -57,17 +57,11 @@ function getLocalStatus(email: string | null, ip: string) {
   }
 }
 
-/**
- * Multi-layered Security Status Check
- * 1. Check Device Block (IP only, email is null)
- * 2. Check Account Block (Email + IP)
- */
 export async function getLoginStatus(email: string, ip: string) {
   if (!ip) return { attempts: 0, locked_until: null };
   const cleanEmail = email?.toLowerCase().trim();
   
   try {
-    // Check Device first (IP only, email IS NULL)
     const { data: deviceData } = await supabase
       .from('login_attempts')
       .select('attempts, locked_until')
@@ -79,7 +73,6 @@ export async function getLoginStatus(email: string, ip: string) {
         return { ...deviceData, type: 'device' };
     }
 
-    // Check Account specific (Email + IP)
     if (cleanEmail && cleanEmail.includes('@')) {
         const { data: accountData } = await supabase
             .from('login_attempts')
@@ -93,20 +86,15 @@ export async function getLoginStatus(email: string, ip: string) {
     
     return deviceData || { attempts: 0, locked_until: null, type: 'device' };
   } catch (err) {
-    // Fallback to browser-local if table doesn't exist
     return getLocalStatus(cleanEmail, ip);
   }
 }
 
-/**
- * Record failure globally using dual-upsert logic
- */
 export async function recordLoginFailure(email: string, ip: string) {
   const cleanEmail = email.toLowerCase().trim();
   
   const updateEntity = async (targetEmail: string | null, threshold: number, lockMins: number) => {
     try {
-        // 1. Fetch current
         const query = supabase.from('login_attempts').select('id, attempts').eq('ip_address', ip);
         if (targetEmail) query.eq('email', targetEmail);
         else query.is('email', null);
@@ -142,7 +130,6 @@ export async function recordLoginFailure(email: string, ip: string) {
         localStorage.setItem(getLocalSecurityKey(targetEmail, ip), JSON.stringify(data));
         return data;
     } catch (e) {
-        // Local backup if DB fail
         const local = getLocalStatus(targetEmail, ip);
         const next = (local.attempts || 0) + 1;
         let lock = null;
@@ -156,9 +143,8 @@ export async function recordLoginFailure(email: string, ip: string) {
     }
   };
 
-  // Run both updates
   const accountResult = await updateEntity(cleanEmail, 5, 10);
-  await updateEntity(null, 10, 15); // Device-wide attempt
+  await updateEntity(null, 10, 15);
   
   return accountResult;
 }
@@ -168,17 +154,12 @@ export async function clearLoginAttempts(email: string, ip: string) {
   localStorage.removeItem(getLocalSecurityKey(cleanEmail, ip));
   localStorage.removeItem(getLocalSecurityKey(null, ip));
   try {
-    // Clear account specific
     await supabase
       .from('login_attempts')
       .delete()
       .eq('email', cleanEmail)
       .eq('ip_address', ip);
-    
-    // Note: We typically DON'T clear device-wide failures on a single success 
-    // to prevent brute forcing multiple accounts.
   } catch (e) {
-    // Ignore cleanup errors
   }
 }
 
@@ -219,6 +200,21 @@ export async function authSignUp(email: string, pass: string, businessName?: str
   }
 
   return { user, restaurant: rest, defaultMenuId: menu.id };
+}
+
+export async function createStaffUser(email: string, pass: string, restaurantId: string) {
+    const { data, error } = await supabase
+        .from('users')
+        .insert([{
+            email: email.toLowerCase().trim(),
+            password: pass,
+            restaurant_id: restaurantId
+        }])
+        .select()
+        .single();
+    
+    if (error) throw new Error(error.message || "Failed to create account.");
+    return data;
 }
 
 export async function authSignIn(email: string, pass: string) {

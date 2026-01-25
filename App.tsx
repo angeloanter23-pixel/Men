@@ -21,6 +21,7 @@ import PaymentView from './views/PaymentView';
 import CreateMenuView from './views/CreateMenuView';
 import TestSupabaseView from './views/TestSupabaseView';
 import SuperAdminView from './views/SuperAdminView';
+import AcceptInviteView from './views/AcceptInviteView';
 
 export interface OrderInstance extends CartItem {
   orderId: string;
@@ -74,7 +75,7 @@ export default function App() {
     const path = window.location.pathname;
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
-      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu', 'test-supabase'];
+      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu', 'test-supabase', 'accept-invite'];
       if (!reserved.includes(token.toLowerCase())) {
         try {
           const details = await MenuService.getQRCodeByCode(token);
@@ -119,7 +120,7 @@ export default function App() {
       'favorites': 'favorites', 'feedback': 'feedback', 'feedback-data': 'feedback-data',
       'privacy': 'privacy', 'terms': 'terms', 'admin': 'admin', 'create-menu': 'create-menu',
       'payment': 'payment', 'qr-verify': 'qr-verify', 'group': 'group',
-      'test-supabase': 'test-supabase', 'super-admin': 'super-admin'
+      'test-supabase': 'test-supabase', 'super-admin': 'super-admin', 'accept-invite': 'accept-invite'
     };
     if (viewMap[route]) {
       setCurrentView(viewMap[route]);
@@ -240,6 +241,7 @@ export default function App() {
       case 'group': return <GroupView />;
       case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onExit={() => navigateTo('menu')} onLogoUpdate={setLogo} />;
       case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
+      case 'accept-invite': return <AcceptInviteView onComplete={() => navigateTo('admin')} onCancel={() => navigateTo('landing')} />;
       default: return null;
     }
   };
@@ -251,9 +253,9 @@ export default function App() {
     </div>
   );
 
-  const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin', 'menu', 'cart', 'orders', 'group'].includes(currentView);
-  const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin'].includes(currentView);
-  const showBottomNav = !['landing', 'admin', 'payment', 'create-menu', 'super-admin'].includes(currentView);
+  const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin', 'menu', 'cart', 'orders', 'group', 'accept-invite'].includes(currentView);
+  const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin', 'accept-invite'].includes(currentView);
+  const showBottomNav = !['landing', 'admin', 'payment', 'create-menu', 'super-admin', 'accept-invite'].includes(currentView);
 
   return (
     <div className={`min-h-screen bg-white relative overflow-x-hidden ${isDesktopFullWidthView ? 'w-full' : 'max-w-xl mx-auto shadow-2xl pb-24'}`}>

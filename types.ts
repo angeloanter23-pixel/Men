@@ -1,4 +1,3 @@
-
 export interface Category {
   id: number;
   name: string;
@@ -23,7 +22,7 @@ export interface MenuItem {
 export type OrderMode = 'Dine-in' | 'Takeout' | 'Delivery';
 
 // ViewState defines the possible views/routes in the application
-export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'create-menu' | 'payment' | 'qr-verify' | 'group' | 'test-supabase' | 'super-admin';
+export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'create-menu' | 'payment' | 'qr-verify' | 'group' | 'test-supabase' | 'super-admin' | 'accept-invite';
 
 export interface CartItem extends MenuItem {
   quantity: number;

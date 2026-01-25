@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ViewState } from '../types';
 
@@ -39,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
             <p className="px-5 text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-4">Discovery</p>
             {navItem('menu', 'fa-utensils', 'Menu')}
             {navItem('group', 'fa-users', 'Group Order')}
+            {navItem('create-menu', 'fa-map', 'Product Tour')}
             
             <div className="my-8 border-t border-slate-100 pt-8 space-y-2">
               <p className="px-5 text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-4">Account</p>
