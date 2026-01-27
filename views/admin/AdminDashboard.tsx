@@ -27,11 +27,6 @@ interface AdminDashboardProps {
   onLogoUpdate: (logo: string | null) => void;
 }
 
-interface ImportLog {
-  msg: string;
-  status: 'info' | 'success' | 'update' | 'exists';
-}
-
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
   onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate 
 }) => {
@@ -39,22 +34,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [availableBranches, setAvailableBranches] = useState<any[]>([]);
-  
-  // Import States
-  const [isImporting, setIsImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState(0);
-  const [importLogs, setImportLogs] = useState<ImportLog[]>([]);
-  const [previewData, setPreviewData] = useState<any>(null);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sessionRaw = localStorage.getItem('foodie_supabase_session');
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   const restaurantId = session?.restaurant?.id;
+  const userRole = session?.user?.role;
+  const isSuperAdmin = userRole === 'super-admin';
+  const isBranchManager = userRole === 'branch-manager';
 
   useEffect(() => {
     if (restaurantId && restaurantId !== "undefined") {
       refreshAllData();
       const interval = setInterval(syncSalesOnly, 30000);
+      
+      const hasSeenRole = sessionStorage.getItem('foodie_role_verified');
+      if (!hasSeenRole) {
+        setShowRoleDialog(true);
+      }
+      
       return () => clearInterval(interval);
     }
   }, [restaurantId]);
@@ -104,187 +103,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleLoadConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const backup = JSON.parse(event.target?.result as string);
-        setPreviewData(backup);
-        setActiveTab('import-preview');
-      } catch (err) {
-        alert("Invalid JSON file.");
-      } finally {
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const addLog = (msg: string, status: ImportLog['status'] = 'info') => {
-    setImportLogs(prev => [...prev, { msg, status }]);
-  };
-
-  const commitImport = async () => {
-    if (!previewData || !restaurantId) return;
-    setIsImporting(true);
-    setImportProgress(5);
-    setImportLogs([{ msg: 'Analyzing local configuration...', status: 'info' }]);
-    
-    try {
-      addLog('Fetching existing cloud entities...', 'info');
-      const [existingBranches, existingQRs, cloudMenu] = await Promise.all([
-        MenuService.getBranchesForRestaurant(restaurantId),
-        MenuService.getQRCodes(restaurantId),
-        MenuService.getMenuByRestaurantId(restaurantId)
-      ]);
-      
-      const branchMap = new Map(existingBranches.map((b: any) => [b.subdomain.toLowerCase(), b.id]));
-      const qrByLabelMap = new Map(existingQRs.map((q: any) => [q.label.toLowerCase(), q.id]));
-      const catMap = new Map(cloudMenu.categories.map((c: any) => [c.name.toLowerCase(), c.id]));
-      const itemMap = new Map(cloudMenu.items.map((i: any) => [i.name.toLowerCase(), i.id]));
-      
-      setImportProgress(20);
-
-      if (previewData.business?.branches) {
-        addLog('Processing Branches...', 'info');
-        for (const branch of previewData.business.branches) {
-          const sub = (branch.subdomain || branch.name.toLowerCase().replace(/\s+/g, '-')).toLowerCase();
-          if (branchMap.has(sub)) {
-            addLog(`Branch "${branch.name}" exists. Skipped.`, 'exists');
-          } else {
-            addLog(`Deploying branch: ${branch.name}`, 'success');
-            await MenuService.insertBranch(branch.name, sub, restaurantId);
-          }
-        }
-      }
-      setImportProgress(40);
-
-      if (previewData.business?.qrAssets) {
-        addLog('Syncing QR Infrastructure...', 'info');
-        for (const qr of previewData.business.qrAssets) {
-          const existingId = qrByLabelMap.get(qr.name.toLowerCase());
-          if (existingId) {
-            addLog(`Table "${qr.name}" exists. Merging tokens.`, 'exists');
-          } else {
-            addLog(`Creating table: ${qr.name}`, 'success');
-          }
-          await MenuService.upsertQRCode({
-            id: existingId || undefined,
-            restaurant_id: restaurantId,
-            label: qr.name,
-            code: qr.token,
-            type: 'menu'
-          });
-        }
-      }
-      setImportProgress(60);
-
-      if (previewData.menu?.categories) {
-        addLog('Organizing Menu Groups...', 'info');
-        for (const cat of previewData.menu.categories) {
-          const existingId = catMap.get(cat.name.toLowerCase());
-          if (existingId) {
-            addLog(`Group "${cat.name}" exists. Skipping duplication.`, 'exists');
-          } else {
-            addLog(`Adding new group: ${cat.name}`, 'success');
-            await MenuService.upsertCategory({
-              id: existingId || undefined,
-              name: cat.name,
-              menu_id: session.defaultMenuId,
-              order_index: cat.order_index || 0
-            });
-          }
-        }
-      }
-      setImportProgress(80);
-
-      const updatedMenu = await MenuService.getMenuByRestaurantId(restaurantId);
-      const updatedCatMap = new Map(updatedMenu.categories.map((c: any) => [c.name.toLowerCase(), c.id]));
-
-      if (previewData.menu?.items) {
-        addLog('Archiving Menu Items...', 'info');
-        for (const item of previewData.menu.items) {
-          const existingId = itemMap.get(item.name.toLowerCase());
-          const catId = updatedCatMap.get(item.cat_name?.toLowerCase()) || null;
-          
-          if (existingId) {
-            addLog(`Dish "${item.name}" exists. Applying update.`, 'update');
-          } else {
-            addLog(`Storing new dish: ${item.name}`, 'success');
-          }
-          
-          await MenuService.upsertMenuItem({
-            id: existingId || undefined,
-            name: item.name,
-            price: item.price,
-            description: item.description,
-            image_url: item.image_url,
-            category_id: catId,
-            pax: item.pax,
-            serving_time: item.serving_time,
-            is_popular: item.is_popular
-          });
-        }
-      }
-      
-      setImportProgress(100);
-      addLog('Deployment Successful!', 'success');
-      
-      setTimeout(async () => {
-        await refreshAllData();
-        setIsImporting(false);
-        setActiveTab('menu');
-        setPreviewData(null);
-      }, 1500);
-
-    } catch (err: any) {
-      addLog(`Sync Error: ${err.message}`, 'info');
-      console.error(err);
-      setIsImporting(false);
-    }
+  const handleVerifyRole = () => {
+    setShowRoleDialog(false);
+    sessionStorage.setItem('foodie_role_verified', 'true');
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} availableBranches={availableBranches} />;
       case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} />;
-      case 'branches': return <AdminBranches />;
+      case 'branches': return isSuperAdmin ? <AdminBranches /> : <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} availableBranches={availableBranches} />;
       case 'qr': return <AdminQR availableBranches={availableBranches} />;
       case 'orders': return <AdminOrders />;
       case 'accounts': return <AdminAccounts branches={availableBranches} setActiveTab={setActiveTab} />;
       case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onImportClick={() => fileInputRef.current?.click()} />;
-      case 'import-preview': return (
-        <div className="p-10 max-w-2xl mx-auto space-y-8 animate-fade-in">
-           <header className="text-center space-y-4">
-              <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-sm"><i className="fa-solid fa-file-import"></i></div>
-              <h3 className="text-3xl font-black uppercase italic tracking-tighter">Review Import</h3>
-              <p className="text-slate-500 text-sm">Review entities before cloud synchronization.</p>
-           </header>
-           
-           <div className="bg-white p-10 rounded-[4rem] border border-slate-100 shadow-xl space-y-10 max-h-[500px] overflow-y-auto no-scrollbar">
-              {previewData?.menu?.items?.length > 0 && (
-                <div className="space-y-4">
-                   <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest px-4 italic">Proposed Menu Entities</h4>
-                   <div className="grid grid-cols-1 gap-2">
-                     {previewData.menu.items.map((it: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
-                           <span className="font-bold text-slate-700 text-xs">{it.name}</span>
-                           <span className="font-black text-indigo-600 text-xs">₱{it.price}</span>
-                        </div>
-                      ))}
-                   </div>
-                </div>
-              )}
-           </div>
-
-           <div className="flex gap-4">
-              <button onClick={() => { setActiveTab('settings'); setPreviewData(null); }} className="flex-1 py-5 bg-slate-100 rounded-3xl font-black uppercase text-[10px] tracking-widest text-slate-400">Cancel</button>
-              <button onClick={commitImport} className="flex-[2] py-5 bg-indigo-600 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-100 active:scale-95 transition-all">Synchronize Now</button>
-           </div>
-        </div>
-      );
       default: return null;
     }
   };
@@ -300,24 +132,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-['Plus_Jakarta_Sans']">
-      <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleLoadConfig} />
+      <input type="file" ref={fileInputRef} className="hidden" accept=".json" />
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-black/50 z-[90] backdrop-blur-sm" />}
       
-      {isImporting && (
-        <div className="fixed inset-0 z-[300] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in">
-          <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl flex flex-col items-center">
-            <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-8 shadow-inner animate-pulse">
-              <i className="fa-solid fa-cloud-arrow-up text-3xl"></i>
-            </div>
-            <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-2 text-slate-900">Synchronizing</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-10 text-center">Restoring cloud infrastructure...</p>
-            <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden mb-10 border border-slate-50 shadow-inner relative">
-              <div className="h-full bg-indigo-600 transition-all duration-700 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.4)]" style={{ width: `${importProgress}%` }}></div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <aside className={`fixed lg:static inset-y-0 left-0 w-72 bg-[#0f172a] text-slate-400 h-full p-6 flex flex-col z-[100] transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="mb-10 flex justify-between items-center px-2">
           <h1 className="text-xl font-black italic tracking-tighter text-white uppercase">Admin<span className="text-indigo-500">Panel</span></h1>
@@ -326,7 +143,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {navItem('menu', 'fa-utensils', 'Menu Editor')}
           {navItem('orders', 'fa-receipt', 'Live Orders')}
           {navItem('analytics', 'fa-chart-pie', 'Sales & Stats')}
-          {navItem('branches', 'fa-sitemap', 'Branches')}
+          {isSuperAdmin && navItem('branches', 'fa-sitemap', 'Branches')}
           {navItem('qr', 'fa-qrcode', 'QR Codes')}
           {navItem('accounts', 'fa-user-group', 'Staff & Accounts')}
           {navItem('settings', 'fa-gears', 'Settings')}
@@ -345,15 +162,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <header className="sticky top-0 z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 shadow-sm">
           <div className="flex items-center gap-4">
              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-600"><i className="fa-solid fa-bars-staggered"></i></button>
-             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Panel / <span className="text-slate-900 italic">{activeTab}</span></h2>
+             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Panel / <span className="text-slate-900">{activeTab}</span></h2>
           </div>
-          {isSyncing && <div className="text-[10px] font-black text-indigo-600 animate-pulse uppercase tracking-widest">Active Sync</div>}
+          <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
+             <i className={`fa-solid ${isSuperAdmin ? 'fa-crown' : 'fa-shield-halved'} text-indigo-600 text-[10px]`}></i>
+             <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">{isSuperAdmin ? 'Super Admin' : 'Branch Manager'}</span>
+          </div>
         </header>
         
         <main className="flex-1 overflow-y-auto bg-slate-50 relative no-scrollbar pb-20">
           {renderContent()}
         </main>
       </div>
+
+      {showRoleDialog && (
+        <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-8 animate-fade-in">
+          <div className="bg-white rounded-[4rem] p-12 w-full max-w-sm text-center shadow-2xl space-y-10 animate-scale">
+            <div className={`w-24 h-24 mx-auto rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl ${isSuperAdmin ? 'bg-slate-900' : 'bg-indigo-600'}`}>
+              <i className={`fa-solid ${isSuperAdmin ? 'fa-crown' : 'fa-user-shield'} text-4xl`}></i>
+            </div>
+            <div className="space-y-4">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.5em]">Identity Check</p>
+              <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">
+                {isSuperAdmin ? 'Super Admin' : 'Branch Manager'}
+              </h2>
+              <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                {isSuperAdmin 
+                  ? 'Access granted to all branches. You can manage everything.' 
+                  : 'Access granted to your branch. You can manage your staff and menu.'}
+              </p>
+            </div>
+            <button 
+              onClick={handleVerifyRole} 
+              className="w-full bg-slate-900 text-white h-20 rounded-[2.5rem] font-black uppercase text-[12px] tracking-[0.4em] shadow-xl active:scale-95 transition-all hover:bg-indigo-600"
+            >
+              Enter Dashboard
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

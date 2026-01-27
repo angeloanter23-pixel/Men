@@ -1,5 +1,7 @@
 
 import { supabase } from '../lib/supabase';
+// Exporting supabase to allow access via the MenuService namespace in other components
+export { supabase };
 
 // --- Global Utilities ---
 export function getSubdomain() {
@@ -441,14 +443,18 @@ export async function createStaffInvite(email: string, role: string, restaurantI
     return data;
 }
 
-export async function verifyStaffInvite(token: string, email: string) {
-    const { data, error } = await supabase
+export async function verifyStaffInvite(token: string, email?: string) {
+    let query = supabase
         .from('users')
         .select('*')
         .eq('invite_token', token)
-        .eq('email', email.toLowerCase().trim())
-        .eq('status', 'pending')
-        .maybeSingle();
+        .eq('status', 'pending');
+    
+    if (email) {
+        query = query.eq('email', email.toLowerCase().trim());
+    }
+    
+    const { data, error } = await query.maybeSingle();
     
     if (error) throw new Error(error.message);
     if (!data) return null;

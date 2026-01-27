@@ -19,24 +19,24 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const hash = window.location.hash.split('?')[1];
-    const params = new URLSearchParams(hash);
-    const urlToken = params.get('token');
-    const urlEmail = params.get('email');
+    // URL format: /#/accept-invite/[token]
+    const hashPart = window.location.hash.replace(/^#\/?/, '');
+    const parts = hashPart.split('/');
+    const urlToken = parts[1]; // Parts[0] is 'accept-invite', Parts[1] is the token
 
-    if (!urlToken || !urlEmail) {
+    if (!urlToken) {
       setStep('expired');
       return;
     }
 
     const verify = async () => {
       try {
-        const invite = await MenuService.verifyStaffInvite(urlToken, urlEmail);
+        const invite = await MenuService.verifyStaffInvite(urlToken);
         if (!invite) {
           setStep('expired');
         } else {
           setToken(urlToken);
-          setEmail(urlEmail);
+          setEmail(invite.email);
           setStep('setup');
         }
       } catch (err) {
@@ -63,10 +63,10 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
     try {
       await MenuService.acceptStaffInvite(token, password);
       setLoading(false);
-      alert("Account active! Please sign in.");
+      alert("Account is active! You can now sign in.");
       onComplete();
     } catch (err: any) {
-      setError(err.message || "Failed to setup account.");
+      setError(err.message || "Failed to create account.");
       setLoading(false);
     }
   };
@@ -75,7 +75,7 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 font-jakarta">
         <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="mt-6 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Verifying Identity...</p>
+        <p className="mt-6 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Checking your invitation...</p>
       </div>
     );
   }
@@ -85,10 +85,10 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 font-jakarta text-center space-y-10 animate-fade-in">
         <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-3xl shadow-xl shadow-rose-100"><i className="fa-solid fa-clock"></i></div>
         <div className="space-y-4">
-          <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Node Expired</h2>
-          <p className="text-slate-500 text-sm font-medium max-w-xs mx-auto leading-relaxed">This invitation node is no longer valid or has already been consumed.</p>
+          <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Link Expired</h2>
+          <p className="text-slate-500 text-sm font-medium max-w-xs mx-auto leading-relaxed">This invitation link is no longer valid or has already been used.</p>
         </div>
-        <button onClick={onCancel} className="px-12 py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95 transition-all">Exit Terminal</button>
+        <button onClick={onCancel} className="px-12 py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95 transition-all">Exit</button>
       </div>
     );
   }
@@ -99,20 +99,19 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
         <header className="text-center space-y-4">
             <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-xl"><i className="fa-solid fa-user-shield"></i></div>
             <div>
-                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.4em] mb-2 leading-none">Team Provisioning</p>
-                <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Setup Account</h2>
+                <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Create Account</h2>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 py-2 px-4 rounded-full inline-block italic">{email}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 py-2 px-4 rounded-full inline-block">{email}</p>
         </header>
 
         <form onSubmit={handleSetup} className="space-y-8">
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Full Name</label>
-                <input required autoFocus value={fullName} onChange={e => setFullName(e.target.value)} className="w-full bg-slate-50 border-none rounded-3xl p-6 text-sm font-black outline-none focus:ring-4 ring-indigo-500/5 shadow-inner italic" placeholder="e.g. Alex Mercer" />
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Full Name</label>
+                <input required autoFocus value={fullName} onChange={e => setFullName(e.target.value)} className="w-full bg-slate-50 border-none rounded-3xl p-6 text-sm font-black outline-none focus:ring-4 ring-indigo-500/5 shadow-inner" placeholder="Your Name" />
             </div>
             
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Secure Password</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Password</label>
                 <div className="relative group">
                     <input 
                         required 
@@ -130,11 +129,11 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
                         <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-lg`}></i>
                     </button>
                 </div>
-                <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest ml-4">Min. 8 characters</p>
+                <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest ml-4">Minimum 8 characters</p>
             </div>
 
             <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Confirm Key</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Confirm Password</label>
                 <input 
                     required 
                     type={showPassword ? "text" : "password"} 
@@ -145,14 +144,14 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
                 />
             </div>
 
-            {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest bg-rose-50 p-4 rounded-2xl border border-rose-100 italic">{error}</p>}
+            {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest bg-rose-50 p-4 rounded-2xl border border-rose-100">{error}</p>}
 
             <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-7 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600 disabled:opacity-50">
-              {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Initialize Account'}
+              {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Finish Setup'}
             </button>
         </form>
       </div>
-      <p className="mt-12 text-[10px] font-black text-slate-300 uppercase tracking-[1em] opacity-30 italic">AUTHENTICATION PIPELINE 4.0</p>
+      <p className="mt-12 text-[10px] font-black text-slate-300 uppercase tracking-[1em] opacity-30">SECURE REGISTRATION</p>
     </div>
   );
 };

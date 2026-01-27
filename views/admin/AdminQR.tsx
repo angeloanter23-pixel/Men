@@ -22,7 +22,6 @@ const ShareModal: React.FC<{
 }> = ({ asset, restaurantName, onClose, branchName }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isCopied, setIsCopied] = useState(false);
-    // Updated production base URL
     const productionBase = "https://men-brown.vercel.app/";
     const finalUrl = `${productionBase}${asset.code}`;
 
@@ -53,145 +52,55 @@ const ShareModal: React.FC<{
         }
     };
 
-    const shareData = async () => {
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: `Menu Access: ${restaurantName}`,
-                    text: `Scan to view the menu for ${asset.label} at ${branchName}`,
-                    url: finalUrl,
-                });
-            } catch (err) {
-                console.log("Share failed or cancelled");
-            }
-        } else {
-            handleCopy();
-        }
-    };
-
     return (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 md:p-6 bg-slate-900/80 backdrop-blur-2xl animate-fade-in" onClick={onClose}>
             <div className="bg-white w-full max-w-lg rounded-[4rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative animate-scale" onClick={e => e.stopPropagation()}>
-                {/* Visual Header / Brand Bar */}
                 <div className="h-2 bg-brand-primary w-full"></div>
-                
                 <div className="p-8 md:p-12 space-y-10">
                     <header className="flex justify-between items-start">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div>
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] italic">Access Node Verified</p>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] italic">QR Ready</p>
                             </div>
-                            <h3 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 leading-tight">
-                                Share <span className="text-brand-primary">Node</span>
-                            </h3>
+                            <h3 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 leading-tight">Share <span className="text-brand-primary">Code</span></h3>
                         </div>
-                        <button onClick={onClose} className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all border border-slate-100 shadow-sm active:scale-90">
-                            <i className="fa-solid fa-xmark text-xl"></i>
-                        </button>
+                        <button onClick={onClose} className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all border border-slate-100 shadow-sm active:scale-90"><i className="fa-solid fa-xmark text-xl"></i></button>
                     </header>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-                        {/* QR Presentation */}
                         <div className="relative group">
-                            <div className="absolute inset-0 bg-brand-primary/5 rounded-[3.5rem] blur-2xl group-hover:bg-brand-primary/10 transition-all duration-700"></div>
+                            <div className="absolute inset-0 bg-brand-primary/5 rounded-[3.5rem] blur-2xl transition-all duration-700"></div>
                             <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border border-slate-50 relative z-10 flex flex-col items-center">
-                                <div className="relative">
-                                    <canvas ref={canvasRef} className="rounded-2xl"></canvas>
-                                    {/* Scanning Animation Overlay */}
-                                    <div className="absolute inset-0 border-2 border-brand-primary/20 rounded-2xl overflow-hidden pointer-events-none">
-                                        <div className="w-full h-1 bg-brand-primary/40 shadow-[0_0_15px_rgba(255,107,0,0.5)] animate-scan absolute left-0"></div>
-                                    </div>
-                                </div>
+                                <canvas ref={canvasRef} className="rounded-2xl"></canvas>
                                 <div className="mt-6 flex items-center gap-3">
-                                    <i className="fa-solid fa-expand text-slate-200 text-xs"></i>
-                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Live Digital Key</p>
+                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Digital Access Key</p>
                                 </div>
                             </div>
                         </div>
-
-                        {/* Metadata Section */}
-                        <div className="space-y-8">
-                            <div className="space-y-6">
-                                <div className="space-y-1">
-                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Merchant Context</p>
-                                    <h4 className="text-2xl font-black uppercase italic text-slate-900 leading-none">{restaurantName}</h4>
-                                    <p className="text-xs font-bold text-brand-primary uppercase tracking-tighter opacity-80">{branchName || 'Master Location'}</p>
-                                </div>
-
-                                <div className="h-px bg-slate-100 w-full"></div>
-
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-1">
-                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Identity Label</p>
-                                        <p className="text-sm font-black text-slate-800 uppercase italic leading-none">{asset.label}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Node ID</p>
-                                        <p className="text-xs font-mono font-bold text-indigo-500 uppercase leading-none">{asset.code}</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3 bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest italic text-center">Node Security Specs</p>
-                                    <div className="flex flex-col gap-2">
-                                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-                                            <span className="uppercase opacity-60">Protocol</span>
-                                            <span className="text-emerald-500">HTTPS (TLS 1.3)</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-                                            <span className="uppercase opacity-60">Encryption</span>
-                                            <span>SHA-256</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-                                            <span className="uppercase opacity-60">Status</span>
-                                            <span className="text-brand-primary animate-pulse">ACTIVE</span>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div className="space-y-6">
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Restaurant</p>
+                                <h4 className="text-2xl font-black uppercase italic text-slate-900 leading-none">{restaurantName}</h4>
+                                <p className="text-xs font-bold text-brand-primary uppercase tracking-tighter opacity-80">{branchName || 'Main'}</p>
+                            </div>
+                            <div className="h-px bg-slate-100 w-full"></div>
+                            <div className="space-y-1">
+                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Label</p>
+                                <p className="text-sm font-black text-slate-800 uppercase italic leading-none">{asset.label}</p>
                             </div>
                         </div>
                     </div>
-
-                    {/* Actions */}
-                    <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <button 
-                            onClick={shareData}
-                            className="bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl shadow-slate-200 active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-brand-primary"
-                        >
-                            <i className="fa-solid fa-share-nodes"></i>
-                            Share Node
-                        </button>
-                        <button 
-                            onClick={handleCopy}
-                            className={`py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3 border ${isCopied ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-slate-900 border-slate-100 hover:bg-slate-50 shadow-slate-100'}`}
-                        >
+                    <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button onClick={handleCopy} className={`py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3 border ${isCopied ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-900 text-white hover:bg-brand-primary'}`}>
                             <i className={`fa-solid ${isCopied ? 'fa-check' : 'fa-link'}`}></i>
-                            {isCopied ? 'Link Copied' : 'Copy URL'}
+                            {isCopied ? 'Copied' : 'Copy Link'}
                         </button>
-                        <button 
-                            onClick={handleDownload}
-                            className="bg-slate-100 text-slate-600 py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-indigo-600 hover:text-white shadow-inner"
-                        >
-                            <i className="fa-solid fa-download"></i>
-                            Save Image
+                        <button onClick={handleDownload} className="bg-slate-100 text-slate-600 py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-indigo-600 hover:text-white shadow-inner">
+                            <i className="fa-solid fa-download"></i> Save Image
                         </button>
-                    </div>
-                </div>
-
-                <div className="bg-slate-50 px-8 py-5 border-t border-slate-100 flex justify-between items-center">
-                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.3em] italic">Platinum Core Authentication Suite</p>
-                    <div className="flex gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-primary"></div>
                     </div>
                 </div>
             </div>
-            <style>{`
-                @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
-                .animate-scan { animation: scan 3s ease-in-out infinite alternate; }
-            `}</style>
         </div>
     );
 };
@@ -212,84 +121,31 @@ const QRBlock: React.FC<{
 
   useEffect(() => {
     if (canvasRef.current && typeof QRious !== 'undefined') {
-      new QRious({
-        element: canvasRef.current,
-        size: 180,
-        value: finalUrl,
-        level: 'H',
-        foreground: '#0f172a'
-      });
+      new QRious({ element: canvasRef.current, size: 180, value: finalUrl, level: 'H', foreground: '#0f172a' });
     }
   }, [finalUrl]);
 
-  const handleSyncUpdate = () => {
-    if (localLabel !== asset.label) {
-        onUpdate(asset.id, localLabel, asset.code);
-    }
-  };
-
   return (
-    <div className={`bg-white p-8 rounded-[3rem] border transition-all duration-500 relative overflow-hidden group animate-fade-in ${isSelected ? 'border-indigo-500 ring-4 ring-indigo-50 shadow-2xl' : 'border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl'}`}>
-      <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-[4rem] -translate-y-4 translate-x-4 group-hover:bg-indigo-50 transition-colors"></div>
-      
+    <div className={`bg-white p-8 rounded-[3rem] border transition-all relative group animate-fade-in ${isSelected ? 'border-indigo-500 ring-4 ring-indigo-50 shadow-2xl' : 'border-slate-100 shadow-sm hover:shadow-xl'}`}>
       <div className="absolute top-6 left-6 z-20">
-        <button 
-          onClick={() => onSelect(asset.id)}
-          className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-transparent hover:border-indigo-300'}`}
-        >
+        <button onClick={() => onSelect(asset.id)} className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-transparent hover:border-indigo-300'}`}>
           <i className="fa-solid fa-check text-[10px]"></i>
         </button>
       </div>
-
       <div className="flex items-start justify-between mb-8 relative z-10 pl-10">
         <div className="flex-1 pr-4">
-          <input 
-            type="text" 
-            value={localLabel} 
-            onBlur={handleSyncUpdate}
-            onChange={(e) => setLocalLabel(e.target.value)}
-            className="text-xl font-black uppercase italic tracking-tighter text-brand-primary bg-transparent border-b-2 border-transparent hover:border-indigo-100 focus:border-brand-primary outline-none transition-all w-full mb-1" 
-            placeholder="Label..." 
-          />
-          <div className="flex flex-col gap-2">
-            {branchName && (
-              <span className="text-[8px] font-black uppercase text-brand-primary tracking-widest bg-brand-secondary px-2 py-0.5 rounded-lg w-fit">
-                {branchName}
-              </span>
-            )}
-            <div className="flex items-center text-[10px] font-black text-slate-300 uppercase tracking-widest group/token">
-              <span className="opacity-40 mr-2">TOKEN:</span>
-              <div className="bg-slate-100/50 px-3 py-1 rounded-lg text-slate-400 border border-slate-100 flex items-center gap-2 cursor-not-allowed">
-                <span className="font-mono">{asset.code}</span>
-                <i className="fa-solid fa-lock text-[8px] opacity-30"></i>
-              </div>
-            </div>
-          </div>
+          <input type="text" value={localLabel} onBlur={() => localLabel !== asset.label && onUpdate(asset.id, localLabel, asset.code)} onChange={(e) => setLocalLabel(e.target.value)} className="text-xl font-black uppercase italic tracking-tighter text-brand-primary bg-transparent border-b-2 border-transparent hover:border-indigo-100 focus:border-brand-primary outline-none transition-all w-full mb-1" placeholder="Label..." />
+          {branchName && <span className="text-[8px] font-black uppercase text-brand-primary tracking-widest bg-brand-secondary px-2 py-0.5 rounded-lg w-fit">{branchName}</span>}
         </div>
         <div className="flex gap-2">
             <button onClick={() => onShare(asset)} className="w-10 h-10 rounded-xl bg-slate-900 text-white hover:bg-brand-primary transition-all flex items-center justify-center shadow-lg"><i className="fa-solid fa-share-nodes text-xs"></i></button>
             <button onClick={() => onDelete(asset)} className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center shadow-sm"><i className="fa-solid fa-trash-can text-xs"></i></button>
         </div>
       </div>
-
       <div className="flex flex-col items-center py-10 bg-slate-50/50 rounded-[2.5rem] mb-8 border border-slate-100 shadow-inner group-hover:bg-white transition-all">
-        <div className="bg-white p-4 rounded-3xl shadow-lg shadow-slate-200/50 cursor-pointer" onClick={() => onShare(asset)}>
-          <canvas ref={canvasRef}></canvas>
-        </div>
-        <div className="mt-6 w-full px-8 text-center">
-           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Direct Link</p>
-           <p className="text-[8px] font-bold text-slate-400 break-all opacity-60 leading-tight">
-             {finalUrl}
-           </p>
-        </div>
+        <div className="bg-white p-4 rounded-3xl shadow-lg cursor-pointer" onClick={() => onShare(asset)}><canvas ref={canvasRef}></canvas></div>
+        <p className="mt-6 text-[8px] font-bold text-slate-400 break-all opacity-60 px-8 text-center">{finalUrl}</p>
       </div>
-
-      <button 
-        onClick={() => onShare(asset)}
-        className="w-full py-5 bg-slate-50 text-slate-900 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:bg-white hover:shadow-xl active:scale-95"
-      >
-        Configure & Share
-      </button>
     </div>
   );
 };
@@ -305,342 +161,121 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
   const [bulkCount, setBulkCount] = useState(5);
   const [savedQrs, setSavedQrs] = useState<QRAsset[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  // Branch specific states
   const [genBranchId, setGenBranchId] = useState<string>('');
   const [branchFilter, setBranchFilter] = useState<string>('all');
-  
-  // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
-  // Modals state
   const [qrToDelete, setQrToDelete] = useState<QRAsset[] | null>(null);
   const [qrToShare, setQrToShare] = useState<QRAsset | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const sessionRaw = localStorage.getItem('foodie_supabase_session');
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   const restaurantId = session?.restaurant?.id;
-  const restaurantName = session?.restaurant?.name || 'My Restaurant';
-  const userRole = session?.user?.role || 'waiter';
+  const userRole = session?.user?.role;
   const userBranchId = session?.user?.branch_id;
   const isSuperAdmin = userRole === 'super-admin';
+  const isBranchManager = userRole === 'branch-manager';
 
-  useEffect(() => {
-    if (restaurantId && restaurantId !== "undefined") {
-      fetchQRCodes();
-    }
-  }, [restaurantId]);
-
-  useEffect(() => {
-    // Lock logic: If not super admin, lock generator to their branch
+  useEffect(() => { if (restaurantId) fetchQRCodes(); }, [restaurantId]);
+  
+  useEffect(() => { 
     if (!isSuperAdmin && userBranchId) {
-      setGenBranchId(userBranchId);
+        setGenBranchId(userBranchId);
+        setBranchFilter(userBranchId);
     } else if (availableBranches.length > 0 && !genBranchId) {
-      setGenBranchId(availableBranches[0].id);
+        setGenBranchId(availableBranches[0].id);
     }
   }, [availableBranches, isSuperAdmin, userBranchId]);
 
   const fetchQRCodes = async () => {
-    if (!restaurantId || restaurantId === "undefined") return;
     setLoading(true);
-    try {
-      const data = await MenuService.getQRCodes(restaurantId);
-      setSavedQrs(data);
-    } catch (err) {
-      console.error("Failed to fetch QR codes", err);
-    } finally {
-      setLoading(false);
+    try { 
+        const data = await MenuService.getQRCodes(restaurantId); 
+        setSavedQrs(data); 
     }
-  };
-
-  const handleSelectOne = (id: string) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const handleSelectAll = () => {
-    if (selectedIds.length === savedQrs.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(savedQrs.map(q => q.id));
-    }
-  };
-
-  const generateToken = (length = 6) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   const handleGenerate = async () => {
-    if (!restaurantId || restaurantId === "undefined") return alert("Please log in again.");
-    if (!genBranchId) return alert("Please select a target branch.");
-    
+    if (!genBranchId) return alert("Select a branch.");
     setLoading(true);
     try {
-      if (mode === 'single') {
-        await MenuService.upsertQRCode({
-          restaurant_id: restaurantId,
-          branch_id: genBranchId,
-          label: baseName,
-          code: generateToken(),
-          type: 'menu'
-        });
-      } else {
-        const qty = Math.min(bulkCount, 50);
-        for (let i = 1; i <= qty; i++) {
-          await MenuService.upsertQRCode({
-            restaurant_id: restaurantId,
-            branch_id: genBranchId,
-            label: `${baseName}${i}`,
-            code: generateToken(),
-            type: 'menu'
-          });
-        }
-      }
-      await fetchQRCodes();
-      setActiveTab('saved');
-    } catch (err) {
-      alert("Error creating code. Every code must be unique.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const confirmDeleteQr = async () => {
-    if (!qrToDelete || qrToDelete.length === 0) return;
-    setIsDeleting(true);
-    try {
-      for (const asset of qrToDelete) {
-        await MenuService.deleteQRCode(asset.id);
-      }
-      const deletedIds = qrToDelete.map(a => a.id);
-      setSavedQrs(prev => prev.filter(item => !deletedIds.includes(item.id)));
-      setSelectedIds(prev => prev.filter(id => !deletedIds.includes(id)));
-      setQrToDelete(null);
-    } catch (err) {
-      alert("Failed to delete QR code(s).");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const updateQr = async (id: string, label: string, code: string) => {
-    try {
-      await MenuService.upsertQRCode({ id, label, code, restaurant_id: restaurantId });
-      setSavedQrs(prev => prev.map(q => q.id === id ? { ...q, label, code } : q));
-    } catch (err) {
-      console.error("Failed to update", err);
-    }
+      if (mode === 'single') { await MenuService.upsertQRCode({ restaurant_id: restaurantId, branch_id: genBranchId, label: baseName, code: Math.random().toString(36).substr(2, 6).toUpperCase(), type: 'menu' }); }
+      else { for (let i = 1; i <= Math.min(bulkCount, 50); i++) { await MenuService.upsertQRCode({ restaurant_id: restaurantId, branch_id: genBranchId, label: `${baseName}${i}`, code: Math.random().toString(36).substr(2, 6).toUpperCase(), type: 'menu' }); } }
+      await fetchQRCodes(); setActiveTab('saved');
+    } catch (err) { alert("Error generating codes."); } finally { setLoading(false); }
   };
 
   const filteredQrs = savedQrs.filter(qr => {
-    if (branchFilter === 'all') return true;
-    return qr.branch_id === branchFilter;
+    if (isBranchManager) return qr.branch_id === userBranchId;
+    return branchFilter === 'all' || qr.branch_id === branchFilter;
   });
 
   return (
     <div className="flex flex-col h-full animate-fade-in relative overflow-x-hidden font-['Plus_Jakarta_Sans'] bg-slate-50/30">
-      
       <div className="bg-white border-b border-slate-200 sticky top-0 z-[45] px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex overflow-x-auto no-scrollbar gap-2">
-          <button 
-            onClick={() => setActiveTab('gen')}
-            className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${activeTab === 'gen' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-          >
-            Generator
-          </button>
-          <button 
-            onClick={() => setActiveTab('saved')}
-            className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${activeTab === 'saved' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-          >
-            Saved Codes ({savedQrs.length})
-          </button>
+        <div className="flex gap-2">
+          <button onClick={() => setActiveTab('gen')} className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'gen' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-500'}`}>Generator</button>
+          <button onClick={() => setActiveTab('saved')} className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'saved' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-500'}`}>Saved ({filteredQrs.length})</button>
         </div>
-
-        {activeTab === 'saved' && (
-          <div className="flex items-center gap-4">
-            {availableBranches.length > 0 && (
-              <div className="relative group">
-                <select 
-                  value={branchFilter}
-                  onChange={(e) => setBranchFilter(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest outline-none appearance-none pr-8 cursor-pointer hover:border-brand-primary transition-all text-slate-600"
-                >
-                  <option value="all">All Branches</option>
-                  {availableBranches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-                <i className="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[8px] text-slate-300 pointer-events-none group-hover:text-brand-primary"></i>
-              </div>
-            )}
-            {savedQrs.length > 0 && (
-              <>
-                <div className="flex items-center gap-2">
-                   <button 
-                    onClick={handleSelectAll}
-                    className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${selectedIds.length === savedQrs.length && savedQrs.length > 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300 text-transparent hover:border-brand-primary'}`}
-                   >
-                     <i className="fa-solid fa-check text-[8px]"></i>
-                   </button>
-                   <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest hidden sm:inline">Select All</span>
-                </div>
-                {selectedIds.length > 0 && (
-                  <button 
-                    onClick={() => setQrToDelete(savedQrs.filter(q => selectedIds.includes(q.id)))}
-                    className="bg-rose-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 flex items-center gap-2 animate-scale"
-                  >
-                    <i className="fa-solid fa-trash-can"></i>
-                    <span className="hidden sm:inline">Delete</span> ({selectedIds.length})
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+        {activeTab === 'saved' && isSuperAdmin && availableBranches.length > 0 && (
+          <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-[9px] font-black uppercase outline-none">
+            <option value="all">All Branches</option>
+            {availableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
+        {activeTab === 'saved' && isBranchManager && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl">
+                <i className="fa-solid fa-location-dot text-indigo-600 text-[8px]"></i>
+                <span className="text-[8px] font-black uppercase text-indigo-600 tracking-widest italic">{availableBranches.find(b => b.id === userBranchId)?.name || 'Branch Terminal'}</span>
+            </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 lg:p-10 no-scrollbar pb-32">
-        <div className="mb-10 animate-fade-in-up">
-          <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-2">
-            {activeTab === 'gen' ? 'Create QR Codes' : 'Saved QR Codes'}
-          </h3>
-          <p className="text-slate-500 text-sm max-w-2xl leading-relaxed">
-            {activeTab === 'gen' 
-              ? 'Create new QR codes for your tables. Each code is unique and randomly generated to link directly to your menu.' 
-              : 'Review and manage your active menu links. You can download these QR codes to print for your tables.'}
-          </p>
-        </div>
-
+      <div className="flex-1 overflow-y-auto p-6 lg:p-10 pb-32">
         {activeTab === 'gen' ? (
-          <section className="space-y-10 max-w-2xl">
-            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-10">
+          <section className="space-y-10 max-w-2xl mx-auto">
+            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-8">
               <div className="bg-slate-50 p-1.5 rounded-2xl flex border border-slate-100 shadow-inner">
-                <button onClick={() => setMode('single')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'single' ? 'bg-white text-indigo-600 shadow-sm border border-slate-50' : 'text-slate-400'}`}>Single Code</button>
-                <button onClick={() => setMode('bulk')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-sm border border-slate-50' : 'text-slate-400'}`}>Bulk Create</button>
+                <button onClick={() => setMode('single')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase transition-all ${mode === 'single' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Single</button>
+                <button onClick={() => setMode('bulk')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Bulk Create</button>
               </div>
-              
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Target Branch</label>
-                  <div className="relative group">
-                    <select 
-                      disabled={!isSuperAdmin}
-                      value={genBranchId} 
-                      onChange={(e) => setGenBranchId(e.target.value)}
-                      className={`w-full px-6 py-5 rounded-2xl border-none outline-none font-black text-sm italic transition-all shadow-inner appearance-none pr-12 ${!isSuperAdmin ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-50 cursor-pointer focus:ring-4 ring-brand-primary/5'}`}
-                    >
-                      <option value="" disabled>Select Branch...</option>
-                      {availableBranches.map(b => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
+                {isSuperAdmin ? (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Target Branch</label>
+                    <select value={genBranchId} onChange={(e) => setGenBranchId(e.target.value)} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm italic">
+                      <option value="">Select Branch...</option>
+                      {availableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
-                    {isSuperAdmin && <i className="fa-solid fa-chevron-down absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>}
-                    {!isSuperAdmin && <i className="fa-solid fa-lock absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none text-xs"></i>}
                   </div>
-                  {!isSuperAdmin && <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-4 mt-2">Locked to your assigned territory</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">Table Name (e.g. Table 1)</label>
-                  <input type="text" value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Enter label..." className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-brand-primary/5 transition-all shadow-inner" />
-                </div>
-                
-                {mode === 'bulk' && (
-                  <div className="animate-fade-in space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4 italic">How many codes?</label>
-                    <input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} min="1" max="50" className="w-full px-6 py-5 bg-slate-50 rounded-2xl border-none outline-none font-black text-sm italic focus:ring-4 ring-brand-primary/5 transition-all shadow-inner" />
+                ) : (
+                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex items-center justify-between shadow-inner">
+                     <div className="space-y-1">
+                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Assigned Territory</p>
+                        <span className="text-sm font-black uppercase italic text-slate-900 tracking-tighter">
+                            {availableBranches.find(b => b.id === userBranchId)?.name || 'Branch Terminal'}
+                        </span>
+                     </div>
+                     <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100">
+                        <i className="fa-solid fa-lock text-xs"></i>
+                     </div>
                   </div>
                 )}
-                
-                <button disabled={loading || !genBranchId} onClick={handleGenerate} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-brand-primary disabled:opacity-50">
-                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Create QR Code'}
-                </button>
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Table Label</label><input type="text" value={baseName} onChange={(e) => setBaseName(e.target.value)} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm italic shadow-inner" /></div>
+                {mode === 'bulk' && <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Total Quantity</label><input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm shadow-inner" /></div>}
+                <button disabled={loading || !genBranchId} onClick={handleGenerate} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600">{loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Generate QR'}</button>
               </div>
             </div>
           </section>
         ) : (
-          <section className="space-y-8 animate-fade-in">
-            {filteredQrs.length === 0 ? (
-              <div className="py-32 text-center border-4 border-dashed border-slate-100 rounded-[4rem] bg-white/50">
-                <i className="fa-solid fa-folder-open text-4xl text-slate-100 mb-6"></i>
-                <p className="text-slate-300 text-[11px] font-black uppercase tracking-[0.5em] italic">No codes found for this filter</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-20">
-                {filteredQrs.map(asset => (
-                  <QRBlock 
-                    key={asset.id} 
-                    asset={asset} 
-                    isSelected={selectedIds.includes(asset.id)}
-                    onSelect={handleSelectOne}
-                    onDelete={(a) => setQrToDelete([a])} 
-                    onUpdate={updateQr} 
-                    onShare={(a) => setQrToShare(a)}
-                    branchName={asset.branches?.name || availableBranches.find(b => b.id === asset.branch_id)?.name}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {filteredQrs.map(asset => (
+              <QRBlock key={asset.id} asset={asset} isSelected={selectedIds.includes(asset.id)} onSelect={(id) => setSelectedIds(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id])} onDelete={(a) => MenuService.deleteQRCode(a.id).then(fetchQRCodes)} onUpdate={(id, l, c) => MenuService.upsertQRCode({ id, label: l, code: c, restaurant_id: restaurantId }).then(fetchQRCodes)} onShare={(a) => setQrToShare(a)} branchName={asset.branches?.name} />
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Enhanced Immersive Share Modal */}
-      {qrToShare && (
-        <ShareModal 
-            asset={qrToShare} 
-            restaurantName={restaurantName}
-            branchName={qrToShare.branches?.name || availableBranches.find(b => b.id === qrToShare.branch_id)?.name}
-            onClose={() => setQrToShare(null)} 
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {qrToDelete && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setQrToDelete(null)}>
-          <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-scale" onClick={e => e.stopPropagation()}>
-            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
-              <i className="fa-solid fa-qrcode text-3xl"></i>
-            </div>
-            <div>
-              <h4 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 leading-tight">
-                {qrToDelete.length > 1 ? `Delete ${qrToDelete.length} Nodes?` : 'Delete Access Node?'}
-              </h4>
-              <p className="text-sm text-slate-400 font-medium mt-4 leading-relaxed px-2">
-                {qrToDelete.length > 1 
-                  ? `You are about to permanently deactivate ${qrToDelete.length} access tokens. This action is final.`
-                  : <>Removing <span className="text-slate-900 font-bold uppercase italic tracking-tight">"{qrToDelete[0].label}"</span> will permanently deactivate its unique access token.</>
-                }
-              </p>
-            </div>
-            <div className="space-y-3 pt-4">
-              <button 
-                onClick={confirmDeleteQr}
-                disabled={isDeleting}
-                className="w-full py-5 bg-rose-500 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] shadow-xl shadow-rose-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                {isDeleting ? <i className="fa-solid fa-spinner animate-spin"></i> : `Yes, Delete ${qrToDelete.length > 1 ? 'Codes' : 'Code'}`}
-              </button>
-              <button 
-                onClick={() => setQrToDelete(null)}
-                className="w-full py-4 text-[10px] font-black uppercase text-slate-300 hover:text-slate-600 tracking-widest transition-colors"
-              >
-                Discard Action
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes scale { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        .animate-scale { animation: scale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-      `}</style>
+      {qrToShare && <ShareModal asset={qrToShare} restaurantName={session?.restaurant?.name || 'Restaurant'} branchName={qrToShare.branches?.name} onClose={() => setQrToShare(null)} />}
     </div>
   );
 };

@@ -23,9 +23,10 @@ const AdminView: React.FC<AdminViewProps> = ({
   menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate 
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [view, setView] = useState<'login' | 'forgot'>('login');
+  const [view, setView] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [error, setError] = useState('');
@@ -117,17 +118,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     setLoading(true);
     setError('');
 
-    const status = await MenuService.getLoginStatus(email, clientIp);
-    if (status.locked_until && new Date(status.locked_until) > new Date()) {
-      const diff = Math.ceil((new Date(status.locked_until).getTime() - Date.now()) / 1000);
-      setIsBlocked(true);
-      setBlockType(status.type || 'account');
-      setCountdown(diff);
-      setLoading(false);
-      setError(`${status.type === 'device' ? 'Device' : 'Account'} locked.`);
-      return;
-    }
-
     try {
       const dbResponse = await MenuService.authSignIn(email, password);
       await MenuService.clearLoginAttempts(email, clientIp);
@@ -150,6 +140,22 @@ const AdminView: React.FC<AdminViewProps> = ({
         setCooldownSeconds(3);
         setError(`Incorrect credentials. ${triesLeft} tries left.`);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || !businessName) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await MenuService.authSignUp(email, password, businessName);
+      localStorage.setItem('foodie_supabase_session', JSON.stringify(res));
+      setIsAuthenticated(true);
+    } catch (err: any) {
+      setError(err.message || "Registration failed.");
     } finally {
       setLoading(false);
     }
@@ -208,24 +214,42 @@ const AdminView: React.FC<AdminViewProps> = ({
       </div>
 
       <div className="w-full max-w-sm md:max-w-md relative z-10 space-y-12">
-        {view === 'login' ? (
+        {view !== 'forgot' ? (
           <div className="space-y-10">
             <header className="space-y-6 text-center">
               <div className={`inline-flex w-20 h-20 rounded-[2.5rem] items-center justify-center text-white shadow-2xl transition-all duration-700 ${isBlocked ? 'bg-rose-500 scale-110' : isCoolingDown ? 'bg-amber-500' : 'bg-slate-900'}`}>
-                <i className={`fa-solid ${isBlocked ? 'fa-lock' : isCoolingDown ? 'fa-hourglass-half' : 'fa-fingerprint'} text-3xl`}></i>
+                <i className={`fa-solid ${view === 'signup' ? 'fa-rocket' : isBlocked ? 'fa-lock' : isCoolingDown ? 'fa-hourglass-half' : 'fa-fingerprint'} text-3xl`}></i>
               </div>
               <div className="space-y-3">
                 <h2 className="text-5xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">
-                  {isBlocked ? 'Locked' : isCoolingDown ? 'Wait' : 'Sign In'}
+                  {view === 'signup' ? 'Enroll' : isBlocked ? 'Locked' : 'Sign In'}
                 </h2>
                 <p className="text-slate-400 text-sm font-medium">
-                  {isBlocked ? `Wait ${formatTime(countdown)} for security.` : isCoolingDown ? `System cooling down: ${cooldownSeconds}s` : 'Access Merchant Terminal'}
+                  {view === 'signup' ? 'Register your Merchant Node' : isBlocked ? `Wait ${formatTime(countdown)} for security.` : 'Access Merchant Terminal'}
                 </p>
               </div>
             </header>
 
-            <form onSubmit={handleLogin} className="space-y-8">
+            <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100 mb-6">
+              <button onClick={() => {setView('login'); setError('');}} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'login' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Login</button>
+              <button onClick={() => {setView('signup'); setError('');}} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'signup' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Sign Up</button>
+            </div>
+
+            <form onSubmit={view === 'signup' ? handleSignUp : handleLogin} className="space-y-8">
               <div className={`space-y-6 transition-all duration-700 ${(isBlocked || isCoolingDown) ? 'opacity-30 blur-[2px] pointer-events-none' : 'opacity-100'}`}>
+                {view === 'signup' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 italic">Business Name</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={businessName} 
+                      onChange={(e) => setBusinessName(e.target.value)} 
+                      className="w-full bg-slate-50 border-none rounded-3xl p-6 text-sm font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner italic" 
+                      placeholder="e.g. Sharp Bistro" 
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 italic">Master Email</label>
                   <input 
@@ -267,7 +291,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                   disabled={loading || isBlocked || isCoolingDown} 
                   className={`w-full py-7 rounded-[2.5rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${isBlocked ? 'bg-slate-100 text-slate-300' : isCoolingDown ? 'bg-amber-100 text-amber-600' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}
                 >
-                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? `Locked • ${formatTime(countdown)}` : 'Authenticate Node'}
+                  {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : isBlocked ? `Locked • ${formatTime(countdown)}` : view === 'signup' ? 'Initialize Node' : 'Authenticate Node'}
                 </button>
                 <button type="button" onClick={() => setView('forgot')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-colors italic">Lost access credentials?</button>
               </div>
@@ -302,7 +326,7 @@ const AdminView: React.FC<AdminViewProps> = ({
         )}
 
         <footer className="text-center pt-10 border-t border-slate-50">
-          <p className="text-[10px] font-black text-slate-200 uppercase tracking-[0.5em] italic">Platinum Terminal Engine 4.0</p>
+          <p className="text-[10px] font-black text-slate-200 uppercase tracking-[0.5em] italic">Platinum Terminal Engine 4.5</p>
         </footer>
       </div>
     </div>

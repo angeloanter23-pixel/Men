@@ -283,7 +283,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onImpo
                       <input type="email" placeholder="Business Email" className="w-full bg-white/5 border border-white/10 p-8 rounded-3xl text-white text-lg font-bold outline-none focus:ring-4 ring-indigo-500/20 transition-all" />
                    </div>
                    <textarea placeholder="Tell us about your project requirements..." className="w-full bg-white/5 border border-white/10 p-10 rounded-[4rem] text-white text-lg font-bold outline-none focus:ring-4 ring-indigo-500/20 h-64 resize-none transition-all"></textarea>
-                   <button className="w-full bg-indigo-600 text-white py-8 rounded-[4rem] font-black uppercase text-[14px] tracking-[0.6em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-500 border-4 border-transparent hover:border-indigo-400">Dispatch Request</button>
+                   <button className="w-full bg-indigo-600 text-white py-8 rounded-[4rem] font-black uppercase text-[14px] tracking-[0.6em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-50 border-4 border-transparent hover:border-indigo-400">Dispatch Request</button>
                 </div>
              </form>
           </Reveal>
@@ -305,6 +305,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onImpo
                     <li className="hover:text-indigo-400 transition-all cursor-pointer hover:translate-x-2" onClick={() => scrollToSection('about')}>Documentation</li>
                     <li className="hover:text-indigo-400 transition-all cursor-pointer hover:translate-x-2" onClick={() => scrollToSection('how-it-works')}>Deployment</li>
                     <li className="hover:text-indigo-400 transition-all cursor-pointer hover:translate-x-2" onClick={() => scrollToSection('contact')}>Terminal</li>
+                    <li className="hover:text-emerald-400 transition-all cursor-pointer hover:translate-x-2 border-t border-white/5 pt-4" onClick={() => window.location.hash = '#/test-supabase'}>Supabase Tester</li>
                   </ul>
                </div>
                <div className="space-y-8">
