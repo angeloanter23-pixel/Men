@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
 import AdminQR from './AdminQR';
@@ -108,6 +108,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     sessionStorage.setItem('foodie_role_verified', 'true');
   };
 
+  const currentBranchName = useMemo(() => {
+    if (isSuperAdmin) return 'All Branches';
+    if (!session?.user?.branch_id) return 'Main Location';
+    const branch = availableBranches.find(b => b.id === session.user.branch_id);
+    return branch ? branch.name : 'Checking location...';
+  }, [availableBranches, session, isSuperAdmin]);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} availableBranches={availableBranches} />;
@@ -137,7 +144,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       <aside className={`fixed lg:static inset-y-0 left-0 w-72 bg-[#0f172a] text-slate-400 h-full p-6 flex flex-col z-[100] transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="mb-10 flex justify-between items-center px-2">
-          <h1 className="text-xl font-black italic tracking-tighter text-white uppercase">Admin<span className="text-indigo-500">Panel</span></h1>
+          <h1 className="text-xl font-black tracking-tighter text-white uppercase">Admin Panel</h1>
         </div>
         <nav className="flex-1 space-y-2">
           {navItem('menu', 'fa-utensils', 'Menu Editor')}
@@ -182,21 +189,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <i className={`fa-solid ${isSuperAdmin ? 'fa-crown' : 'fa-user-shield'} text-4xl`}></i>
             </div>
             <div className="space-y-4">
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.5em]">Identity Check</p>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.5em]">Account Check</p>
               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">
                 {isSuperAdmin ? 'Super Admin' : 'Branch Manager'}
               </h2>
-              <p className="text-sm text-slate-500 font-medium leading-relaxed">
+              
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4 mt-6">
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Business Name</p>
+                   <p className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none">{session?.restaurant?.name || 'My Restaurant'}</p>
+                </div>
+                <div className="h-px bg-slate-200/50 w-full"></div>
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Access Location</p>
+                   <p className="text-sm font-black text-indigo-600 uppercase tracking-tight leading-none">{currentBranchName}</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400 font-medium leading-relaxed pt-2">
                 {isSuperAdmin 
-                  ? 'Access granted to all branches. You can manage everything.' 
-                  : 'Access granted to your branch. You can manage your staff and menu.'}
+                  ? 'You have full access to all branch data and settings.' 
+                  : 'You have access to manage staff and menu for this location.'}
               </p>
             </div>
             <button 
               onClick={handleVerifyRole} 
               className="w-full bg-slate-900 text-white h-20 rounded-[2.5rem] font-black uppercase text-[12px] tracking-[0.4em] shadow-xl active:scale-95 transition-all hover:bg-indigo-600"
             >
-              Enter Dashboard
+              Access Dashboard
             </button>
           </div>
         </div>

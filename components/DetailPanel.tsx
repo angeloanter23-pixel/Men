@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MenuItem, CartItem, OrderMode } from '../types';
 
@@ -64,7 +65,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
         <i className="fa-solid fa-chevron-left text-base"></i>
       </button>
 
-      <div className="flex-1 bg-[#FBFBFD] flex flex-col h-full relative overflow-hidden">
+      <div className="flex-1 bg-white flex flex-col h-full relative overflow-hidden">
         <div className="flex-1 overflow-y-auto no-scrollbar pb-64">
           <div className="px-6 pt-12 pb-6 flex justify-center">
             <div className="w-full max-w-sm aspect-square relative rounded-[4rem] overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.12)] bg-white border border-slate-100 group">
@@ -78,7 +79,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
 
           <div className="max-w-xl mx-auto space-y-10 p-8 md:p-12 pt-0">
             <div className="text-center space-y-2 mb-10">
-                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-brand-primary block">Best Seller</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-brand-primary block mb-2">Signature Selection</span>
                 <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none text-slate-900">
                     {item.name}
                 </h1>
@@ -86,7 +87,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
 
             <div className="border-b border-slate-100 pb-8 flex flex-col sm:flex-row items-center justify-between gap-6">
                <div className="text-center sm:text-left">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">Price</p>
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 leading-none">Standard Pricing</p>
                   <h2 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">₱{item.price.toLocaleString()}</h2>
                </div>
                
@@ -105,19 +106,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
 
             <div className="space-y-10">
               <div className="space-y-3">
-                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">About this dish</h3>
-                <p className="text-slate-500 text-lg leading-relaxed font-medium">
+                <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Product Information</h3>
+                <p className="text-slate-600 text-lg leading-relaxed font-medium">
                   {item.description}
                 </p>
               </div>
 
               {item.ingredients && item.ingredients.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Ingredients</h3>
+                  <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Component Breakdown</h3>
                   <div className="flex flex-wrap gap-2.5">
                     {item.ingredients.map((ing: any, i: number) => (
-                      <div key={i} className="bg-white border border-slate-100 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-primary/40"></div>
+                      <div key={i} className="bg-slate-50 border border-slate-100 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
+                        <div className="w-1.5 h-1.5 rounded-full bg-brand-primary"></div>
                         <span className="text-[10px] font-black uppercase text-slate-600 tracking-tight">
                           {typeof ing === 'string' ? ing : (ing.label || ing.key)}
                         </span>
@@ -128,41 +129,41 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
               )}
             </div>
 
-            <div className="space-y-8 bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
+            <div className="space-y-8 bg-slate-50/50 p-8 rounded-[3.5rem] border border-slate-100 shadow-inner">
                 <div className="space-y-3">
-                  <label className="text-[9px] font-black text-slate-900 uppercase tracking-[0.3em] ml-1">Your Name</label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Guest Identity</label>
                   <div className="relative">
-                    <i className="fa-solid fa-user absolute left-6 top-1/2 -translate-y-1/2 text-slate-200 text-xs"></i>
+                    <i className="fa-solid fa-user absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
                     <input 
                       type="text" 
-                      placeholder="Enter guest name" 
+                      placeholder="Enter name label" 
                       value={orderTo} 
                       onChange={(e) => setOrderTo(e.target.value)} 
-                      className="w-full bg-slate-50 border border-slate-50 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold outline-none focus:ring-4 ring-brand-primary/5 transition-all shadow-inner" 
+                      className="w-full bg-white border border-slate-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold outline-none focus:ring-4 ring-brand-primary/5 transition-all shadow-sm" 
                     />
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[9px] font-black text-slate-900 uppercase tracking-[0.3em] ml-1">Special Notes</label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Special Requirements</label>
                   <textarea 
-                    placeholder="Allergies or custom requests..." 
+                    placeholder="Allergies, modifications or notes..." 
                     value={instructions} 
                     onChange={(e) => setInstructions(e.target.value)} 
-                    className="w-full bg-slate-50 border border-slate-50 rounded-[2.5rem] py-6 px-8 text-sm font-bold outline-none h-36 resize-none focus:ring-4 ring-brand-primary/5 transition-all shadow-inner leading-relaxed" 
+                    className="w-full bg-white border border-slate-100 rounded-[2.5rem] py-6 px-8 text-sm font-bold outline-none h-36 resize-none focus:ring-4 ring-brand-primary/5 transition-all shadow-sm leading-relaxed" 
                   />
                 </div>
 
                 <div className="space-y-4 pt-2">
-                  <label className="text-[9px] font-black text-slate-900 uppercase tracking-[0.3em] ml-1">Service Mode</label>
-                  <div className="bg-slate-50 p-1.5 rounded-2xl flex border border-slate-100 shadow-inner">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Dispatch Mode</label>
+                  <div className="bg-slate-100/50 p-1.5 rounded-[2rem] flex border border-slate-100 shadow-inner">
                     {modes.map((mode) => (
                       <button
                         key={mode.id}
                         onClick={() => setOrderMode(mode.id)}
-                        className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-all ${orderMode === mode.id ? 'bg-white text-brand-primary shadow-md shadow-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-4 rounded-[1.5rem] transition-all ${orderMode === mode.id ? 'bg-white text-indigo-600 shadow-md shadow-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
                       >
-                        <i className={`fa-solid ${mode.icon} text-sm ${orderMode === mode.id ? 'animate-bounce' : ''}`}></i>
+                        <i className={`fa-solid ${mode.icon} text-sm`}></i>
                         <span className="text-[9px] font-black uppercase tracking-widest">{mode.label}</span>
                       </button>
                     ))}
@@ -176,27 +177,27 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
            <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center gap-6">
               <div className="flex items-center justify-between gap-8 w-full sm:w-auto">
                  <div className="shrink-0">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Total</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Net Total</p>
                     <p className="text-3xl font-black text-brand-primary tracking-tighter leading-none">₱{(item.price * quantity).toLocaleString()}</p>
                  </div>
                  
-                 <div className="flex items-center gap-4 bg-slate-100/80 p-2 rounded-2xl border border-slate-100">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-brand-primary transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-50"><i className="fa-solid fa-minus text-[10px]"></i></button>
+                 <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100 shadow-inner">
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-brand-primary transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-100"><i className="fa-solid fa-minus text-[10px]"></i></button>
                     <span className="font-black text-slate-900 text-xl tabular-nums min-w-[1.5rem] text-center">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-brand-primary transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-50"><i className="fa-solid fa-plus text-[10px]"></i></button>
+                    <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-brand-primary transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-100"><i className="fa-solid fa-plus text-[10px]"></i></button>
                  </div>
               </div>
 
               <div className="flex gap-3 w-full sm:flex-1 shrink-0">
                  <button 
                    onClick={handleAdd}
-                   className="flex-1 bg-slate-900 text-white py-6 rounded-[2.2rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all border border-white/10"
+                   className="flex-1 bg-slate-900 text-white py-6 rounded-[2.2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all border border-white/10"
                  >
-                   Add to cart
+                   Queue Order
                  </button>
                  <button 
                    onClick={handleKitchen}
-                   className="flex-[1.5] bg-brand-primary text-white py-6 rounded-[2.2rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-brand-primary/20 active:scale-95 transition-all hover:bg-orange-600"
+                   className="flex-[1.5] bg-brand-primary text-white py-6 rounded-[2.2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-xl shadow-brand-primary/20 active:scale-95 transition-all hover:bg-orange-600"
                  >
                    Order Now
                  </button>

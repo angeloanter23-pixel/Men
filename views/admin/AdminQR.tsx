@@ -61,9 +61,9 @@ const ShareModal: React.FC<{
                         <div>
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div>
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] italic">QR Ready</p>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em]">QR Ready</p>
                             </div>
-                            <h3 className="text-4xl font-black uppercase italic tracking-tighter text-slate-900 leading-tight">Share <span className="text-brand-primary">Code</span></h3>
+                            <h3 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-tight">Share <span className="text-brand-primary">Code</span></h3>
                         </div>
                         <button onClick={onClose} className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all border border-slate-100 shadow-sm active:scale-90"><i className="fa-solid fa-xmark text-xl"></i></button>
                     </header>
@@ -73,20 +73,20 @@ const ShareModal: React.FC<{
                             <div className="bg-white p-8 rounded-[3.5rem] shadow-2xl border border-slate-50 relative z-10 flex flex-col items-center">
                                 <canvas ref={canvasRef} className="rounded-2xl"></canvas>
                                 <div className="mt-6 flex items-center gap-3">
-                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Digital Access Key</p>
+                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Digital Access Key</p>
                                 </div>
                             </div>
                         </div>
                         <div className="space-y-6">
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Restaurant</p>
-                                <h4 className="text-2xl font-black uppercase italic text-slate-900 leading-none">{restaurantName}</h4>
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Business</p>
+                                <h4 className="text-2xl font-black uppercase text-slate-900 leading-none">{restaurantName}</h4>
                                 <p className="text-xs font-bold text-brand-primary uppercase tracking-tighter opacity-80">{branchName || 'Main'}</p>
                             </div>
                             <div className="h-px bg-slate-100 w-full"></div>
                             <div className="space-y-1">
-                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest italic">Label</p>
-                                <p className="text-sm font-black text-slate-800 uppercase italic leading-none">{asset.label}</p>
+                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Table Name</p>
+                                <p className="text-sm font-black text-slate-800 uppercase leading-none">{asset.label}</p>
                             </div>
                         </div>
                     </div>
@@ -134,7 +134,7 @@ const QRBlock: React.FC<{
       </div>
       <div className="flex items-start justify-between mb-8 relative z-10 pl-10">
         <div className="flex-1 pr-4">
-          <input type="text" value={localLabel} onBlur={() => localLabel !== asset.label && onUpdate(asset.id, localLabel, asset.code)} onChange={(e) => setLocalLabel(e.target.value)} className="text-xl font-black uppercase italic tracking-tighter text-brand-primary bg-transparent border-b-2 border-transparent hover:border-indigo-100 focus:border-brand-primary outline-none transition-all w-full mb-1" placeholder="Label..." />
+          <input type="text" value={localLabel} onBlur={() => localLabel !== asset.label && onUpdate(asset.id, localLabel, asset.code)} onChange={(e) => setLocalLabel(e.target.value)} className="text-xl font-black uppercase tracking-tighter text-brand-primary bg-transparent border-b-2 border-transparent hover:border-indigo-100 focus:border-brand-primary outline-none transition-all w-full mb-1" placeholder="Label..." />
           {branchName && <span className="text-[8px] font-black uppercase text-brand-primary tracking-widest bg-brand-secondary px-2 py-0.5 rounded-lg w-fit">{branchName}</span>}
         </div>
         <div className="flex gap-2">
@@ -211,7 +211,7 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
   });
 
   return (
-    <div className="flex flex-col h-full animate-fade-in relative overflow-x-hidden font-['Plus_Jakarta_Sans'] bg-slate-50/30">
+    <div className="flex flex-col h-full animate-fade-in relative overflow-x-hidden font-jakarta bg-slate-50/30">
       <div className="bg-white border-b border-slate-200 sticky top-0 z-[45] px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex gap-2">
           <button onClick={() => setActiveTab('gen')} className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'gen' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-500'}`}>Generator</button>
@@ -222,12 +222,6 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
             <option value="all">All Branches</option>
             {availableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-        )}
-        {activeTab === 'saved' && isBranchManager && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl">
-                <i className="fa-solid fa-location-dot text-indigo-600 text-[8px]"></i>
-                <span className="text-[8px] font-black uppercase text-indigo-600 tracking-widest italic">{availableBranches.find(b => b.id === userBranchId)?.name || 'Branch Terminal'}</span>
-            </div>
         )}
       </div>
 
@@ -240,29 +234,17 @@ const AdminQR: React.FC<AdminQRProps> = ({ availableBranches = [] }) => {
                 <button onClick={() => setMode('bulk')} className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase transition-all ${mode === 'bulk' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Bulk Create</button>
               </div>
               <div className="space-y-6">
-                {isSuperAdmin ? (
+                {isSuperAdmin && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Target Branch</label>
-                    <select value={genBranchId} onChange={(e) => setGenBranchId(e.target.value)} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm italic">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Target Branch</label>
+                    <select value={genBranchId} onChange={(e) => setGenBranchId(e.target.value)} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm">
                       <option value="">Select Branch...</option>
                       {availableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                   </div>
-                ) : (
-                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex items-center justify-between shadow-inner">
-                     <div className="space-y-1">
-                        <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest ml-1">Assigned Territory</p>
-                        <span className="text-sm font-black uppercase italic text-slate-900 tracking-tighter">
-                            {availableBranches.find(b => b.id === userBranchId)?.name || 'Branch Terminal'}
-                        </span>
-                     </div>
-                     <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100">
-                        <i className="fa-solid fa-lock text-xs"></i>
-                     </div>
-                  </div>
                 )}
-                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Table Label</label><input type="text" value={baseName} onChange={(e) => setBaseName(e.target.value)} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm italic shadow-inner" /></div>
-                {mode === 'bulk' && <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Total Quantity</label><input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm shadow-inner" /></div>}
+                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4">Table Label</label><input type="text" value={baseName} onChange={(e) => setBaseName(e.target.value)} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm shadow-inner" /></div>
+                {mode === 'bulk' && <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4">Total Quantity</label><input type="number" value={bulkCount} onChange={(e) => setBulkCount(Number(e.target.value))} className="w-full px-6 py-5 bg-slate-50 rounded-2xl outline-none font-black text-sm shadow-inner" /></div>}
                 <button disabled={loading || !genBranchId} onClick={handleGenerate} className="w-full bg-slate-900 text-white py-6 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600">{loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Generate QR'}</button>
               </div>
             </div>

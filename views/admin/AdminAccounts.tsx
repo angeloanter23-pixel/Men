@@ -221,13 +221,6 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ branches, setActiveTab })
                   )}
                 </div>
               )}
-
-              {isBranchManager && (
-                <div className="bg-indigo-50/50 p-5 rounded-3xl border border-indigo-100 flex items-center gap-4">
-                  <i className="fa-solid fa-location-arrow text-indigo-400"></i>
-                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none">Branch: {branches.find(b => b.id === userBranchId)?.name || 'Main Office'}</p>
-                </div>
-              )}
               
               {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest bg-rose-50 p-5 rounded-2xl border border-rose-100">{error}</p>}
               <button type="submit" disabled={modalLoading} className="w-full py-7 bg-slate-900 text-white rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600">
