@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MenuItem, CartItem, OrderMode } from '../types';
 
@@ -79,7 +78,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
 
           <div className="max-w-xl mx-auto space-y-10 p-8 md:p-12 pt-0">
             <div className="text-center space-y-2 mb-10">
-                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-brand-primary block mb-2">Signature Selection</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-[#FF6B00] block mb-2">Signature Selection</span>
                 <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none text-slate-900">
                     {item.name}
                 </h1>
@@ -118,7 +117,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
                   <div className="flex flex-wrap gap-2.5">
                     {item.ingredients.map((ing: any, i: number) => (
                       <div key={i} className="bg-slate-50 border border-slate-100 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-primary"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#FF6B00]"></div>
                         <span className="text-[10px] font-black uppercase text-slate-600 tracking-tight">
                           {typeof ing === 'string' ? ing : (ing.label || ing.key)}
                         </span>
@@ -139,7 +138,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
                       placeholder="Enter name label" 
                       value={orderTo} 
                       onChange={(e) => setOrderTo(e.target.value)} 
-                      className="w-full bg-white border border-slate-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold outline-none focus:ring-4 ring-brand-primary/5 transition-all shadow-sm" 
+                      className="w-full bg-white border border-slate-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold outline-none focus:ring-4 ring-orange-500/5 transition-all shadow-sm" 
                     />
                   </div>
                 </div>
@@ -150,7 +149,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
                     placeholder="Allergies, modifications or notes..." 
                     value={instructions} 
                     onChange={(e) => setInstructions(e.target.value)} 
-                    className="w-full bg-white border border-slate-100 rounded-[2.5rem] py-6 px-8 text-sm font-bold outline-none h-36 resize-none focus:ring-4 ring-brand-primary/5 transition-all shadow-sm leading-relaxed" 
+                    className="w-full bg-white border border-slate-100 rounded-[2.5rem] py-6 px-8 text-sm font-bold outline-none h-36 resize-none focus:ring-4 ring-orange-500/5 transition-all shadow-sm leading-relaxed" 
                   />
                 </div>
 
@@ -178,13 +177,13 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
               <div className="flex items-center justify-between gap-8 w-full sm:w-auto">
                  <div className="shrink-0">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Net Total</p>
-                    <p className="text-3xl font-black text-brand-primary tracking-tighter leading-none">₱{(item.price * quantity).toLocaleString()}</p>
+                    <p className="text-3xl font-black text-[#FF6B00] tracking-tighter leading-none">₱{(item.price * quantity).toLocaleString()}</p>
                  </div>
                  
                  <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100 shadow-inner">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-brand-primary transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-100"><i className="fa-solid fa-minus text-[10px]"></i></button>
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-100"><i className="fa-solid fa-minus text-[10px]"></i></button>
                     <span className="font-black text-slate-900 text-xl tabular-nums min-w-[1.5rem] text-center">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-brand-primary transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-100"><i className="fa-solid fa-plus text-[10px]"></i></button>
+                    <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-[#FF6B00] transition-all active:scale-90 shadow-sm flex items-center justify-center border border-slate-100"><i className="fa-solid fa-plus text-[10px]"></i></button>
                  </div>
               </div>
 
@@ -193,11 +192,11 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ item, isOpen, onClose, onAddT
                    onClick={handleAdd}
                    className="flex-1 bg-slate-900 text-white py-6 rounded-[2.2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all border border-white/10"
                  >
-                   Queue Order
+                   Add to Cart
                  </button>
                  <button 
                    onClick={handleKitchen}
-                   className="flex-[1.5] bg-brand-primary text-white py-6 rounded-[2.2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-xl shadow-brand-primary/20 active:scale-95 transition-all hover:bg-orange-600"
+                   className="flex-[1.5] bg-[#FF6B00] text-white py-6 rounded-[2.2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-xl shadow-orange-500/20 active:scale-95 transition-all hover:bg-orange-600"
                  >
                    Order Now
                  </button>

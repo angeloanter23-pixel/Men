@@ -47,7 +47,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
             <div className="my-8 border-t border-slate-800 pt-8 space-y-2">
               <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Support & Account</p>
               {navItem('orders', 'fa-receipt', 'My Orders')}
-              {navItem('feedback', 'fa-comment-dots', 'Send Review')}
+              {navItem('feedback-data', 'fa-star', 'Reviews')}
+              {navItem('feedback', 'fa-comment-dots', 'Write Review')}
             </div>
 
             <div className="my-2 space-y-2">

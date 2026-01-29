@@ -143,7 +143,7 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
                 </button>
                 <button 
                     onClick={() => setMode('ai')}
-                    className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${mode === 'ai' ? 'bg-white text-brand-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${mode === 'ai' ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     <i className="fa-solid fa-wand-magic-sparkles"></i>
                     <span>AI Genie</span>
@@ -163,8 +163,8 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
                 <>
                     <header className={`p-4 flex items-center justify-between border-b border-slate-50 ${mode === 'staff' ? 'bg-indigo-50' : 'bg-orange-50'}`}>
                         <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm ${mode === 'staff' ? 'bg-indigo-600' : 'bg-brand-primary'}`}>
-                                <i className={`fa-solid ${mode === 'staff' ? 'fa-user-tie' : 'fa-wand-magic-sparkles'} text-xs`}></i>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm ${mode === 'staff' ? 'bg-indigo-600' : 'bg-[#FF6B00]'}`}>
+                                <i className={`fa-solid ${mode === 'staff' ? 'fa-user-tie' : 'fa-wand-magic-sparkles'} text-xs text-white`}></i>
                             </div>
                             <div>
                                 <h4 className={`text-sm font-black uppercase tracking-tight leading-none ${mode === 'staff' ? 'text-indigo-900' : 'text-orange-900'}`}>
@@ -216,9 +216,9 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
                         <button 
                             onClick={handleSend}
                             disabled={loading || !input.trim()}
-                            className={`w-14 h-14 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:opacity-50 ${mode === 'staff' ? 'bg-indigo-600' : 'bg-brand-primary'}`}
+                            className="w-14 h-14 bg-[#FF6B00] text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:opacity-50"
                         >
-                            <i className="fa-solid fa-paper-plane"></i>
+                            <i className="fa-solid fa-paper-plane text-white"></i>
                         </button>
                     </div>
                 </>
