@@ -8,23 +8,20 @@ import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import DetailPanel from './components/DetailPanel';
 import FeedbackForm from './components/FeedbackForm';
-import GourmetAssistant from './components/GourmetAssistant';
+import SupportHub from './components/SupportHub';
 
 import MenuView from './views/MenuView';
 import CartView from './views/CartView';
 import OrdersView from './views/OrdersView';
 import QRVerifyView from './views/QRVerifyView';
 import GroupView from './views/GroupView';
-import LegalView from './views/LegalView';
 import AdminView from './views/AdminView';
 import FeedbackDataView from './views/FeedbackDataView';
 import LandingView from './views/LandingView';
 import PaymentView from './views/PaymentView';
 import CreateMenuView from './views/CreateMenuView';
-import TestSupabaseView from './views/TestSupabaseView';
 import SuperAdminView from './views/SuperAdminView';
 import AcceptInviteView from './views/AcceptInviteView';
-import PortfolioView from './views/PortfolioView';
 
 export interface OrderInstance extends CartItem {
   orderId: string;
@@ -38,7 +35,7 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [isSupportHubOpen, setIsSupportHubOpen] = useState(false);
   
   const hasMerchantSession = !!localStorage.getItem('foodie_supabase_session');
 
@@ -55,7 +52,7 @@ export default function App() {
   const [orders, setOrders] = useState<OrderInstance[]>([]);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
-  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, branchName?: string, theme?: any} | null>(null);
+  const [qrDetails, setQrDetails] = useState<{id: string, restaurant_id: string, label: string, token: string, restaurantName: string, theme?: any} | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const [appTheme, setAppTheme] = useState<any>({
@@ -75,38 +72,50 @@ export default function App() {
     document.documentElement.style.setProperty('--brand-font', merged.font_family);
   };
 
+  const handleQRDetected = async (token: string) => {
+    try {
+        const details = await MenuService.getQRCodeByCode(token);
+        if (details) {
+          setActiveTable(details.label);
+          const qrSession = {
+            id: details.id,
+            restaurant_id: details.restaurant_id,
+            label: details.label,
+            token: details.code,
+            restaurantName: details.restaurant_name || 'Merchant',
+            theme: details.theme
+          };
+          setQrDetails(qrSession);
+          localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
+          if (details.theme) applyTheme(details.theme);
+          
+          const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
+          setMenuItems(cloudMenu.items || []);
+          setCategories(cloudMenu.categories || []);
+          
+          // Ensure active session in DB
+          await MenuService.ensureActiveSession(details.id);
+          
+          return true;
+        }
+    } catch (err) {
+        console.error("Token verification error:", err);
+    }
+    return false;
+  };
+
   const syncStateWithURL = async () => {
     const path = window.location.pathname;
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
-      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu', 'test-supabase', 'accept-invite', 'portfolio'];
+      const reserved = ['menu', 'cart', 'orders', 'favorites', 'feedback', 'admin', 'super-admin', 'landing', 'create-menu', 'test-supabase', 'accept-invite'];
       if (!reserved.includes(token.toLowerCase())) {
-        try {
-          const details = await MenuService.getQRCodeByCode(token);
-          if (details) {
-            setActiveTable(details.label);
-            const qrSession = {
-              id: details.id,
-              restaurant_id: details.restaurant_id,
-              label: details.label,
-              token: details.code,
-              restaurantName: details.restaurant_name || 'Merchant',
-              branchName: details.branch_name,
-              theme: details.theme
-            };
-            setQrDetails(qrSession);
-            localStorage.setItem('foodie_active_qr', JSON.stringify(qrSession));
-            if (details.theme) applyTheme(details.theme);
-            const cloudMenu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
-            setMenuItems(cloudMenu.items || []);
-            setCategories(cloudMenu.categories || []);
+        const success = await handleQRDetected(token);
+        if (success) {
             setShowWelcomeModal(true);
             setCurrentView('menu');
             window.history.replaceState({}, '', '/#/menu');
             return;
-          }
-        } catch (err) {
-          console.error("Token error:", err);
         }
       }
     }
@@ -124,14 +133,10 @@ export default function App() {
       'favorites': 'favorites', 'feedback': 'feedback', 'feedback-data': 'feedback-data',
       'privacy': 'privacy', 'terms': 'terms', 'admin': 'admin', 'create-menu': 'create-menu',
       'payment': 'payment', 'qr-verify': 'qr-verify', 'group': 'group',
-      'test-supabase': 'test-supabase', 'super-admin': 'super-admin', 'accept-invite': 'accept-invite',
-      'portfolio': 'portfolio'
+      'super-admin': 'super-admin', 'accept-invite': 'accept-invite'
     };
-    if (viewMap[route]) {
-      setCurrentView(viewMap[route]);
-    } else {
-      setCurrentView(activeTable ? 'menu' : 'landing');
-    }
+    if (viewMap[route]) setCurrentView(viewMap[route]);
+    else setCurrentView(activeTable ? 'menu' : 'landing');
   };
 
   useEffect(() => {
@@ -181,36 +186,50 @@ export default function App() {
     setSelectedItem(item);
   };
 
-  const finalizeOrder = async () => {
+  const finalizeOrder = async (detectedToken?: string) => {
+    // If a token was provided during verify, sync state first
+    if (detectedToken) {
+        await handleQRDetected(detectedToken);
+    }
+
     const itemsToProcess = pendingSingleItem ? [pendingSingleItem] : cart;
     if (itemsToProcess.length === 0) { navigateTo('menu'); return; }
+    
+    // We get rid/token after potentially updating state above
     const sessionRaw = localStorage.getItem('foodie_supabase_session');
     const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-    const sessionRestaurantId = session?.restaurant?.id;
-    const restaurant_id = qrDetails?.restaurant_id || sessionRestaurantId;
-    const qr_token = qrDetails?.token || 'Demo';
-    if (!restaurant_id) {
+    const currentRID = qrDetails?.restaurant_id || session?.restaurant?.id;
+    const currentToken = qrDetails?.token || 'Demo';
+    
+    if (!currentRID) {
       if (pendingSingleItem) setPendingSingleItem(null);
       else setCart([]);
       navigateTo('orders');
       setSelectedItem(null);
       return;
     }
-    const dbOrders = itemsToProcess.map(item => ({
-      restaurant_id: restaurant_id,
-      item_id: String(item.id),
-      item_name: item.name,
-      price: Number(item.price),
-      quantity: Number(item.quantity),
-      amount: Number(item.price * item.quantity),
-      table_number: activeTable || 'Walk-in',
-      customer_name: item.orderTo || 'Guest',
-      order_status: 'Preparing',
-      payment_status: 'Unpaid',
-      instructions: item.customInstructions || '',
-      qr_code_token: qr_token
-    }));
+
     try {
+      // Ensure active table session is persistent
+      if (qrDetails?.id) {
+        await MenuService.ensureActiveSession(qrDetails.id);
+      }
+
+      const dbOrders = itemsToProcess.map(item => ({
+        restaurant_id: currentRID,
+        item_id: String(item.id),
+        item_name: item.name,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+        amount: Number(item.price * item.quantity),
+        table_number: activeTable || 'Walk-in',
+        customer_name: item.orderTo || 'Guest',
+        order_status: 'Pending',
+        payment_status: 'Unpaid',
+        instructions: item.customInstructions || '',
+        qr_code_token: currentToken
+      }));
+
       await MenuService.insertOrders(dbOrders);
       if (pendingSingleItem) setPendingSingleItem(null);
       else setCart([]);
@@ -234,20 +253,31 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'landing': return <LandingView onStart={() => navigateTo('menu')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={(c) => { navigateTo('menu'); }} />;
+      case 'landing': 
+        return (
+          <LandingView 
+            onStart={() => navigateTo('menu')} 
+            onCreateMenu={() => navigateTo('create-menu')} 
+            onImportMenu={(c) => { 
+              if (c.menu?.items) setMenuItems(c.menu.items);
+              if (c.menu?.categories) setCategories(c.menu.categories);
+              if (c.business?.logo) setLogo(c.business.logo);
+              navigateTo('menu'); 
+            }} 
+          />
+        );
       case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={(config) => { navigateTo('admin'); }} />;
       case 'menu': return <MenuView popularItems={menuItems.filter(i => i.is_popular)} categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
       case 'cart': return <CartView cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))} onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => navigateTo('qr-verify')} onGoBack={() => navigateTo('menu')} />;
       case 'payment': return <PaymentView total={0} onClose={() => navigateTo('orders')} onSuccess={() => { alert("Payment Successful!"); navigateTo('feedback'); }} />;
       case 'qr-verify': return <QRVerifyView onVerify={finalizeOrder} onCancel={() => { setPendingSingleItem(null); navigateTo(cart.length > 0 ? 'cart' : 'menu'); }} />;
-      case 'orders': return <OrdersView restaurantId={qrDetails?.restaurant_id} tableNumber={activeTable} onPayNow={() => navigateTo('payment')} onGoToMenu={() => navigateTo('menu')} />;
+      case 'orders': return <OrdersView restaurantId={qrDetails?.restaurant_id} tableNumber={activeTable} onIdentifyTable={() => navigateTo('qr-verify')} onPayNow={() => navigateTo('payment')} onGoToMenu={() => navigateTo('menu')} />;
       case 'feedback': return <FeedbackForm onSubmit={handleFeedbackSubmit} onCancel={() => navigateTo('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} />;
       case 'group': return <GroupView />;
       case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onExit={() => navigateTo('menu')} onLogoUpdate={setLogo} />;
       case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
       case 'accept-invite': return <AcceptInviteView onComplete={() => navigateTo('admin')} onCancel={() => navigateTo('landing')} />;
-      case 'portfolio': return <PortfolioView onBack={() => navigateTo('menu')} />;
       default: return null;
     }
   };
@@ -259,9 +289,9 @@ export default function App() {
     </div>
   );
 
-  const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin', 'menu', 'cart', 'orders', 'group', 'accept-invite', 'portfolio'].includes(currentView);
-  const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin', 'accept-invite', 'portfolio'].includes(currentView);
-  const showBottomNav = !['landing', 'admin', 'payment', 'create-menu', 'super-admin', 'accept-invite', 'portfolio'].includes(currentView);
+  const isDesktopFullWidthView = ['landing', 'admin', 'create-menu', 'super-admin', 'menu', 'cart', 'orders', 'group', 'accept-invite'].includes(currentView);
+  const showNavbar = !['admin', 'payment', 'landing', 'create-menu', 'super-admin', 'accept-invite'].includes(currentView);
+  const showBottomNav = !['landing', 'admin', 'payment', 'create-menu', 'super-admin', 'accept-invite'].includes(currentView);
 
   return (
     <div className={`min-h-screen bg-white relative overflow-x-hidden ${isDesktopFullWidthView ? 'w-full' : 'max-w-xl mx-auto shadow-2xl pb-24'}`}>
@@ -279,7 +309,7 @@ export default function App() {
 
       {showWelcomeModal && qrDetails && (
         <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-3xl flex items-center justify-center p-8 animate-fade-in">
-          <div className="bg-white rounded-[4rem] p-12 w-full max-w-sm text-center shadow-2xl space-y-10">
+          <div className="bg-white rounded-[4rem] p-12 w-full max-sm:p-8 max-w-sm text-center shadow-2xl space-y-10">
             <div className="w-24 h-24 bg-brand-secondary text-brand-primary rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm"><i className="fa-solid fa-utensils text-4xl"></i></div>
             <div className="space-y-8">
               <div>
@@ -287,13 +317,6 @@ export default function App() {
                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">Welcome to <span className="text-brand-primary">{qrDetails.restaurantName}</span></h2>
               </div>
               <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-100 space-y-8">
-                {qrDetails.branchName && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase text-brand-primary tracking-widest leading-none">Store</p>
-                    <p className="text-lg font-black text-slate-600 uppercase leading-none">{qrDetails.branchName}</p>
-                  </div>
-                )}
-                <div className="h-px bg-slate-200/50 w-full"></div>
                 <div className="space-y-2">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Table</p>
                   <p className="text-3xl font-black text-slate-800 uppercase leading-none">{qrDetails.label}</p>
@@ -307,31 +330,41 @@ export default function App() {
 
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
       <DetailPanel item={selectedItem} isOpen={!!selectedItem} onClose={() => handleItemSelect(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={handleSendToKitchenDirect} />
-      <GourmetAssistant isOpen={isAIAssistantOpen} onClose={() => setIsAIAssistantOpen(false)} menuItems={menuItems} onSelectItem={(it) => { handleItemSelect(it); setIsAIAssistantOpen(false); }} />
+      
+      {/* Support Hub - captures table context */}
+      <SupportHub 
+        isOpen={isSupportHubOpen} 
+        onClose={() => setIsSupportHubOpen(false)} 
+        menuItems={menuItems}
+        restaurantId={qrDetails?.restaurant_id || ''}
+        tableNumber={activeTable || 'Walk-in'}
+      />
 
       {showNavbar && <Navbar logo={logo} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.reduce((s, i) => s + i.quantity, 0)} />}
       
       <main className={showNavbar ? "min-h-[85vh] animate-fade-in" : ""}>{renderView()}</main>
       
-      {/* Floating AI Assistant Toggle */}
-      {currentView === 'menu' && (
-        <button 
-          onClick={() => setIsAIAssistantOpen(true)}
-          className="fixed bottom-20 right-6 z-[45] w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all group"
-        >
-          <div className="absolute inset-0 bg-brand-primary rounded-full animate-ping opacity-20 group-hover:opacity-40"></div>
-          <i className="fa-solid fa-wand-magic-sparkles text-xl"></i>
-        </button>
-      )}
-
       {showBottomNav && (
         <div className={`fixed bottom-0 ${isDesktopFullWidthView ? 'left-0 right-0' : 'left-1/2 -translate-x-1/2 w-full max-w-xl'} bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around px-4 h-14 z-40 shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.03)]`}>
-          {[{ v: 'menu', i: 'fa-house', l: 'Menu' }, { v: 'group', i: 'fa-users', l: 'Group' }, { v: 'favorites', i: 'fa-heart', l: 'Saved' }, { v: 'orders', i: 'fa-receipt', l: 'Orders' }].map(btn => {
+          {[
+            { v: 'menu', i: 'fa-house', l: 'Menu' }, 
+            { v: 'group', i: 'fa-users', l: 'Group' }, 
+            { v: 'messages', i: 'fa-comment-dots', l: 'Messages' }, 
+            { v: 'orders', i: 'fa-receipt', l: 'Orders' }
+          ].map(btn => {
             const isActive = currentView === btn.v;
+            // Favorites is now messages view logic
+            const handleClick = () => {
+                if (btn.v === 'messages') {
+                    setIsSupportHubOpen(true);
+                } else {
+                    navigateTo(btn.v as ViewState);
+                }
+            };
             return (
               <button 
                 key={btn.v} 
-                onClick={() => navigateTo(btn.v as ViewState)} 
+                onClick={handleClick} 
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all duration-200 ease-out transform
                   ${isActive ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-110' : 'text-slate-400 hover:text-slate-600'}
                 `}

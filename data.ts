@@ -1,4 +1,3 @@
-
 import { Category, MenuItem } from './types';
 
 export const categories: Category[] = [
@@ -19,6 +18,7 @@ export const menuItems: MenuItem[] = [
     category_id: 1,
     cat_name: 'Main Course',
     is_popular: true,
+    is_available: true,
     ingredients: ['Chicken Thighs', 'Soy Sauce', 'Cane Vinegar', 'Garlic', 'Bay Leaves', 'Peppercorns'],
     pax: '1-2 Persons',
     serving_time: '15-20 mins'
@@ -32,6 +32,7 @@ export const menuItems: MenuItem[] = [
     category_id: 5,
     cat_name: 'Snacks',
     is_popular: true,
+    is_available: true,
     ingredients: ['Wagyu Beef', 'Brioche Bun', 'Truffle Aioli', 'Cheddar Cheese', 'Onions'],
     pax: '1 Person',
     serving_time: '10-15 mins'
@@ -45,6 +46,7 @@ export const menuItems: MenuItem[] = [
     category_id: 3,
     cat_name: 'Beverages',
     is_popular: true,
+    is_available: true,
     ingredients: ['Arabica Coffee', 'Condensed Milk', 'Fresh Milk', 'Cinnamon'],
     pax: '1 Person',
     serving_time: '5 mins'
@@ -58,6 +60,7 @@ export const menuItems: MenuItem[] = [
     category_id: 2,
     cat_name: 'Breakfast',
     is_popular: false,
+    is_available: true,
     ingredients: ['Beef Tapa', 'Garlic Rice', 'Fresh Egg', 'Vinegar'],
     pax: '1 Person',
     serving_time: '10 mins'
@@ -71,6 +74,7 @@ export const menuItems: MenuItem[] = [
     category_id: 4,
     cat_name: 'Desserts',
     is_popular: true,
+    is_available: true,
     ingredients: ['Mango', 'Meringue', 'Chocolate Mousse', 'Cashews'],
     pax: '1 Person',
     serving_time: 'Immediate'
@@ -84,6 +88,7 @@ export const menuItems: MenuItem[] = [
     category_id: 1,
     cat_name: 'Main Course',
     is_popular: false,
+    is_available: true,
     ingredients: ['Pork Belly', 'Tamarind', 'Radish', 'Kangkong', 'Tomatoes'],
     pax: '2-3 Persons',
     serving_time: '20-25 mins'

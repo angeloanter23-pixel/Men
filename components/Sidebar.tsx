@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ViewState } from '../types';
 
@@ -44,18 +43,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
             <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Main Menu</p>
             {navItem('menu', 'fa-house', 'Home')}
             {navItem('group', 'fa-users', 'Group Order')}
-            {navItem('ai-assistant', 'fa-wand-magic-sparkles', 'AI Assistant')}
             
             <div className="my-8 border-t border-slate-800 pt-8 space-y-2">
-              <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">My Account</p>
+              <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Support & Account</p>
               {navItem('orders', 'fa-receipt', 'My Orders')}
-              {navItem('favorites', 'fa-heart', 'Saved Food')}
               {navItem('feedback', 'fa-comment-dots', 'Send Review')}
             </div>
 
             <div className="my-2 space-y-2">
               <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Dining Tools</p>
-              {navItem('portfolio', 'fa-briefcase', 'Portfolio')}
+              {navItem('landing', 'fa-rocket', 'Landing Page')}
               {navItem('super-admin', 'fa-shield-halved', 'System Status')}
             </div>
           </nav>

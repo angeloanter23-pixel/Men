@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { MenuItem, Category } from '../types';
 
@@ -19,23 +18,33 @@ const MenuView: React.FC<MenuViewProps> = ({
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  // Only show items that are available
+  const availableItems = useMemo(() => {
+    return filteredItems.filter(item => item.is_available !== false);
+  }, [filteredItems]);
+
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return filteredItems;
+    if (!searchQuery.trim()) return availableItems;
     const query = searchQuery.toLowerCase().trim();
-    return filteredItems.filter(item => 
+    return availableItems.filter(item => 
       item.name.toLowerCase().includes(query) || 
       item.description.toLowerCase().includes(query) ||
       item.cat_name.toLowerCase().includes(query)
     );
-  }, [filteredItems, searchQuery]);
+  }, [availableItems, searchQuery]);
 
   const suggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase().trim();
-    return filteredItems.filter(item => 
+    return availableItems.filter(item => 
       item.name.toLowerCase().includes(query)
     ).slice(0, 5);
-  }, [filteredItems, searchQuery]);
+  }, [availableItems, searchQuery]);
+
+  // Only show popular items that are available
+  const availablePopular = useMemo(() => {
+    return popularItems.filter(item => item.is_available !== false);
+  }, [popularItems]);
 
   return (
     <div className="animate-fade-in w-full bg-white">
@@ -95,14 +104,14 @@ const MenuView: React.FC<MenuViewProps> = ({
       </header>
 
       {/* Popular Items */}
-      {popularItems.length > 0 && !searchQuery && (
+      {availablePopular.length > 0 && !searchQuery && (
         <section className="mb-14">
           <div className="max-w-[1400px] mx-auto px-6 mb-6 flex items-center gap-4">
             <h2 className="font-black text-[10px] text-slate-900 uppercase tracking-[0.5em]">Today's Specials</h2>
             <div className="h-px bg-slate-100 flex-1"></div>
           </div>
           <div className="flex overflow-x-auto gap-5 px-6 md:px-0 md:pl-[calc((100%-1400px)/2+24px)] no-scrollbar pb-8">
-            {popularItems.map((item) => (
+            {availablePopular.map((item) => (
               <button 
                 key={item.id} 
                 onClick={() => onItemSelect(item)} 
@@ -132,7 +141,7 @@ const MenuView: React.FC<MenuViewProps> = ({
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="py-5">
             <div className="flex items-center gap-6">
-              <h2 className="hidden md:block font-black text-[10px] text-slate-300 uppercase tracking-[0.4em] shrink-0">Filter /</h2>
+              <h2 className="hidden md:block font-black text-[10px] text-slate-300 uppercase tracking-widest shrink-0">Filter /</h2>
               <div className="flex overflow-x-auto gap-3 no-scrollbar flex-1 items-center">
                 <button 
                   onClick={() => onCategorySelect('all')}
@@ -180,7 +189,7 @@ const MenuView: React.FC<MenuViewProps> = ({
               </div>
               <div className="px-2 flex-1 flex flex-col">
                 <div className="mb-4">
-                  <h4 className="font-black text-slate-900 text-2xl uppercase tracking-tight leading-tight mb-2 truncate pr-2">{item.name}</h4>
+                  <h4 className="font-black text-slate-900 text-2xl uppercase tracking-tight italic leading-tight mb-2 truncate pr-2">{item.name}</h4>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{item.cat_name}</span>
                     <div className="w-1 h-1 bg-slate-200 rounded-full"></div>

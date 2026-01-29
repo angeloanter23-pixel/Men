@@ -1,4 +1,3 @@
-
 const defaultCategories = [
   { id: 1, name: 'Main Course' },
   { id: 2, name: 'Breakfast' },
@@ -17,6 +16,7 @@ const defaultMenuItems = [
     category_id: 1,
     cat_name: 'Main Course',
     is_popular: true,
+    is_available: true,
     ingredients: ['Chicken Thighs', 'Soy Sauce', 'Cane Vinegar', 'Garlic', 'Bay Leaves', 'Peppercorns'],
     pax: '1-2 Persons',
     serving_time: '15-20 mins'
@@ -30,6 +30,7 @@ const defaultMenuItems = [
     category_id: 5,
     cat_name: 'Snacks',
     is_popular: true,
+    is_available: true,
     ingredients: ['Wagyu Beef', 'Brioche Bun', 'Truffle Aioli', 'Cheddar Cheese', 'Onions'],
     pax: '1 Person',
     serving_time: '10-15 mins'
@@ -43,6 +44,7 @@ const defaultMenuItems = [
     category_id: 3,
     cat_name: 'Beverages',
     is_popular: true,
+    is_available: true,
     ingredients: ['Arabica Coffee', 'Condensed Milk', 'Fresh Milk', 'Cinnamon'],
     pax: '1 Person',
     serving_time: '5 mins'

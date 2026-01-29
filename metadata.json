@@ -1,5 +1,7 @@
 {
   "name": "Foodie Premium SPA",
   "description": "A high-end digital menu and ordering single-page application with group ordering capabilities, detailed product panels, and order management.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }
