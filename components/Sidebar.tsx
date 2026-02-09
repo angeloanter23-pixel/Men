@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ViewState } from '../types';
 
@@ -9,13 +10,16 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentView }) => {
-  const navItem = (view: ViewState, icon: string, label: string) => (
+  const navItem = (view: ViewState, icon: string, label: string, badge?: string) => (
     <button 
       onClick={() => { onNavigate(view); onClose(); }} 
       className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold transition-all group text-left ${currentView === view ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-50/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
     >
       <i className={`fa-solid ${icon} text-base transition-colors ${currentView === view ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}></i> 
-      <span className="uppercase tracking-widest text-[11px]">{label}</span>
+      <div className="flex-1 flex items-center justify-between">
+        <span className="uppercase tracking-widest text-[11px]">{label}</span>
+        {badge && <span className="bg-[#FF6B00] text-white text-[7px] px-2 py-0.5 rounded-full font-black tracking-tighter">{badge}</span>}
+      </div>
     </button>
   );
 
@@ -42,6 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
           <nav className="space-y-2 flex-1 overflow-y-auto no-scrollbar pr-2">
             <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Main Menu</p>
             {navItem('menu', 'fa-house', 'Home')}
+            {navItem('ai-assistant', 'fa-wand-magic-sparkles', 'AI Assistant', 'AI')}
             {navItem('group', 'fa-users', 'Group Order')}
             
             <div className="my-8 border-t border-slate-800 pt-8 space-y-2">

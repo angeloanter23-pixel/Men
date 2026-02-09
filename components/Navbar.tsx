@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ViewState } from '../types';
 
@@ -30,18 +29,18 @@ const Navbar: React.FC<NavbarProps> = ({
         {logo ? (
           <img src={logo} alt="Logo" className="h-8 w-auto object-contain max-w-[140px]" />
         ) : (
-          <h1 className="font-black text-2xl tracking-tighter text-brand-primary uppercase">FOODIE.</h1>
+          <h1 className="font-black text-2xl tracking-tighter text-[#FF6B00] uppercase">FOODIE.</h1>
         )}
       </div>
       
       <div className="flex items-center gap-2">
         <button 
           onClick={onCartClick} 
-          className={`relative p-2 transition-all active:scale-90 ${currentView === 'cart' ? 'text-brand-primary' : 'text-slate-700'}`}
+          className={`relative p-2 transition-all active:scale-90 ${currentView === 'cart' ? 'text-[#FF6B00]' : 'text-slate-700'}`}
         >
           <i className="fa-solid fa-cart-shopping text-xl"></i>
           {cartCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-brand-primary text-white text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-black animate-pulse">
+            <span className="absolute -top-1 -right-1 bg-[#FF6B00] text-white text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-black animate-pulse">
               {cartCount}
             </span>
           )}

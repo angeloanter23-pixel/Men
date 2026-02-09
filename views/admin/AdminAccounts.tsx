@@ -21,8 +21,7 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
 
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'list' | 'invite'>('list');
-  const [formData, setFormData] = useState({ name: '', email: '', role: 'waiter' });
+  const [formData, setFormData] = useState({ email: '', role: 'waiter' });
   const [generatedInvite, setGeneratedInvite] = useState<string | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +31,14 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
   const fetchStaff = async () => {
     if (!restaurantId) return;
     setLoading(true);
-    try { const data = await MenuService.getStaffByRestaurantId(restaurantId); setStaff(data); } 
-    catch (err) { console.error("Staff sync failed", err); } 
-    finally { setLoading(false); }
+    try { 
+      const data = await MenuService.getStaffByRestaurantId(restaurantId); 
+      setStaff(data); 
+    } catch (err) { 
+      console.error("Staff loading failed", err); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const staffGroups = useMemo(() => {
@@ -48,86 +52,213 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
   }, [staff, currentUserEmail]);
 
   const handleAddStaff = async (e: React.FormEvent) => {
-    e.preventDefault(); setModalLoading(true); setError(null);
+    e.preventDefault(); 
+    setModalLoading(true); 
+    setError(null);
     try {
         const emailExists = await MenuService.checkEmailExists(formData.email);
-        if (emailExists) { setError("Email in use."); setModalLoading(false); return; }
+        if (emailExists) { 
+          setError("This email is already in use."); 
+          setModalLoading(false); 
+          return; 
+        }
         const invite = await MenuService.createStaffInvite(formData.email, formData.role, restaurantId);
         const inviteLink = `${window.location.origin}/#/accept-invite/${invite.invite_token}`;
-        setGeneratedInvite(inviteLink); await fetchStaff();
-    } catch (err: any) { setError(err.message || "Invite failed."); } 
-    finally { setModalLoading(false); }
-  };
-
-  const handleRemoveStaff = async (id: string, role: string, email: string) => {
-    if (role === 'super-admin') return alert("Cannot remove owners here.");
-    if (confirm(`Remove ${email} from staff?`)) {
-        try { await MenuService.deleteStaffMember(id); await fetchStaff(); } 
-        catch (err: any) { alert(err.message); }
+        setGeneratedInvite(inviteLink); 
+        await fetchStaff();
+    } catch (err: any) { 
+      setError(err.message || "Invite failed."); 
+    } finally { 
+      setModalLoading(false); 
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center h-full gap-6"><div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Synchronizing Accounts...</p></div>;
+  const handleRemoveStaff = async (id: string, role: string, email: string) => {
+    if (role === 'super-admin') return alert("Main accounts cannot be removed here.");
+    if (confirm(`Remove ${email} from your team?`)) {
+        try { 
+          await MenuService.deleteStaffMember(id); 
+          await fetchStaff(); 
+        } catch (err: any) { 
+          alert(err.message); 
+        }
+    }
+  };
+
+  const SettingRow: React.FC<{ icon: string; color: string; label: string; sub?: string; children: React.ReactNode; last?: boolean }> = ({ icon, color, label, sub, children, last }) => (
+    <div className={`flex items-center justify-between py-4 ${!last ? 'border-b border-slate-100' : ''}`}>
+      <div className="flex items-center gap-4 min-w-0">
+        <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white shrink-0 shadow-sm`}>
+          <i className={`fa-solid ${icon} text-[14px]`}></i>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-slate-800 tracking-tight leading-none mb-1 truncate">{label}</p>
+          {sub && <p className="text-[11px] text-slate-400 font-medium truncate">{sub}</p>}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 shrink-0 ml-4">
+        {children}
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 border-4 border-white border-t-indigo-600 rounded-full animate-spin shadow-sm"></div>
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Loading Team...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full animate-fade-in font-jakarta bg-white overflow-y-auto no-scrollbar pb-32">
-      <div className="bg-slate-50 border-b border-slate-100 p-6 lg:p-10 sticky top-0 z-[40] shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h2 className="text-3xl lg:text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Team Portal</h2>
-            <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
-                <button onClick={() => setActiveSubTab('list')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'list' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>Staff List</button>
-                <button onClick={() => setActiveSubTab('invite')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'invite' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>New Access</button>
-            </div>
-          </div>
-      </div>
+    <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
+      <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
+        
+        {/* Page Header */}
+        <header className="px-2">
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none">Team</h1>
+          <p className="text-slate-500 text-sm font-medium mt-2">Manage staff and account permissions.</p>
+        </header>
 
-      <div className="p-6 lg:p-14 max-w-6xl mx-auto w-full space-y-12">
-        {activeSubTab === 'list' ? (
-          <section className="space-y-12">
+        {/* Group 1: Your Profile */}
+        <section className="space-y-3">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Your Account</h3>
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/50">
             {staffGroups.you && (
-              <div className="bg-slate-900 p-10 lg:p-14 rounded-[4rem] text-white shadow-2xl flex flex-col md:flex-row items-center gap-10">
-                <div className="w-24 h-24 bg-white text-slate-900 rounded-[2.5rem] flex items-center justify-center text-4xl shadow-2xl shrink-0"><i className="fa-solid fa-crown"></i></div>
-                <div>
-                   <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Active Session / Master</p>
-                   <h3 className="text-4xl font-black uppercase tracking-tighter truncate mb-2">{staffGroups.you.email}</h3>
-                </div>
-              </div>
+              <SettingRow 
+                icon="fa-crown" 
+                color="bg-slate-900" 
+                label={staffGroups.you.email.split('@')[0]} 
+                sub={staffGroups.you.email}
+                last
+              >
+                <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  Master
+                </span>
+              </SettingRow>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {staffGroups.others.concat(staffGroups.pending).map(s => (
-                <div key={s.id} className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-xl transition-all">
-                  <div className="flex items-center gap-6">
-                    <div className={`w-14 h-14 ${s.status === 'pending' ? 'bg-amber-50 text-amber-500' : 'bg-indigo-50 text-indigo-600'} rounded-2xl flex items-center justify-center`}><i className={`fa-solid ${s.status === 'pending' ? 'fa-envelope' : 'fa-user-tie'}`}></i></div>
-                    <div className="min-w-0"><p className="text-lg font-black uppercase tracking-tight text-slate-800 leading-none mb-2 truncate">{s.email.split('@')[0]}</p><p className="text-[10px] text-slate-400 font-bold uppercase truncate tracking-widest leading-none">{s.email}</p></div>
-                  </div>
-                  <button onClick={() => handleRemoveStaff(s.id, s.role, s.email)} className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-200 hover:text-rose-500 border border-slate-100 transition-all"><i className="fa-solid fa-trash-can text-sm"></i></button>
+          </div>
+        </section>
+
+        {/* Group 2: Active Team Members */}
+        <section className="space-y-3">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Team Members</h3>
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/50">
+            {staffGroups.others.length > 0 ? staffGroups.others.map((s, idx) => (
+              <SettingRow 
+                key={s.id} 
+                icon="fa-user" 
+                color="bg-emerald-500" 
+                label={s.email.split('@')[0]} 
+                sub={s.email}
+                last={idx === staffGroups.others.length - 1}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.role}</span>
+                  <button onClick={() => handleRemoveStaff(s.id, s.role, s.email)} className="text-rose-400 hover:text-rose-600 transition-colors p-2">
+                    <i className="fa-solid fa-circle-minus text-lg"></i>
+                  </button>
                 </div>
+              </SettingRow>
+            )) : (
+              <p className="py-4 text-center text-sm font-medium text-slate-300 italic">No other staff added yet.</p>
+            )}
+          </div>
+        </section>
+
+        {/* Group 3: Pending Invites */}
+        {staffGroups.pending.length > 0 && (
+          <section className="space-y-3">
+            <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Pending Invites</h3>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/50">
+              {staffGroups.pending.map((s, idx) => (
+                <SettingRow 
+                  key={s.id} 
+                  icon="fa-envelope" 
+                  color="bg-amber-400" 
+                  label={s.email} 
+                  sub="Waiting for setup"
+                  last={idx === staffGroups.pending.length - 1}
+                >
+                  <button onClick={() => handleRemoveStaff(s.id, s.role, s.email)} className="text-rose-400 hover:text-rose-600 transition-colors p-2">
+                    <i className="fa-solid fa-circle-xmark text-lg"></i>
+                  </button>
+                </SettingRow>
               ))}
             </div>
           </section>
-        ) : (
-          <section className="max-w-lg mx-auto">
-            <div className="bg-white p-12 rounded-[4rem] border border-slate-100 shadow-2xl space-y-10">
-              {generatedInvite ? (
-                <div className="text-center space-y-10 py-4">
-                  <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto text-3xl"><i className="fa-solid fa-link"></i></div>
-                  <h4 className="text-3xl font-black uppercase tracking-tighter">Access Linked</h4>
-                  <div className="bg-slate-50 p-6 rounded-3xl break-all shadow-inner"><p className="text-[9px] font-mono font-bold text-indigo-500">{generatedInvite}</p></div>
-                  <button onClick={() => { navigator.clipboard.writeText(generatedInvite!); alert("Copied!"); }} className="w-full py-6 bg-slate-900 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl">Copy Invite Link</button>
-                  <button onClick={() => setGeneratedInvite(null)} className="text-[10px] font-black uppercase text-slate-300">New Invite</button>
-                </div>
-              ) : (
-                <form onSubmit={handleAddStaff} className="space-y-8">
-                  <div className="text-center space-y-4"><div className="w-16 h-16 bg-indigo-600 text-white rounded-[1.8rem] flex items-center justify-center mx-auto shadow-xl"><i className="fa-solid fa-user-plus text-2xl"></i></div><h4 className="text-3xl font-black uppercase tracking-tighter">Team Access</h4></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Staff Email</label><input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-50 border-none rounded-3xl p-6 text-sm font-bold outline-none shadow-inner" placeholder="staff@example.com" /></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Account Role</label><select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full bg-slate-50 p-6 rounded-3xl text-sm font-bold outline-none shadow-inner cursor-pointer"><option value="waiter">Staff Member</option><option value="super-admin">Administrator</option></select></div>
-                  {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest">{error}</p>}
-                  <button type="submit" disabled={modalLoading} className="w-full py-7 bg-slate-900 text-white rounded-3xl font-black uppercase text-[11px] tracking-[0.4em] shadow-2xl hover:bg-indigo-600 active:scale-95 transition-all">{modalLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Deploy Access Token'}</button>
-                </form>
-              )}
-            </div>
-          </section>
         )}
+
+        {/* Group 4: Add Member Form */}
+        <section className="space-y-3">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Invite Staff</h3>
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/50">
+            {generatedInvite ? (
+              <div className="text-center space-y-6 animate-fade-in">
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto text-xl">
+                  <i className="fa-solid fa-link"></i>
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-2">Invite Ready</h4>
+                  <p className="text-xs text-slate-500 font-medium">Send this link to your new team member.</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl break-all border border-slate-100 shadow-inner">
+                  <p className="text-[10px] font-mono font-bold text-indigo-600 leading-relaxed">{generatedInvite}</p>
+                </div>
+                <div className="flex gap-4">
+                  <button onClick={() => { navigator.clipboard.writeText(generatedInvite!); alert("Copied to clipboard!"); }} className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-100">Copy Link</button>
+                  <button onClick={() => setGeneratedInvite(null)} className="flex-1 py-3.5 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest">Done</button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleAddStaff} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Work Email</label>
+                    <input 
+                      required 
+                      type="email" 
+                      value={formData.email} 
+                      onChange={e => setFormData({...formData, email: e.target.value})} 
+                      className="w-full bg-slate-50 border border-slate-200/60 p-4 rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner" 
+                      placeholder="e.g. jason@restaurant.com" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Role</label>
+                    <div className="relative">
+                      <select 
+                        value={formData.role} 
+                        onChange={e => setFormData({...formData, role: e.target.value as any})} 
+                        className="w-full bg-slate-50 border border-slate-200/60 p-4 rounded-2xl font-bold text-sm text-slate-900 outline-none appearance-none cursor-pointer focus:bg-white transition-all shadow-inner"
+                      >
+                        <option value="waiter">Staff Member</option>
+                        <option value="super-admin">Administrator</option>
+                      </select>
+                      <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none text-xs"></i>
+                    </div>
+                  </div>
+                </div>
+
+                {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest">{error}</p>}
+                
+                <button 
+                  type="submit" 
+                  disabled={modalLoading} 
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {modalLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Send Invitation'}
+                </button>
+              </form>
+            )}
+          </div>
+        </section>
+
+        <footer className="text-center pt-8 opacity-40 pb-20">
+           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Team Security Node v1.2</p>
+        </footer>
       </div>
     </div>
   );

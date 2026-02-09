@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import * as MenuService from '../services/menuService';
 
@@ -331,7 +330,7 @@ const TestSupabaseView: React.FC = () => {
                        <p className="text-[10px] font-black uppercase text-indigo-500 tracking-[0.5em] mb-4 italic">Inventory Deployment / Structure</p>
                        <h4 className="text-slate-900 text-4xl font-black uppercase italic tracking-tighter leading-none">{activeBranch.name}</h4>
                     </div>
-                    <button onClick={() => openModal('category')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-100 active:scale-95 transition-all">Add Group Identity</button>
+                    <button onClick={() => openModal('category')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-100 active:scale-95 transition-all">Add Category</button>
                   </div>
 
                   <div className="flex flex-wrap gap-3">
@@ -341,7 +340,7 @@ const TestSupabaseView: React.FC = () => {
                         <button onClick={() => { if(confirm('Delete entire category?')) MenuService.deleteCategory(c.id).then(() => loadBranchMenu(activeBranch.subdomain)); }} className="text-slate-200 hover:text-rose-500 transition-all"><i className="fa-solid fa-circle-xmark"></i></button>
                       </div>
                     ))}
-                    {activeBranch.categories?.length === 0 && <p className="text-[11px] text-slate-300 font-black uppercase italic tracking-[0.2em]">Define groups to organize library resources.</p>}
+                    {activeBranch.categories?.length === 0 && <p className="text-[11px] text-slate-300 font-black uppercase italic tracking-[0.2em]">Define categories to organize library resources.</p>}
                   </div>
 
                   {/* Presets - Minimalist Flow */}
@@ -419,7 +418,7 @@ const TestSupabaseView: React.FC = () => {
                   <p className="text-[9px] font-black uppercase tracking-[0.5em] text-indigo-500 mb-3 italic">{session.restaurant.name}</p>
                   <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 italic leading-none">
                      {modalType === 'branch' && 'Deploy Branch'}
-                     {modalType === 'category' && 'Initialize Group'}
+                     {modalType === 'category' && 'Initialize Category'}
                      {modalType === 'item' && 'Define Dish'}
                      {modalType === 'delete-account' && 'Purge Context'}
                   </h2>

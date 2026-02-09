@@ -126,11 +126,15 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
   };
 
   const handlePinChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
+    // Only allow numbers and take the last character
+    const cleanValue = value.replace(/[^0-9]/g, '').slice(-1);
+    if (!cleanValue && value !== "") return;
+    
     const newPin = [...pin];
-    newPin[index] = value.slice(-1);
+    newPin[index] = cleanValue;
     setPin(newPin);
-    if (value && index < 3) pinRefs[index + 1].current?.focus();
+    
+    if (cleanValue && index < 3) pinRefs[index + 1].current?.focus();
   };
 
   const handleVerify = async () => {
@@ -141,14 +145,32 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
     try {
         const details = await MenuService.getQRCodeByCode(detectedToken);
         if (details) {
+            // Using the requested SQL logic: fetch active session for the QR code
             const session = await MenuService.verifySessionPin(details.id, fullPin);
             if (session) {
-                onVerify({ ...session, label: details.label, restaurantName: details.restaurant_name, theme: details.theme, restaurant_id: details.restaurant_id });
+                onVerify({ 
+                  ...session, 
+                  label: details.label, 
+                  restaurantName: details.restaurant_name, 
+                  theme: details.theme, 
+                  restaurant_id: details.restaurant_id,
+                  qr_token: details.code 
+                });
             }
-            else { setError("Incorrect PIN. Please ask staff for the table code."); setPin(['','','','']); pinRefs[0].current?.focus(); }
+            else { 
+              setError("Incorrect PIN. Please ask staff for the table code."); 
+              setPin(['','','','']); 
+              pinRefs[0].current?.focus(); 
+            }
+        } else {
+            setError("Table identity lost. Please scan again.");
+            setMode('scan');
         }
-    } catch (e) { setError("Verification failed. Check your connection."); }
-    finally { setLoading(false); }
+    } catch (e) { 
+      setError("Verification failed. Check your connection."); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   return (
@@ -158,7 +180,7 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-5 shrink-0" />
         <div className="px-8 pb-8 flex justify-between items-center border-b border-slate-50">
             <div>
-                <h2 className="text-2xl font-black text-slate-900 leading-none">Table <span className="text-brand-primary">Unlock</span></h2>
+                <h2 className="text-2xl font-black text-slate-900 leading-none">Table <span className="text-[#FF6B00]">Unlock</span></h2>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Required to place order</p>
             </div>
             <button onClick={onCancel} className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all shadow-sm"><i className="fa-solid fa-xmark"></i></button>
@@ -172,9 +194,9 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
                         <canvas ref={canvasRef} className="hidden" />
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="w-48 h-48 border-2 border-white/20 rounded-[2.5rem] relative">
-                                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-brand-primary rounded-tl-2xl"></div>
-                                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-brand-primary rounded-tr-2xl"></div>
-                                <div className="absolute inset-x-4 h-0.5 bg-brand-primary/50 shadow-[0_0_15px_rgba(255,107,0,0.5)] animate-scan"></div>
+                                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-[#FF6B00] rounded-tl-2xl"></div>
+                                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-[#FF6B00] rounded-tr-2xl"></div>
+                                <div className="absolute inset-x-4 h-0.5 bg-[#FF6B00]/50 shadow-[0_0_15px_rgba(255,107,0,0.5)] animate-scan"></div>
                             </div>
                         </div>
                     </div>
@@ -184,11 +206,16 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
                         <div className="w-full h-px bg-slate-100 my-2" />
                         
                         <button 
+                          disabled={loading}
                           onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-3 px-6 py-4 bg-slate-50 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100"
+                          className="flex items-center gap-3 px-6 py-4 bg-slate-50 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100 disabled:opacity-50"
                         >
-                          <i className="fa-solid fa-image text-brand-primary"></i>
-                          Use image QR
+                          {loading ? (
+                            <i className="fa-solid fa-spinner animate-spin text-[#FF6B00]"></i>
+                          ) : (
+                            <i className="fa-solid fa-image text-[#FF6B00]"></i>
+                          )}
+                          <span>{loading ? 'Processing Image...' : 'Use image QR'}</span>
                         </button>
                         <input 
                           type="file" 
@@ -202,20 +229,42 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
             ) : (
                 <div className="space-y-10 animate-fade-in">
                     <div className="text-center space-y-3">
-                        <div className="w-16 h-16 bg-brand-secondary text-brand-primary rounded-3xl flex items-center justify-center mx-auto text-2xl"><i className="fa-solid fa-lock"></i></div>
+                        <div className="w-16 h-16 bg-orange-50 text-[#FF6B00] rounded-3xl flex items-center justify-center mx-auto text-2xl"><i className="fa-solid fa-lock"></i></div>
                         <h4 className="text-xl font-black text-slate-800">Enter Table PIN</h4>
                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Ask our staff for the 4-digit code</p>
                     </div>
                     <div className="flex justify-center gap-4">
                         {pin.map((digit, idx) => (
-                            <input key={idx} ref={pinRefs[idx]} type="text" maxLength={1} value={digit} onChange={(e) => handlePinChange(idx, e.target.value)} onKeyDown={(e) => e.key === 'Backspace' && !digit && idx > 0 && pinRefs[idx - 1].current?.focus()} className="w-14 h-20 bg-slate-50 border-none rounded-2xl text-center text-3xl font-black text-slate-900 outline-none focus:ring-4 ring-brand-primary/5 shadow-inner" />
+                            <input 
+                                key={idx} 
+                                ref={pinRefs[idx]} 
+                                type="text" 
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                maxLength={1} 
+                                value={digit} 
+                                onChange={(e) => handlePinChange(idx, e.target.value)} 
+                                onKeyDown={(e) => e.key === 'Backspace' && !digit && idx > 0 && pinRefs[idx - 1].current?.focus()} 
+                                className="w-14 h-20 bg-slate-50 border-none rounded-2xl text-center text-3xl font-black text-slate-900 outline-none focus:ring-4 ring-orange-500/5 shadow-inner" 
+                            />
                         ))}
                     </div>
-                    <button onClick={handleVerify} disabled={loading || pin.join('').length < 4} className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-2xl active:scale-95 disabled:opacity-30">
-                        {loading ? 'Verifying...' : 'Unlock Table'}
+                    <button 
+                        onClick={handleVerify} 
+                        disabled={loading || pin.join('').length < 4} 
+                        className="w-full bg-[#FF6B00] text-white py-6 rounded-[2rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                    >
+                        {loading ? (
+                            <>
+                                <i className="fa-solid fa-spinner animate-spin"></i>
+                                <span>Verifying...</span>
+                            </>
+                        ) : (
+                            'Unlock Table'
+                        )}
                     </button>
                     {!initialToken && (
-                        <button onClick={() => setMode('scan')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-all">Scan Different Table</button>
+                        <button disabled={loading} onClick={() => setMode('scan')} className="w-full text-[10px] font-black uppercase text-slate-300 hover:text-slate-900 tracking-widest transition-all disabled:opacity-20">Scan Different Table</button>
                     )}
                 </div>
             )}

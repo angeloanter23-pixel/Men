@@ -18,7 +18,7 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
         <div className="w-28 h-28 bg-slate-50 text-slate-200 rounded-full flex items-center justify-center mb-8 text-5xl shadow-inner">
           <i className="fa-solid fa-cart-shopping"></i>
         </div>
-        <h2 className="text-4xl font-black text-slate-900 mb-4 uppercase tracking-tighter">Your cart is <span className="text-brand-primary">empty</span></h2>
+        <h2 className="text-4xl font-black text-slate-900 mb-4 uppercase tracking-tighter">Your cart is <span className="text-[#FF6B00]">empty</span></h2>
         <p className="text-slate-400 text-base max-w-sm mb-12 leading-relaxed font-medium">Add some items from the menu to start your order.</p>
         <button onClick={onGoBack} className="bg-slate-900 text-white px-16 py-6 rounded-[2rem] font-black text-[11px] tracking-widest uppercase shadow-2xl active:scale-95 transition-all">Go to Menu</button>
       </div>
@@ -29,8 +29,8 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
     <div className="animate-fade-in bg-[#FBFBFD] min-h-screen">
       <div className="max-w-[800px] mx-auto px-6 py-12">
         <header className="mb-12">
-          <p className="text-[11px] font-black text-brand-primary uppercase tracking-[0.4em] mb-2 leading-none">Your Selection</p>
-          <h1 className="text-5xl md:text-7xl font-black text-slate-900 uppercase tracking-tighter leading-none">Your <span className="text-brand-primary">Cart</span></h1>
+          <p className="text-[11px] font-black text-[#FF6B00] uppercase tracking-[0.4em] mb-2 leading-none">Your Selection</p>
+          <h1 className="text-5xl md:text-7xl font-black text-slate-900 uppercase tracking-tighter leading-none">Your <span className="text-[#FF6B00]">Cart</span></h1>
         </header>
 
         <div className="space-y-5 pb-48">
@@ -45,7 +45,7 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
                    <div>
                      <h4 className="font-black text-xl text-slate-800 uppercase tracking-tight mb-1">{item.name}</h4>
                      <div className="flex items-center gap-4">
-                       <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">For: {item.orderTo}</span>
+                       <span className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest">For: {item.orderTo}</span>
                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">• {item.orderMode}</span>
                      </div>
                    </div>
@@ -54,6 +54,29 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
                    </button>
                  </div>
                  
+                 {/* OPTIONS BREAKDOWN */}
+                 {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                   <div className="mt-4 space-y-1.5 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
+                      {Object.entries(item.selectedOptions).map(([groupName, options]) => (
+                        <div key={groupName} className="flex flex-col gap-0.5">
+                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{groupName}</span>
+                           <div className="flex flex-wrap gap-x-3 gap-y-1">
+                              {(options as string[]).map(optName => {
+                                // Find price for this option
+                                const group = item.option_groups?.find(g => g.name === groupName);
+                                const opt = group?.options.find(o => o.name === optName);
+                                return (
+                                  <span key={optName} className="text-[11px] font-bold text-slate-600">
+                                    {optName} {opt && opt.price > 0 && <span className="text-[#FF6B00] font-black text-[9px] ml-1">+₱{opt.price}</span>}
+                                  </span>
+                                );
+                              })}
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                 )}
+
                  {item.customInstructions && (
                    <div className="mt-3 text-[11px] text-slate-400 font-bold uppercase leading-relaxed">
                      Note: {item.customInstructions}
@@ -61,11 +84,14 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
                  )}
 
                  <div className="flex justify-between items-end mt-6">
-                   <span className="text-2xl font-black text-slate-900 tracking-tighter">₱{(item.price * item.quantity).toLocaleString()}</span>
+                   <div className="flex flex-col">
+                     <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Unit Total</span>
+                     <span className="text-2xl font-black text-slate-900 tracking-tighter">₱{(item.price * item.quantity).toLocaleString()}</span>
+                   </div>
                    <div className="flex items-center gap-5 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-                     <button onClick={() => onUpdateQuantity(idx, -1)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-brand-primary transition-all"><i className="fa-solid fa-minus text-sm"></i></button>
+                     <button onClick={() => onUpdateQuantity(idx, -1)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-[#FF6B00] transition-all"><i className="fa-solid fa-minus text-sm"></i></button>
                      <span className="text-lg font-black text-slate-800 w-6 text-center tabular-nums">{item.quantity}</span>
-                     <button onClick={() => onUpdateQuantity(idx, 1)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-brand-primary transition-all"><i className="fa-solid fa-plus text-sm"></i></button>
+                     <button onClick={() => onUpdateQuantity(idx, 1)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-[#FF6B00] transition-all"><i className="fa-solid fa-plus text-sm"></i></button>
                    </div>
                  </div>
                </div>
@@ -78,7 +104,7 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
       <div className="fixed bottom-24 left-0 right-0 p-6 z-[45] flex justify-center">
         <button 
           onClick={onCheckout} 
-          className="w-full max-w-md bg-slate-900 text-white py-6 px-10 rounded-[2.5rem] font-black text-[12px] uppercase tracking-[0.2em] shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 border-2 border-white/10 flex justify-between items-center group transition-all hover:bg-brand-primary hover:border-brand-primary/20"
+          className="w-full max-w-md bg-[#FF6B00] text-white py-6 px-10 rounded-[2.5rem] font-black text-[12px] uppercase tracking-[0.2em] shadow-[0_20px_50px_rgba(255,107,0,0.3)] active:scale-95 border-2 border-white/10 flex justify-between items-center group transition-all hover:bg-orange-600"
         >
           <span>Order Everything</span>
           <div className="flex items-center gap-3">

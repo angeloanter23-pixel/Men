@@ -1,5 +1,38 @@
+import React, { useState, useEffect, useRef } from 'react';
 
-import React, { useState } from 'react';
+// --- Scroll Reveal Animation Wrapper (Localized for consistency) ---
+const Reveal: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{ 
+        transitionDelay: `${delay}ms`,
+        transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+        opacity: isVisible ? 1 : 0
+      }}
+      className="transition-all duration-[1000ms] cubic-bezier(0.23, 1, 0.32, 1)"
+    >
+      {children}
+    </div>
+  );
+};
 
 const GroupView: React.FC = () => {
   const [isHosting, setIsHosting] = useState(false);
@@ -30,88 +63,99 @@ const GroupView: React.FC = () => {
   };
 
   return (
-    <div className="animate-fade-in font-jakarta bg-white min-h-screen">
-      <div className="max-w-[1000px] mx-auto px-6 py-12 md:py-24">
+    <div className="animate-fade-in font-jakarta bg-[#FBFBFD] min-h-screen pb-40">
+      <div className="max-w-[1024px] mx-auto px-6 py-16 md:py-24">
         
-        {/* Simplified Header */}
-        <header className="mb-16">
-          <div className="flex items-center gap-3 mb-4">
-             <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
-             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Social Dining</p>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter uppercase leading-tight mb-6">
-            Group <span className="text-brand-primary">Ordering.</span>
-          </h1>
-          <p className="text-slate-500 text-base md:text-lg font-medium leading-relaxed max-w-xl">
-            Order together in real-time. Share one basket with everyone at your table for a faster, simpler dining experience.
-          </p>
+        {/* Apple Style Header */}
+        <header className="mb-20 text-center md:text-left">
+          <Reveal>
+            <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
+               <div className="w-1.5 h-1.5 rounded-full bg-[#007AFF]"></div>
+               <p className="text-[12px] font-bold text-[#86868B] uppercase tracking-[0.2em]">Connected Dining</p>
+            </div>
+            <h1 className="text-[48px] md:text-[80px] font-bold text-[#1D1D1F] tracking-[-0.04em] leading-[1.05] mb-8">
+              Dining. <br className="md:hidden" /> Together.
+            </h1>
+            <p className="text-[19px] md:text-[24px] text-[#86868B] font-medium leading-snug max-w-2xl">
+              One table. One order. Share a real-time basket with everyone in your group for a seamless, unified experience.
+            </p>
+          </Reveal>
         </header>
 
         {!isHosting ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
             
-            {/* Action 1: Join */}
-            <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-100 flex flex-col justify-between space-y-10">
-              <div className="space-y-4">
-                <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
-                  <i className="fa-solid fa-right-to-bracket text-xl"></i>
+            {/* Join Bento Card */}
+            <div className="md:col-span-7 bg-white rounded-[2.5rem] p-10 md:p-14 border border-slate-200/60 shadow-[0_20px_40px_rgba(0,0,0,0.02)] flex flex-col justify-between space-y-12">
+              <Reveal delay={100}>
+                <div className="space-y-4">
+                  <div className="w-14 h-14 bg-[#F5F5F7] rounded-2xl flex items-center justify-center text-[#1D1D1F]">
+                    <i className="fa-solid fa-right-to-bracket text-xl"></i>
+                  </div>
+                  <h3 className="text-[28px] md:text-[32px] font-bold text-[#1D1D1F] tracking-tight">Join a Table.</h3>
+                  <p className="text-[17px] text-[#86868B] font-medium leading-tight">Enter the 6-digit access code displayed on the host's screen or provided by your server.</p>
                 </div>
-                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Join a Table</h3>
-                <p className="text-slate-500 text-sm font-medium">Enter the 6-digit access code provided by your host or server.</p>
-              </div>
+              </Reveal>
 
-              <div className="space-y-4">
-                <input 
-                  type="text" 
-                  maxLength={6}
-                  placeholder="ENTER PIN"
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  className="w-full bg-white border border-slate-200 rounded-2xl p-5 text-center font-black tracking-[0.4em] uppercase text-slate-800 outline-none focus:ring-4 ring-slate-100 transition-all text-xl shadow-sm"
-                />
-                <button 
-                  disabled={joinCode.length < 4}
-                  className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all disabled:opacity-30"
-                >
-                  Join Group
-                </button>
-                
-                <div className="pt-4 text-center border-t border-slate-200/50">
-                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">No pin yet?</p>
-                   <button 
-                    onClick={notifyWaiter}
-                    className="flex items-center justify-center gap-3 w-full py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase text-indigo-600 tracking-widest hover:bg-slate-50 transition-all"
-                   >
-                     <i className="fa-solid fa-bell"></i> Notify a Waiter
-                   </button>
+              <Reveal delay={200}>
+                <div className="space-y-6">
+                  <div className="relative group">
+                    <input 
+                      type="text" 
+                      maxLength={6}
+                      placeholder="ENTER CODE"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                      className="w-full bg-[#F5F5F7] border border-transparent rounded-[1.5rem] p-6 text-center font-bold tracking-[0.4em] uppercase text-[#1D1D1F] outline-none focus:bg-white focus:ring-4 ring-[#007AFF]/5 transition-all text-2xl shadow-inner"
+                    />
+                  </div>
+                  <button 
+                    disabled={joinCode.length < 4}
+                    className="w-full bg-[#1D1D1F] text-white py-6 rounded-full font-bold text-[17px] transition-all hover:bg-black active:scale-95 disabled:opacity-30 shadow-lg"
+                  >
+                    Connect to Group
+                  </button>
+                  
+                  <div className="pt-8 text-center border-t border-slate-100/80">
+                     <button 
+                      onClick={notifyWaiter}
+                      className="group flex items-center justify-center gap-3 w-full py-4 text-[14px] font-semibold text-[#007AFF] hover:underline transition-all"
+                     >
+                       <i className="fa-solid fa-bell text-[12px] opacity-70 group-hover:animate-bounce"></i> Notify Table Server
+                     </button>
+                  </div>
                 </div>
-              </div>
+              </Reveal>
             </div>
 
-            {/* Action 2: Host */}
-            <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex flex-col justify-between space-y-10 relative overflow-hidden group">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
+            {/* Host Bento Card */}
+            <div className="md:col-span-5 bg-[#5856D6] text-white rounded-[2.5rem] p-10 md:p-14 flex flex-col justify-between space-y-12 relative overflow-hidden group">
+              <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-[80px] group-hover:scale-125 transition-transform duration-[3s]"></div>
               
-              <div className="space-y-4 relative z-10">
-                <div className="w-14 h-14 bg-brand-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-primary/20">
-                  <i className="fa-solid fa-crown text-xl"></i>
+              <Reveal delay={300}>
+                <div className="space-y-4 relative z-10">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center text-white border border-white/10">
+                    <i className="fa-solid fa-crown text-xl"></i>
+                  </div>
+                  <h3 className="text-[28px] md:text-[32px] font-bold text-white tracking-tight leading-tight">Start a <br/> New Group.</h3>
+                  <p className="text-[17px] text-white/70 font-medium leading-snug">Create a cloud-synced ordering node and invite others to join your basket instantly.</p>
                 </div>
-                <h3 className="text-2xl font-black text-white uppercase tracking-tight">Host a Group</h3>
-                <p className="text-slate-400 text-sm font-medium">Create a new cloud session and invite others to join your order.</p>
-              </div>
+              </Reveal>
 
-              <div className="space-y-4 relative z-10">
-                <button 
-                  onClick={startSession}
-                  className="w-full bg-white text-slate-900 py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all hover:bg-slate-100"
-                >
-                  Start New Session
-                </button>
-                <div className="flex items-center gap-3 justify-center pt-2">
-                   <i className="fa-solid fa-shield-halved text-slate-600 text-[10px]"></i>
-                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">End-to-End Secure Connection</p>
+              <Reveal delay={400}>
+                <div className="space-y-6 relative z-10">
+                  <button 
+                    onClick={startSession}
+                    className="w-full bg-white text-[#5856D6] py-6 rounded-full font-bold text-[17px] transition-all hover:bg-[#FBFBFD] active:scale-95 shadow-xl"
+                  >
+                    Generate Session
+                  </button>
+                  <div className="flex items-center gap-2.5 justify-center opacity-60">
+                     <i className="fa-solid fa-shield-halved text-[10px]"></i>
+                     <p className="text-[11px] font-bold uppercase tracking-widest leading-none">Encrypted Persistence</p>
+                  </div>
                 </div>
-              </div>
+              </Reveal>
             </div>
           </div>
         ) : (
@@ -119,90 +163,96 @@ const GroupView: React.FC = () => {
             
             {/* Session ID Card */}
             <div className="lg:col-span-5 space-y-6">
-              <div className="bg-indigo-600 p-12 rounded-[4rem] text-white shadow-2xl relative overflow-hidden text-center">
-                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/50 mb-4">Table Access Code</p>
-                 <h2 className="text-7xl font-black tracking-tighter mb-10 leading-none">{sessionCode}</h2>
-                 
-                 <div className="flex justify-center -space-x-3 mb-10">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="w-14 h-14 rounded-2xl border-4 border-indigo-600 bg-slate-100 overflow-hidden shadow-xl">
-                         <img src={`https://i.pravatar.cc/100?u=${i + 20}`} className="w-full h-full object-cover" alt="Member" />
+              <Reveal>
+                <div className="bg-[#5856D6] p-12 md:p-16 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden text-center border border-white/10">
+                   <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+                   <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-white/50 mb-6">Group Access Code</p>
+                   <h2 className="text-[64px] md:text-[80px] font-black tracking-[-0.04em] mb-10 leading-none">{sessionCode}</h2>
+                   
+                   <div className="flex justify-center -space-x-3 mb-12">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="w-14 h-14 rounded-2xl border-[3px] border-[#5856D6] bg-[#F5F5F7] overflow-hidden shadow-xl">
+                           <img src={`https://i.pravatar.cc/100?u=${i + 40}`} className="w-full h-full object-cover" alt="Member" />
+                        </div>
+                      ))}
+                      <div className="w-14 h-14 rounded-2xl border-[3px] border-[#5856D6] bg-white flex items-center justify-center text-[#5856D6] text-[13px] font-black shadow-xl">
+                         +1
                       </div>
-                    ))}
-                    <div className="w-14 h-14 rounded-2xl border-4 border-indigo-600 bg-white flex items-center justify-center text-indigo-600 text-xs font-black shadow-xl">
-                       +1
-                    </div>
-                 </div>
-                 
-                 <button 
-                   onClick={handleShare}
-                   className="w-full bg-white text-indigo-600 py-6 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all hover:bg-slate-50"
-                 >
-                   Share Invitation
-                 </button>
-              </div>
-              <p className="text-center text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Invite guests to scan and enter this PIN</p>
+                   </div>
+                   
+                   <button 
+                     onClick={handleShare}
+                     className="w-full bg-white text-[#5856D6] py-6 rounded-full font-bold text-[16px] transition-all hover:bg-[#FBFBFD] active:scale-95 shadow-xl"
+                   >
+                     Invite Guests
+                   </button>
+                </div>
+                <p className="text-center text-[12px] font-bold text-[#86868B] uppercase tracking-widest mt-8">Guests can scan and enter this code to join</p>
+              </Reveal>
             </div>
 
             {/* Member List */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-8">
-                <div className="flex justify-between items-center border-b border-slate-50 pb-6">
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Active Members</h4>
-                  <span className="flex items-center gap-2 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Live Sync
-                  </span>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-5 bg-slate-50 rounded-3xl border border-slate-100">
-                     <div className="flex items-center gap-4">
-                        <img src="https://i.pravatar.cc/100?u=21" className="w-10 h-10 rounded-xl border border-white" alt="Self" />
-                        <div>
-                          <p className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none mb-1">You (Host)</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Primary User</p>
-                        </div>
-                     </div>
-                     <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Browsing</span>
+            <div className="lg:col-span-7 space-y-8">
+              <Reveal delay={200}>
+                <div className="bg-white p-10 md:p-12 rounded-[2.5rem] border border-slate-200/60 shadow-[0_20px_60px_rgba(0,0,0,0.02)] space-y-10">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-8">
+                    <h4 className="text-[14px] font-bold text-[#1D1D1F] uppercase tracking-wider">Session Members</h4>
+                    <span className="flex items-center gap-2 text-[11px] font-bold text-[#34C759] uppercase tracking-widest">
+                      <span className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse"></span>
+                      Active Sync
+                    </span>
                   </div>
                   
-                  <div className="flex items-center justify-between p-5 bg-slate-50 rounded-3xl border border-slate-100 opacity-60">
-                     <div className="flex items-center gap-4">
-                        <img src="https://i.pravatar.cc/100?u=22" className="w-10 h-10 rounded-xl border border-white" alt="Guest" />
-                        <div>
-                          <p className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none mb-1">Alex Morgan</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Guest Member</p>
-                        </div>
-                     </div>
-                     <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Connected</span>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-6 bg-[#F5F5F7] rounded-[1.5rem] border border-transparent hover:bg-white hover:border-slate-200 transition-all group">
+                       <div className="flex items-center gap-5">
+                          <img src="https://i.pravatar.cc/100?u=41" className="w-12 h-12 rounded-xl border border-white shadow-sm" alt="Self" />
+                          <div>
+                            <p className="text-[16px] font-bold text-[#1D1D1F] tracking-tight mb-1">You (Host)</p>
+                            <p className="text-[11px] text-[#86868B] font-semibold uppercase tracking-widest">Owner Account</p>
+                          </div>
+                       </div>
+                       <span className="text-[11px] font-bold text-[#5856D6] uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg shadow-sm">Browsing</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-6 bg-[#F5F5F7] rounded-[1.5rem] border border-transparent opacity-60">
+                       <div className="flex items-center gap-5">
+                          <img src="https://i.pravatar.cc/100?u=42" className="w-12 h-12 rounded-xl border border-white shadow-sm" alt="Guest" />
+                          <div>
+                            <p className="text-[16px] font-bold text-[#1D1D1F] tracking-tight mb-1">Alex Morgan</p>
+                            <p className="text-[11px] text-[#86868B] font-semibold uppercase tracking-widest">Guest Member</p>
+                          </div>
+                       </div>
+                       <span className="text-[11px] font-bold text-[#86868B] uppercase tracking-widest">Connected</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-6">
+                     <button 
+                      onClick={() => window.location.hash = '#/menu'}
+                      className="w-full bg-[#1D1D1F] text-white py-6 rounded-full font-bold text-[17px] transition-all hover:bg-black active:scale-95 shadow-lg"
+                     >
+                       Return to Menu
+                     </button>
                   </div>
                 </div>
+              </Reveal>
 
-                <div className="pt-6">
-                   <button 
-                    onClick={() => window.location.hash = '#/menu'}
-                    className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all"
-                   >
-                     Return to Menu
-                   </button>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => setIsHosting(false)}
-                className="w-full py-4 text-[10px] font-black uppercase text-slate-300 hover:text-rose-500 transition-all tracking-[0.2em]"
-              >
-                End Session and Leave
-              </button>
+              <Reveal delay={400}>
+                <button 
+                  onClick={() => setIsHosting(false)}
+                  className="w-full py-4 text-[13px] font-bold uppercase text-[#FF3B30] hover:underline transition-all tracking-wider"
+                >
+                  Terminate Session and Leave
+                </button>
+              </Reveal>
             </div>
           </div>
         )}
       </div>
       
-      <footer className="py-20 border-t border-slate-50 text-center opacity-20">
-         <p className="text-[10px] font-black uppercase tracking-[1em]">Secure Group Node</p>
+      <footer className="py-24 border-t border-slate-100 text-center opacity-40">
+         <p className="text-[10px] font-bold text-[#86868B] uppercase tracking-[0.8em]">PLATINUM CORE v4.5 GROUP NODE</p>
       </footer>
     </div>
   );

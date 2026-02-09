@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { MenuItem } from '../types';
@@ -11,7 +12,7 @@ interface SupportHubProps {
   tableNumber: string;
 }
 
-const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, restaurantId, tableNumber }) => {
+const GourmetAssistantComponent: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, restaurantId, tableNumber }) => {
   const [mode, setMode] = useState<'staff' | 'ai'>('staff');
   const [messages, setMessages] = useState<{role: 'user' | 'model' | 'staff' | 'ai', text: string, created_at?: string}[]>([
     { role: 'model', text: "Welcome! I'm your Support Hub. You can chat with our Staff for immediate assistance, or switch to AI for personalized dish recommendations!" }
@@ -26,11 +27,10 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
     }
   }, [messages]);
 
-  // Handle live staff messages if needed
   useEffect(() => {
     if (!restaurantId || mode !== 'staff') return;
     
-    const channel = MenuService.supabase.channel('guest-chat-live')
+    const channel = MenuService.supabase.channel('guest-chat-live-old')
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
@@ -75,23 +75,14 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
                 model: 'gemini-3-flash-preview',
                 contents: userMsg,
                 config: {
-                systemInstruction: `You are 'Gourmet Genie', a high-end food concierge for 'Foodie Premium'. 
-                You are helpful, elegant, and expert in food pairings.
-                Here is our current menu:
-                ${menuContext}
-                
-                Rules:
-                1. Recommend 1-3 specific dishes from the menu above.
-                2. Be concise and use a professional yet friendly tone.
-                3. Mention ingredients if asked.
-                4. If a dish isn't on the menu, politely suggest the closest alternative we have.`,
-                },
+                systemInstruction: `You are 'Gourmet Genie', a high-end food concierge. Current menu:\n${menuContext}`
+                }
             });
 
-            const aiText = response.text || "I'm sorry, I'm having trouble thinking right now. Let me check the kitchen...";
+            const aiText = response.text || "I apologize, my culinary intuition is momentarily clouded.";
             setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
         } catch (error) {
-            setMessages(prev => [...prev, { role: 'ai', text: "Pardon me, my connection to the kitchen was interrupted." }]);
+            setMessages(prev => [...prev, { role: 'ai', text: "Connection issues." }]);
         } finally {
             setLoading(false);
         }
@@ -108,82 +99,38 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
         <header className="bg-slate-900 p-6 md:p-8 text-white flex flex-col shrink-0">
           <div className="flex justify-between items-start mb-6">
             <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${mode === 'staff' ? 'bg-indigo-600' : 'bg-brand-primary'}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${mode === 'staff' ? 'bg-indigo-600' : 'bg-[#FF6B00]'}`}>
                 <i className={`fa-solid ${mode === 'staff' ? 'fa-user-tie' : 'fa-wand-magic-sparkles'} text-xl`}></i>
                 </div>
                 <div>
-                <h3 className="text-xl font-black italic uppercase tracking-tighter leading-none">{mode === 'staff' ? 'Chat with Staff' : 'Gourmet Genie'}</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{mode === 'staff' ? `Table ${tableNumber} • Human Support` : 'AI Food Concierge'}</p>
+                <h3 className="text-xl font-black italic uppercase tracking-tighter leading-none">{mode === 'staff' ? 'Staff Support' : 'Gourmet AI'}</h3>
                 </div>
             </div>
-            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                <i className="fa-solid fa-xmark"></i>
-            </button>
           </div>
 
           <div className="bg-white/10 p-1.5 rounded-2xl flex border border-white/5 shadow-inner">
-            <button 
-                onClick={() => setMode('staff')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'staff' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-400 hover:text-white'}`}
-            >
-                Staff (Live)
-            </button>
-            <button 
-                onClick={() => setMode('ai')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'ai' ? 'bg-white text-brand-primary shadow-xl' : 'text-slate-400 hover:text-white'}`}
-            >
-                Gourmet AI
-            </button>
+            <button onClick={() => setMode('staff')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${mode === 'staff' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-400 hover:text-white'}`}>Staff</button>
+            <button onClick={() => setMode('ai')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${mode === 'ai' ? 'bg-white text-[#FF6B00] shadow-xl' : 'text-slate-400 hover:text-white'}`}>AI Hub</button>
           </div>
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar bg-slate-50/50">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
               <div className={`max-w-[85%] p-5 rounded-[2rem] text-sm leading-relaxed shadow-sm ${
-                m.role === 'user' 
-                ? 'bg-slate-900 text-white rounded-tr-none' 
-                : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
+                m.role === 'user' ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
               }`}>
                 <p>{m.text}</p>
-                {m.role !== 'user' && (
-                    <span className="block mt-2 text-[8px] font-black uppercase opacity-40 tracking-widest">
-                        {m.role === 'ai' ? 'AI Assistant' : m.role === 'staff' ? 'Restaurant Team' : 'System'}
-                    </span>
-                )}
               </div>
             </div>
           ))}
-          {loading && (
-            <div className="flex justify-start animate-pulse">
-              <div className="bg-white p-5 rounded-[2rem] rounded-tl-none border border-slate-100 flex gap-2">
-                <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce"></div>
-                <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="p-6 bg-white border-t border-slate-100 flex gap-3 items-center shrink-0">
-          <input 
-            type="text" 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={mode === 'staff' ? "Type your request to staff..." : "What should I eat today?"} 
-            className="flex-1 bg-slate-50 p-5 rounded-2xl text-sm font-bold outline-none border border-transparent focus:border-brand-primary/20 transition-all shadow-inner"
-          />
-          <button 
-            onClick={handleSend}
-            disabled={loading || !input.trim()}
-            className={`w-14 h-14 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:opacity-50 ${mode === 'staff' ? 'bg-indigo-600' : 'bg-brand-primary'}`}
-          >
-            <i className="fa-solid fa-paper-plane"></i>
-          </button>
+          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Type..." className="flex-1 bg-slate-50 p-5 rounded-2xl text-sm font-bold outline-none" />
+          <button onClick={handleSend} disabled={loading || !input.trim()} className={`w-14 h-14 text-white rounded-2xl flex items-center justify-center ${mode === 'staff' ? 'bg-indigo-600' : 'bg-[#FF6B00]'}`}><i className="fa-solid fa-paper-plane"></i></button>
         </div>
       </div>
-
       <style>{`
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
@@ -192,4 +139,4 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
   );
 };
 
-export default SupportHub;
+export default GourmetAssistantComponent;

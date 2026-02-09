@@ -1,305 +1,253 @@
-import React, { useState, useEffect } from 'react';
-import { MenuItem, Category } from '../../types';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { MenuItem, Category, ItemOptionGroup } from '../../types';
 import * as MenuService from '../../services/menuService';
+
+// Modular Components
+import SingleFoodList from './menu/SingleFoodList';
+import DishGroupsList from './menu/DishGroupsList';
+import SectionsList from './sections/SectionsList';
+import DishModal from './menu/DishModal';
 
 interface AdminMenuProps {
   items: MenuItem[];
   setItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
   cats: Category[];
   setCats: React.Dispatch<React.SetStateAction<Category[]>>;
-  isWizard?: boolean; 
+  menuId: number | string | null;
+  restaurantId?: string;
+  onOpenFAQ?: () => void;
 }
 
-const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, isWizard = false }) => {
-  const [activeTab, setActiveTab] = useState<'items' | 'add' | 'categories'>('items');
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
-  const [catToDelete, setCatToDelete] = useState<Category | null>(null);
-  const [catDeleteOption, setCatDeleteOption] = useState<'delete_all' | 'keep_items'>('keep_items');
-  const [newCatName, setNewCatName] = useState('');
+const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, menuId, restaurantId, onOpenFAQ }) => {
+  const [activeTab, setActiveTab] = useState<'items' | 'variations' | 'categories'>('items');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [localError, setLocalError] = useState<string | null>(null);
 
-  const sessionRaw = localStorage.getItem('foodie_supabase_session');
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  const restaurantId = session?.restaurant?.id;
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [showDishModal, setShowDishModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
 
   const initialFormState = { 
     name: '', desc: '', ingredients: '', price: '', cat: '', 
-    people: '1 Person', mins: '15 mins', image: '', 
-    isPopular: false, isAvailable: true 
+    people: '1 Person', mins: '15', image: '', 
+    isPopular: false, isAvailable: true, parent_id: null as string | number | null,
+    has_variations: false,
+    optionGroups: [] as ItemOptionGroup[]
   };
   const [formData, setFormData] = useState(initialFormState);
 
   useEffect(() => {
     if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
+      const timer = setTimeout(() => setToast(null), 4000); 
       return () => clearTimeout(timer);
     }
   }, [toast]);
 
   const showToast = (message: string, type: 'success' | 'error') => { setToast({ message, type }); };
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => { if (loadEvent.target?.result) setFormData(prev => ({ ...prev, image: loadEvent.target!.result as string })); };
-      reader.readAsDataURL(e.target.files[0]);
-    }
-  };
-
   const handleSaveItem = async () => {
-    if (loading) return;
-    setLocalError(null);
-    if (!formData.name.trim()) return showToast("Name is required.", 'error');
-    if (!formData.price || Number(formData.price) <= 0) return showToast("Valid price required.", 'error');
-    if (!restaurantId && !isWizard) return showToast("Session expired.", 'error');
-
-    if (!editingItem && items.some(it => it.name.toLowerCase() === formData.name.trim().toLowerCase())) {
-        return showToast(`"${formData.name.trim()}" exists in menu.`, 'error');
-    }
-
+    if (loading || !formData.name.trim() || !restaurantId) return;
+    
     setLoading(true);
     try {
       const targetCategory = cats.find(c => c.name === formData.cat);
-      const ingredientsArray = formData.ingredients.split(',').map(i => {
-        const t = i.trim();
-        return t ? { key: t.toLowerCase().replace(/\s+/g, '_'), label: t.charAt(0).toUpperCase() + t.slice(1) } : null;
-      }).filter(i => i !== null);
+      const ingredientsArray = formData.has_variations ? [] : formData.ingredients
+        .split(',')
+        .map(i => i.trim())
+        .filter(Boolean)
+        .map(i => ({ label: i }));
 
       const itemPayload: any = {
-        name: formData.name.trim(), price: Number(formData.price), description: formData.desc,
-        ingredients: ingredientsArray, image_url: formData.image || 'https://picsum.photos/seed/dish/400/400',
-        category_id: targetCategory ? targetCategory.id : null, pax: formData.people, serving_time: formData.mins,
-        is_popular: formData.isPopular, is_available: formData.isAvailable
+        name: formData.name.trim(), 
+        price: Number(formData.price) || 0, 
+        description: formData.desc,
+        ingredients: ingredientsArray, 
+        image_url: formData.image || 'https://picsum.photos/seed/dish/400/400',
+        category_id: targetCategory ? targetCategory.id : null, 
+        pax: formData.has_variations ? 'Various' : formData.people, 
+        serving_time: formData.has_variations ? 'Various' : formData.mins + " mins",
+        is_popular: formData.isPopular, 
+        is_available: formData.has_variations ? true : formData.isAvailable,
+        parent_id: formData.parent_id,
+        has_variations: formData.has_variations,
+        has_options: formData.has_variations ? false : (formData.optionGroups.length > 0),
+        restaurant_id: restaurantId 
       };
 
-      if (isWizard) {
-        const wizardItem: any = { ...itemPayload, id: editingItem ? editingItem.id : Math.floor(Math.random() * 1000000), cat_name: targetCategory ? targetCategory.name : 'Uncategorized' };
-        if (editingItem) setItems(prev => prev.map(it => it.id === editingItem.id ? wizardItem : it));
-        else setItems(prev => [wizardItem, ...prev]);
-        showToast("Saved.", 'success');
-      } else {
-        if (editingItem) itemPayload.id = editingItem.id;
-        const dbItem = await MenuService.upsertMenuItem(itemPayload);
-        if (!dbItem) throw new Error("Database failed to respond.");
-        const savedItem = { ...dbItem, cat_name: targetCategory ? targetCategory.name : 'Uncategorized' };
-        if (editingItem) setItems(prev => prev.map(it => it.id === editingItem.id ? savedItem : it));
-        else setItems(prev => [savedItem, ...prev]);
-        showToast("Synchronized.", 'success');
+      if (editingItem) itemPayload.id = editingItem.id;
+      const dbItem = await MenuService.upsertMenuItem(itemPayload);
+      
+      if (!formData.has_variations) {
+        await MenuService.saveItemOptions(dbItem.id, formData.optionGroups);
       }
-      setFormData(initialFormState); setEditingItem(null); setActiveTab('items');
+
+      const savedItem = { 
+        ...dbItem, 
+        cat_name: targetCategory ? targetCategory.name : 'Uncategorized',
+        option_groups: formData.has_variations ? [] : formData.optionGroups
+      };
+      
+      if (editingItem) setItems(prev => prev.map(it => it.id === editingItem.id ? savedItem : it));
+      else setItems(prev => [savedItem, ...prev]);
+      
+      showToast("Inventory Updated", 'success');
+      setShowDishModal(false);
+      setEditingItem(null);
     } catch (err: any) {
-      setLocalError(err.message || "Failed to sync.");
-      showToast(err.message || "Sync failure.", 'error');
+      showToast("Error: " + err.message, "error");
     } finally { setLoading(false); }
   };
 
   const startEdit = (item: MenuItem) => {
-    setEditingItem(item); setLocalError(null);
-    const formattedIngredients = Array.isArray(item.ingredients) ? item.ingredients.map((ing: any) => typeof ing === 'object' ? (ing.label || ing.key) : ing).join(', ') : '';
+    setEditingItem(item);
+    const ingString = !item.has_variations && Array.isArray(item.ingredients) 
+      ? item.ingredients.map(i => typeof i === 'string' ? i : (i.label || i.name)).join(', ')
+      : '';
+
     setFormData({ 
-      name: item.name, desc: item.description, ingredients: formattedIngredients, 
+      name: item.name, desc: item.description, ingredients: ingString, 
       price: item.price.toString(), cat: item.cat_name === 'Uncategorized' ? '' : item.cat_name, 
-      people: item.pax, mins: item.serving_time, image: item.image_url, 
-      isPopular: !!item.is_popular, isAvailable: item.is_available !== undefined ? !!item.is_available : true 
+      people: item.pax || '1 Person', mins: (item.serving_time || '').replace(/\D/g, ''), image: item.image_url, 
+      isPopular: !!item.is_popular, isAvailable: item.is_available !== undefined ? !!item.is_available : true,
+      parent_id: item.parent_id || null,
+      has_variations: !!item.has_variations,
+      optionGroups: item.option_groups || []
     });
-    setActiveTab('add');
+    setShowDishModal(true);
   };
 
-  const confirmDeleteItem = async () => {
-    if (loading || !itemToDelete) return;
+  const handleAddCategory = async (name: string) => {
+    if (!menuId) return;
     setLoading(true);
     try {
-      if (!isWizard) await MenuService.deleteMenuItem(itemToDelete.id.toString());
-      setItems(prev => prev.filter(it => it.id !== itemToDelete.id));
-      setItemToDelete(null); showToast("Purged.", 'success');
-    } catch (err: any) { showToast("Purge failed.", 'error'); } finally { setLoading(false); }
+      const res = await MenuService.upsertCategory({ name, menu_id: menuId, order_index: cats.length });
+      setCats([...cats, res]);
+      showToast("Section Published", "success");
+    } catch (e) { showToast("Error adding section", "error"); }
+    finally { setLoading(false); }
   };
 
-  const confirmDeleteCategory = async () => {
-    if (loading || !catToDelete) return;
-    setLoading(true);
+  const handleDeleteCategory = async (id: string | number) => {
+    if (!confirm('Delete this section?')) return;
     try {
-      const itemsInCat = items.filter(i => i.category_id === catToDelete.id);
-      if (!isWizard) {
-        if (catDeleteOption === 'delete_all') {
-            for (const item of itemsInCat) await MenuService.deleteMenuItem(item.id.toString());
-            setItems(prev => prev.filter(i => i.category_id !== catToDelete.id));
-        } else {
-            for (const item of itemsInCat) {
-                const up = { ...item, category_id: null };
-                delete (up as any).cat_name;
-                await MenuService.upsertMenuItem(up);
-            }
-            setItems(prev => prev.map(i => i.category_id === catToDelete.id ? { ...i, category_id: null, cat_name: 'Uncategorized' } : i));
-        }
-        await MenuService.deleteCategory(catToDelete.id.toString());
-      } else {
-        if (catDeleteOption === 'delete_all') setItems(prev => prev.filter(i => i.category_id !== catToDelete.id));
-        else setItems(prev => prev.map(i => i.category_id === catToDelete.id ? { ...i, category_id: null, cat_name: 'Uncategorized' } : i));
-      }
-      setCats(prev => prev.filter(cat => cat.id !== catToDelete.id));
-      setCatToDelete(null); showToast("Groups updated.", 'success');
-    } catch (err: any) { showToast("Failed.", 'error'); } finally { setLoading(false); }
+      await MenuService.deleteCategory(id);
+      setCats(cats.filter(c => c.id !== id));
+      showToast("Section Purged", "success");
+    } catch (e) { showToast("Error deleting section", "error"); }
   };
 
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanName = newCatName.trim();
-    if (loading || !cleanName) return;
-    if (cats.some(c => c.name.toLowerCase() === cleanName.toLowerCase())) return showToast("Group exists.", 'error');
-    setLoading(true);
-    try {
-      if (!isWizard) {
-        const menuId = session?.defaultMenuId;
-        if (!menuId) throw new Error("No menu context.");
-        const newCat = await MenuService.upsertCategory({ name: cleanName, menu_id: menuId, order_index: cats.length });
-        setCats(prev => [...prev, newCat]);
-      } else {
-        setCats(prev => [...prev, { id: Math.floor(Math.random() * 1000000), name: cleanName }]);
-      }
-      setNewCatName(''); showToast("Group created.", 'success');
-    } catch (err: any) { showToast("Failed.", 'error'); } finally { setLoading(false); }
-  };
+  const groupedItems = useMemo(() => {
+    const standalone = items.filter(i => !i.parent_id && !i.has_variations);
+    const headers = items.filter(i => i.has_variations);
+    const map: Record<string, MenuItem[]> = {};
+    items.filter(i => i.parent_id).forEach(c => {
+        const pid = String(c.parent_id);
+        if (!map[pid]) map[pid] = [];
+        map[pid].push(c);
+    });
+    return { standalone, headers, variationMap: map };
+  }, [items]);
 
   return (
-    <div className="flex flex-col h-screen animate-fade-in relative bg-white font-jakarta">
+    <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
       {toast && (
-        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-[2rem] shadow-2xl flex items-center gap-4 animate-scale border ${toast.type === 'success' ? 'bg-slate-900 text-white border-emerald-500/20' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500 text-white'}`}><i className={`fa-solid ${toast.type === 'success' ? 'fa-check' : 'fa-triangle-exclamation'} text-[10px]`}></i></div>
-          <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{toast.message}</span>
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[5000] animate-fade-in w-full max-w-sm px-6">
+           <div className={`p-4 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-2xl border ${toast.type === 'success' ? 'bg-slate-900/90 text-white border-white/10' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+              <p className="text-[11px] font-black uppercase tracking-widest flex-1 text-center italic">{toast.message}</p>
+           </div>
         </div>
       )}
 
-      <div className="bg-slate-50 border-b border-slate-100 p-6 lg:p-8 space-y-6 sticky top-0 z-[40]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-           <div><p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Content Manager</p><h3 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Menu List</h3></div>
-           <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
-             <button onClick={() => setActiveTab('categories')} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'categories' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>Groups</button>
-             <button onClick={() => setActiveTab('items')} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'items' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>Items</button>
-             <button onClick={() => { setEditingItem(null); setFormData(initialFormState); setLocalError(null); setActiveTab('add'); }} className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'add' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-900'}`}>{editingItem ? 'Edit' : 'Add'}</button>
-           </div>
-        </div>
-      </div>
+      <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
+        <header className="px-2 text-center sm:text-left">
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Menu Editor</h1>
+          <p className="text-slate-500 text-sm font-medium mt-3 leading-relaxed">
+            Manage your digital menu and sections. <button onClick={onOpenFAQ} className="text-[#007AFF] font-bold hover:underline">Learn more about the Menu Editor</button>
+          </p>
+        </header>
 
-      <div className="flex-1 overflow-y-auto p-6 lg:p-10 no-scrollbar pb-40">
-        {activeTab === 'categories' && (
-          <div className="max-w-xl mx-auto space-y-8 animate-fade-in">
-             <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl">
-               <h4 className="text-lg font-black uppercase mb-6 text-slate-800">New Group</h4>
-               <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
-                 <input type="text" value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="e.g. Desserts" className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none" />
-                 <button type="submit" disabled={loading} className="bg-indigo-600 text-white px-8 py-4 sm:py-0 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg">Create</button>
-               </form>
-             </div>
-             <div className="grid grid-cols-1 gap-3">
-               {cats.map(c => (
-                 <div key={c.id} className="bg-white border border-slate-100 px-6 py-4 rounded-2xl flex items-center justify-between shadow-sm">
-                    <div><span className="font-black text-sm text-slate-800 uppercase">{c.name}</span></div>
-                    <button onClick={() => setCatToDelete(c)} className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"><i className="fa-solid fa-trash-can text-xs"></i></button>
-                 </div>
-               ))}
-             </div>
-          </div>
-        )}
+        <div className="bg-[#E8E8ED] p-1.5 rounded-2xl flex border border-slate-200/50 shadow-inner overflow-x-auto no-scrollbar gap-1">
+          {(['items', 'variations', 'categories'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 min-w-[110px] py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>
+              {tab === 'items' ? 'Single Food' : tab === 'variations' ? 'Dish Groups' : 'Sections'}
+            </button>
+          ))}
+        </div>
 
         {activeTab === 'items' && (
-          <div className="space-y-4 max-w-4xl mx-auto pb-20">
-            {items.map(item => (
-              <div key={item.id} className="bg-white p-4 md:p-5 rounded-[2.5rem] border border-slate-50 flex items-center justify-between shadow-sm hover:shadow-md transition-all animate-fade-in group">
-                <div className="flex items-center gap-4 md:gap-6 min-w-0">
-                   <div className="w-14 h-14 md:w-16 md:h-16 rounded-3xl bg-slate-50 overflow-hidden border border-slate-100 shrink-0"><img src={item.image_url} className="w-full h-full object-cover" /></div>
-                   <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-black text-xs md:text-sm text-slate-800 uppercase truncate">{item.name}</h4>
-                        {item.is_popular && <span className="bg-orange-500 text-white text-[7px] px-1.5 py-0.5 rounded-md font-black uppercase">Popular</span>}
-                        {!item.is_available && <span className="bg-slate-400 text-white text-[7px] px-1.5 py-0.5 rounded-md font-black uppercase ml-1">Sold Out</span>}
-                      </div>
-                      <div className="flex items-center gap-2 md:gap-3"><p className="text-[8px] md:text-[9px] font-black text-indigo-500 uppercase">{item.cat_name || 'Uncategorized'}</p><div className="w-1 h-1 bg-slate-200 rounded-full"></div><p className="text-[9px] md:text-[10px] font-bold text-slate-400">₱{item.price}</p></div>
-                   </div>
-                </div>
-                <div className="flex gap-1.5 md:gap-2 shrink-0">
-                   <button onClick={() => startEdit(item)} className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"><i className="fa-solid fa-pen text-[10px]"></i></button>
-                   <button onClick={() => setItemToDelete(item)} className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <SingleFoodList 
+            items={groupedItems.standalone} 
+            onEdit={startEdit} 
+            onDelete={setItemToDelete} 
+            onAddNew={() => { setEditingItem(null); setFormData(initialFormState); setShowDishModal(true); }} 
+          />
         )}
 
-        {activeTab === 'add' && (
-          <div className="max-w-xl mx-auto bg-white p-6 md:p-8 lg:p-12 rounded-[2.5rem] md:rounded-[4rem] border border-slate-100 shadow-2xl space-y-8 animate-fade-in mb-20">
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tighter">{editingItem ? 'Edit Dish' : 'Add Dish'}</h3>
-            <div className="space-y-6">
-               <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Photo Asset</label>
-                 <input type="file" id="dish-img-up" className="hidden" onChange={handleImage} />
-                 <button onClick={() => document.getElementById('dish-img-up')?.click()} className="w-full bg-slate-50 border-2 border-dashed border-slate-200 py-10 rounded-3xl flex flex-col items-center gap-4 group overflow-hidden relative min-h-[140px]">
-                   {formData.image ? <img src={formData.image} className="absolute inset-0 w-full h-full object-cover" /> : <><i className="fa-solid fa-cloud-arrow-up text-3xl text-slate-200"></i><div className="text-[9px] font-black uppercase text-slate-400">Pick High-Res Image</div></>}
-                 </button>
-               </div>
-               <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Product Name</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Classic Burger" className="w-full bg-slate-50 border-none rounded-2xl p-5 font-black text-sm outline-none shadow-inner italic" /></div>
-               <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Description</label><textarea value={formData.desc} onChange={e => setFormData({...formData, desc: e.target.value})} placeholder="Describe story and taste..." className="w-full bg-slate-50 border-none p-6 rounded-3xl text-sm h-32 outline-none resize-none shadow-inner" /></div>
-               <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Ingredients (Comma separated)</label><input type="text" value={formData.ingredients} onChange={e => setFormData({...formData, ingredients: e.target.value})} placeholder="Beef, Lettuce, Tomato..." className="w-full bg-slate-50 border-none rounded-2xl p-5 font-black text-sm outline-none shadow-inner italic" /></div>
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Price (₱)</label><input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full bg-slate-50 border-none p-5 rounded-2xl font-black text-sm outline-none shadow-inner" /></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 ml-4 italic">Group</label><select value={formData.cat} onChange={e => setFormData({...formData, cat: e.target.value})} className="w-full bg-slate-50 border-none p-5 rounded-2xl font-black text-[10px] uppercase outline-none shadow-inner">{cats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}<option value="">None</option></select></div>
-               </div>
+        {activeTab === 'variations' && (
+          <DishGroupsList 
+            headers={groupedItems.headers} 
+            variationMap={groupedItems.variationMap} 
+            onEditHeader={startEdit}
+            onEditVariant={startEdit}
+            onAddVariant={(pid, cat) => { setEditingItem(null); setFormData({ ...initialFormState, parent_id: pid, cat: cat }); setShowDishModal(true); }}
+            onDelete={setItemToDelete}
+            onAddNewGroup={() => { setEditingItem(null); setFormData({ ...initialFormState, has_variations: true }); setShowDishModal(true); }}
+          />
+        )}
 
-               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                  <button 
-                    onClick={() => setFormData({...formData, isPopular: !formData.isPopular})}
-                    className={`p-5 rounded-2xl flex items-center justify-between transition-all border ${formData.isPopular ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
-                  >
-                    <span className="text-[10px] font-black uppercase tracking-widest">Is Popular?</span>
-                    <i className={`fa-solid ${formData.isPopular ? 'fa-star text-amber-400' : 'fa-star-half-stroke'}`}></i>
-                  </button>
-
-                  <button 
-                    onClick={() => setFormData({...formData, isAvailable: !formData.isAvailable})}
-                    className={`p-5 rounded-2xl flex items-center justify-between transition-all border ${formData.isAvailable ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-rose-50 border-rose-100 text-rose-500'}`}
-                  >
-                    <span className="text-[10px] font-black uppercase tracking-widest">Available?</span>
-                    <i className={`fa-solid ${formData.isAvailable ? 'fa-check-circle' : 'fa-times-circle'}`}></i>
-                  </button>
-               </div>
-            </div>
-            <div className="pt-4 space-y-4">
-               <button onClick={handleSaveItem} disabled={loading} className="w-full py-6 bg-slate-900 text-white rounded-3xl font-black uppercase text-[10px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all hover:bg-indigo-600 disabled:opacity-50">{loading ? <i className="fa-solid fa-sync animate-spin"></i> : null} {editingItem ? 'Commit Changes' : 'Initialize Dish'}</button>
-               {localError && <div className="bg-rose-50 border border-rose-100 p-5 rounded-3xl animate-fade-in flex items-start gap-4"><i className="fa-solid fa-circle-exclamation text-rose-500 mt-0.5"></i><div className="flex-1"><p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Database Sync Error</p><p className="text-[11px] text-rose-500 font-bold leading-relaxed">{localError}</p></div></div>}
-               <button onClick={() => { setEditingItem(null); setFormData(initialFormState); setLocalError(null); setActiveTab('items'); }} className="w-full text-[9px] font-black uppercase text-slate-300 tracking-[0.2em] hover:text-slate-500">Discard Draft</button>
-            </div>
-          </div>
+        {activeTab === 'categories' && (
+          <SectionsList 
+            cats={cats} 
+            onAdd={handleAddCategory} 
+            onDelete={handleDeleteCategory} 
+            loading={loading} 
+          />
         )}
       </div>
 
+      {showDishModal && (
+        <DishModal 
+          editingItem={editingItem} 
+          formData={formData} 
+          setFormData={setFormData} 
+          cats={cats} 
+          loading={loading} 
+          onClose={() => setShowDishModal(false)} 
+          onSave={handleSaveItem} 
+        />
+      )}
+
       {itemToDelete && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in" onClick={() => setItemToDelete(null)}>
-           <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-scale" onClick={e => e.stopPropagation()}>
-              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto shadow-inner"><i className="fa-solid fa-trash-can text-3xl"></i></div>
-              <h4 className="text-2xl font-black uppercase tracking-tighter">Purge Dish?</h4>
-              <button disabled={loading} onClick={confirmDeleteItem} className="w-full py-5 bg-rose-500 text-white rounded-3xl font-black uppercase text-[10px] tracking-[0.4em] shadow-xl active:scale-95 transition-all">Execute Deletion</button>
-           </div>
+        <div className="fixed inset-0 z-[5000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl animate-fade-in font-jakarta">
+            <div className="bg-white w-full max-w-sm rounded-[3.5rem] p-10 shadow-2xl space-y-8 animate-scale text-center">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center mx-auto text-3xl shadow-inner border border-rose-100/50"><i className="fa-solid fa-trash-can"></i></div>
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">Remove Entry?</h3>
+                  <p className="text-slate-500 text-xs font-bold leading-relaxed px-4 italic">Permanently delete "{itemToDelete.name}" from your menu.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 w-full">
+                    <button onClick={async () => {
+                      setLoading(true);
+                      await MenuService.deleteMenuItem(itemToDelete.id.toString());
+                      setItems(prev => prev.filter(it => it.id !== itemToDelete.id));
+                      setItemToDelete(null); 
+                      setLoading(false);
+                      showToast("Entry Removed", "success");
+                    }} className="w-full py-5 bg-rose-600 text-white rounded-full font-black uppercase text-[10px] tracking-[0.4em] shadow-xl shadow-rose-100 active:scale-95 transition-all">Execute Purge</button>
+                    <button onClick={() => setItemToDelete(null)} className="w-full py-5 bg-slate-50 text-slate-400 rounded-full font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Cancel</button>
+                </div>
+            </div>
         </div>
       )}
 
-      {catToDelete && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in" onClick={() => setCatToDelete(null)}>
-           <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl text-center space-y-8 animate-scale" onClick={e => e.stopPropagation()}>
-              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto shadow-inner"><i className="fa-solid fa-folder-minus text-3xl"></i></div>
-              <h4 className="text-2xl font-black uppercase tracking-tighter">Purge Group?</h4>
-              <div className="space-y-3 text-left">
-                   <label className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors group"><input type="radio" className="accent-rose-500" checked={catDeleteOption === 'delete_all'} onChange={() => setCatDeleteOption('delete_all')} /><span className="text-[10px] font-black uppercase group-hover:text-rose-600">Delete all nested items</span></label>
-                   <label className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors group"><input type="radio" className="accent-rose-500" checked={catDeleteOption === 'keep_items'} onChange={() => setCatDeleteOption('keep_items')} /><span className="text-[10px] font-black uppercase group-hover:text-indigo-600">Preserve orphan items</span></label>
-              </div>
-              <button disabled={loading} onClick={confirmDeleteCategory} className="w-full py-5 bg-rose-500 text-white rounded-3xl font-black uppercase text-[10px] tracking-[0.4em] shadow-xl active:scale-95 transition-all">Confirm Purge</button>
-           </div>
-        </div>
-      )}
-
-      <style>{` @keyframes scale { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } } .animate-scale { animation: scale 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards; } `}</style>
+      <style>{`
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+        @keyframes scale { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-scale { animation: scale 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   );
 };

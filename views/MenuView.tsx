@@ -1,5 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MenuItem, Category } from '../types';
+
+const Reveal: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      }, { threshold: 0.1 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{ transitionDelay: `${delay}ms`, transform: isVisible ? 'translateY(0)' : 'translateY(20px)', opacity: isVisible ? 1 : 0 }} className="transition-all duration-[800ms] ease-out">
+      {children}
+    </div>
+  );
+};
 
 interface MenuViewProps {
   popularItems: MenuItem[];
@@ -17,210 +39,175 @@ const MenuView: React.FC<MenuViewProps> = ({
   onSearchChange, onCategorySelect, onItemSelect 
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  
+  const sessionRaw = localStorage.getItem('foodie_active_session') || localStorage.getItem('foodie_supabase_session');
+  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+  const template = session?.theme?.template || 'classic';
 
-  // Only show items that are available
-  const availableItems = useMemo(() => {
-    return filteredItems.filter(item => item.is_available !== false);
-  }, [filteredItems]);
+  const isMidnight = template === 'midnight';
+  const isLoft = template === 'loft';
 
+  const availableItems = useMemo(() => filteredItems.filter(item => item.is_available !== false && !item.parent_id), [filteredItems]);
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return availableItems;
     const query = searchQuery.toLowerCase().trim();
-    return availableItems.filter(item => 
-      item.name.toLowerCase().includes(query) || 
-      item.description.toLowerCase().includes(query) ||
-      item.cat_name.toLowerCase().includes(query)
-    );
+    return availableItems.filter(item => item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query) || item.cat_name.toLowerCase().includes(query));
   }, [availableItems, searchQuery]);
-
-  const suggestions = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const query = searchQuery.toLowerCase().trim();
-    return availableItems.filter(item => 
-      item.name.toLowerCase().includes(query)
-    ).slice(0, 5);
-  }, [availableItems, searchQuery]);
-
-  // Only show popular items that are available
-  const availablePopular = useMemo(() => {
-    return popularItems.filter(item => item.is_available !== false);
-  }, [popularItems]);
 
   return (
-    <div className="animate-fade-in w-full bg-white">
-      {/* Header & Search Area */}
-      <header className="px-6 py-10 md:py-20 max-w-[1400px] mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-brand-primary uppercase tracking-[0.5em] mb-2 leading-none">Curated Selection</p>
-            <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.85] uppercase text-slate-900">
-              Browse our <br /><span className="text-brand-primary">Menu.</span>
+    <div className={`animate-fade-in w-full min-h-screen pb-40 transition-colors duration-700 ${
+        isMidnight ? 'bg-[#0A0A0B] text-white font-outfit' : 
+        isLoft ? 'bg-[#FCFAF8] text-[#2D2926] font-playfair' : 
+        'bg-[#FBFBFD] text-[#1D1D1F] font-jakarta'
+    }`}>
+      
+      {/* HEADER & SEARCH SECTION */}
+      <header className={`px-6 pt-16 md:pt-24 pb-12 max-w-[1200px] mx-auto ${isLoft ? 'text-center' : ''}`}>
+        <Reveal>
+          <div className="mb-10">
+            <h2 className={`text-[12px] font-black uppercase tracking-[0.4em] leading-none mb-4 ${
+                isMidnight ? 'text-indigo-400' : isLoft ? 'text-[#8B7E74]' : 'text-[#FF6B00]'
+            }`}>
+                {isLoft ? 'La Sélection' : 'Curated Selection'}
+            </h2>
+            <h1 className={`text-[44px] md:text-[84px] font-bold tracking-[-0.05em] leading-[1] ${
+                isMidnight ? 'text-white' : isLoft ? 'text-[#2D2926] italic' : 'text-[#1D1D1F]'
+            }`}>
+              {isLoft ? 'The Art of Dining.' : <>Discover our <br className="md:hidden" /> <span className={isMidnight ? 'text-indigo-500' : 'text-[#86868B]'}>Menu.</span></>}
             </h1>
           </div>
-          
-          <div className="relative w-full md:max-w-sm">
-            <div className="relative group z-50">
-              <i className="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
+        </Reveal>
+        
+        <Reveal delay={100}>
+          <div className={`relative max-w-2xl ${isLoft ? 'mx-auto mt-4' : ''}`}>
+            <div className={`flex items-center gap-4 px-6 py-5 transition-all border ${
+                isMidnight ? `bg-white/5 backdrop-blur-2xl rounded-2xl border-white/10 ${isSearchFocused ? 'border-indigo-500 shadow-[0_0_40px_rgba(99,102,241,0.2)]' : ''}` : 
+                isLoft ? `bg-transparent border-b border-t-0 border-l-0 border-r-0 border-[#2D2926]/20 rounded-none ${isSearchFocused ? 'border-[#2D2926]' : ''}` :
+                `bg-[#E8E8ED]/60 backdrop-blur-xl rounded-2xl border-transparent ${isSearchFocused ? 'bg-white border-[#007AFF] ring-4 ring-[#007AFF]/10' : ''}`
+            }`}>
+              <i className={`fa-solid fa-magnifying-glass text-[17px] ${isMidnight ? 'text-indigo-400' : isLoft ? 'text-[#2D2926]' : 'text-[#86868B]'}`}></i>
               <input 
                 type="text" 
-                placeholder="Find your favorite..." 
+                placeholder={isLoft ? "Search our exquisite collection..." : "Find your favorite..."} 
                 value={searchQuery} 
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className={`w-full bg-slate-50 border border-slate-100 py-5 pl-14 pr-6 transition-all outline-none text-base font-bold shadow-inner focus:border-indigo-200 focus:bg-white focus:ring-4 ring-indigo-500/5 ${isSearchFocused && suggestions.length > 0 ? 'rounded-t-[2rem] border-b-transparent' : 'rounded-[2rem]'}`}
-                style={{ WebkitAppearance: 'none' }}
+                className={`flex-1 bg-transparent border-none outline-none text-[17px] placeholder:opacity-50 ${
+                    isMidnight ? 'text-white' : isLoft ? 'text-[#2D2926] italic' : 'text-[#1D1D1F]'
+                }`}
               />
-              
-              {/* Search Suggestions */}
-              {isSearchFocused && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border-x border-b border-slate-100 rounded-b-[2rem] shadow-2xl overflow-hidden animate-fade-in z-50">
-                  <div className="py-3">
-                    <p className="px-6 py-2 text-[8px] font-black uppercase text-slate-300 tracking-[0.3em] border-b border-slate-50 mb-1">Matching Results</p>
-                    {suggestions.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          onItemSelect(item);
-                          setIsSearchFocused(false);
-                          onSearchChange('');
-                        }}
-                        className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50 transition-colors text-left group"
-                      >
-                        <img src={item.image_url} alt="" className="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-100 shadow-sm" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black uppercase text-slate-800 truncate group-hover:text-brand-primary transition-colors">{item.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">₱{item.price} • {item.cat_name}</p>
-                        </div>
-                        <i className="fa-solid fa-arrow-right text-[10px] text-slate-200 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all"></i>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
-        </div>
+        </Reveal>
       </header>
 
-      {/* Popular Items */}
-      {availablePopular.length > 0 && !searchQuery && (
-        <section className="mb-14">
-          <div className="max-w-[1400px] mx-auto px-6 mb-6 flex items-center gap-4">
-            <h2 className="font-black text-[10px] text-slate-900 uppercase tracking-[0.5em]">Today's Specials</h2>
-            <div className="h-px bg-slate-100 flex-1"></div>
+      {/* CATEGORY UI */}
+      <div className={`sticky top-[72px] z-40 backdrop-blur-2xl mb-12 ${
+          isMidnight ? 'bg-[#0A0A0B]/80 border-b border-white/5' : 
+          isLoft ? 'bg-[#FCFAF8]/80 border-y border-[#2D2926]/10' : 
+          'bg-[#FBFBFD]/80 border-b border-slate-200/50'
+      }`}>
+        <div className="max-w-[1200px] mx-auto px-6 overflow-hidden">
+          <div className={`flex overflow-x-auto no-scrollbar py-6 scroll-smooth gap-10 ${isLoft ? 'justify-center' : ''}`}>
+            {['all', ...categories.map(c => c.name)].map((cat) => (
+              <button 
+                key={cat} 
+                onClick={() => onCategorySelect(cat)}
+                className={`text-[16px] font-black tracking-tight whitespace-nowrap transition-all relative uppercase ${
+                    activeCategory === cat 
+                    ? (isMidnight ? 'text-indigo-400' : isLoft ? 'text-[#2D2926]' : 'text-[#007AFF]') 
+                    : (isMidnight ? 'text-white/30 hover:text-white' : 'text-[#86868B] hover:text-[#1D1D1F]')
+                }`}
+              >
+                {cat === 'all' ? (isLoft ? 'Comprehensive' : 'The Whole Menu') : cat}
+                {activeCategory === cat && !isLoft && <div className={`absolute -bottom-6 left-0 right-0 h-[3px] rounded-full ${isMidnight ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-[#007AFF]'}`}></div>}
+                {activeCategory === cat && isLoft && <div className="absolute -top-1 -right-2 w-1.5 h-1.5 bg-[#8B7E74] rounded-full"></div>}
+              </button>
+            ))}
           </div>
-          <div className="flex overflow-x-auto gap-5 px-6 md:px-0 md:pl-[calc((100%-1400px)/2+24px)] no-scrollbar pb-8">
-            {availablePopular.map((item) => (
+        </div>
+      </div>
+
+      {/* MENU LIST GRID */}
+      <div className="max-w-[1200px] mx-auto px-6">
+        <Reveal delay={200}>
+          <div className={`grid gap-8 ${
+              isLoft ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-1 max-w-4xl mx-auto' : 
+              'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+          }`}>
+            {searchResults.map((item) => (
               <button 
                 key={item.id} 
-                onClick={() => onItemSelect(item)} 
-                className="min-w-[200px] md:min-w-[260px] bg-white rounded-[2.5rem] p-4 border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 text-left group relative"
+                onClick={() => onItemSelect(item)}
+                className={`w-full group flex transition-all duration-500 text-left overflow-hidden ${
+                    isMidnight ? 'bg-white/5 p-4 rounded-3xl border border-white/5 flex-col hover:bg-white/10 hover:border-indigo-500/30' : 
+                    isLoft ? 'bg-transparent border-b border-[#2D2926]/10 p-0 rounded-none flex-row items-center py-10 hover:bg-black/[0.02]' : 
+                    'bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm flex-col hover:shadow-xl'
+                }`}
               >
-                <div className="relative h-40 md:h-52 w-full mb-5 overflow-hidden rounded-[2rem] bg-slate-50 shadow-inner">
-                  <img src={item.image_url} alt={item.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-[1.5s]" />
-                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
-                    <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">₱{item.price}</span>
-                  </div>
+                {/* Image Section */}
+                <div className={`relative overflow-hidden shrink-0 ${
+                    isMidnight ? 'aspect-[4/3] w-full mb-6 rounded-2xl' : 
+                    isLoft ? 'w-32 md:w-56 aspect-square rounded-none' : 
+                    'aspect-[4/3] w-full mb-6 rounded-[1.8rem]'
+                }`}>
+                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-[3s] group-hover:scale-105" />
+                  {item.is_popular && !isLoft && (
+                      <div className={`absolute top-4 left-4 px-3 py-1 text-[8px] font-black uppercase tracking-widest ${
+                          isMidnight ? 'bg-indigo-600 text-white' : 'bg-[#FF6B00] text-white'
+                      }`}>Favorite</div>
+                  )}
                 </div>
-                <div className="px-2 pb-2">
-                  <h3 className="text-sm font-black uppercase text-slate-900 truncate leading-none mb-1.5 tracking-tight">{item.name}</h3>
-                  <div className="flex justify-between items-center">
-                    <p className="text-[9px] font-black text-brand-primary uppercase tracking-[0.2em]">{item.cat_name}</p>
-                    <i className="fa-solid fa-plus-circle text-slate-100 group-hover:text-brand-primary transition-colors text-lg"></i>
+                
+                {/* Content Section */}
+                <div className={`flex-1 flex flex-col ${isLoft ? 'pl-8 md:pl-12 pr-6' : 'px-2'}`}>
+                  <p className={`text-[10px] font-black uppercase tracking-widest mb-1.5 ${
+                      isMidnight ? 'text-indigo-400' : 'text-[#86868B]'
+                  }`}>{item.cat_name}</p>
+                  
+                  <h4 className={`font-bold tracking-tight leading-tight mb-2 ${
+                      isMidnight ? 'text-2xl text-white' : 
+                      isLoft ? 'text-3xl font-playfair italic md:text-4xl' : 
+                      'text-[22px] text-[#1D1D1F]'
+                  }`}>{item.name}</h4>
+                  
+                  <p className={`text-[14px] leading-relaxed line-clamp-2 mb-6 ${
+                      isMidnight ? 'text-white/50' : 'text-[#86868B]'
+                  }`}>{item.description}</p>
+                  
+                  <div className={`flex items-center justify-between pt-6 mt-auto border-t ${
+                      isMidnight ? 'border-white/5' : 
+                      isLoft ? 'border-none' : 
+                      'border-slate-50'
+                  }`}>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">
+                          {item.has_variations ? 'Starts at' : 'Price'}
+                        </span>
+                        <span className={`text-[24px] font-black tracking-tighter ${
+                            isMidnight ? 'text-white' : isLoft ? 'text-[28px] text-[#2D2926]' : 'text-[#1D1D1F]'
+                        }`}>₱{item.price.toLocaleString()}</span>
+                    </div>
+                    <div className={`w-12 h-12 flex items-center justify-center transition-all ${
+                        isMidnight ? 'bg-indigo-600 text-white rounded-xl' : 
+                        isLoft ? 'border border-[#2D2926] text-[#2D2926] rounded-none group-hover:bg-[#2D2926] group-hover:text-white' : 
+                        'bg-[#F5F5F7] text-[#1D1D1F] rounded-full'
+                    }`}>
+                        <i className={`fa-solid ${item.has_variations ? 'fa-arrow-right-long' : 'fa-plus'} text-xs`}></i>
+                    </div>
                   </div>
                 </div>
               </button>
             ))}
           </div>
-        </section>
-      )}
-
-      {/* Sticky Tab Navigator */}
-      <div className="sticky top-[72px] z-40 bg-white/90 backdrop-blur-3xl border-b border-slate-100 mb-10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.03)]">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="py-5">
-            <div className="flex items-center gap-6">
-              <h2 className="hidden md:block font-black text-[10px] text-slate-300 uppercase tracking-widest shrink-0">Filter /</h2>
-              <div className="flex overflow-x-auto gap-3 no-scrollbar flex-1 items-center">
-                <button 
-                  onClick={() => onCategorySelect('all')}
-                  className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeCategory === 'all' ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
-                >
-                  Everything
-                </button>
-                {categories.map(cat => (
-                  <button 
-                    key={cat.id} 
-                    onClick={() => onCategorySelect(cat.name)}
-                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-sm ${activeCategory === cat.name ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        </Reveal>
       </div>
 
-      {/* Results Label */}
-      <div className="max-w-[1400px] mx-auto px-6 mb-10 flex items-center gap-4">
-        <h2 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.5em]">
-          {searchQuery ? `Search: ${searchQuery}` : 'Full Inventory'}
-        </h2>
-        <div className="h-px bg-slate-50 flex-1"></div>
-      </div>
-
-      {/* Main Grid List */}
-      <div className="max-w-[1400px] mx-auto px-6 pb-48">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-          {searchResults.map(item => (
-            <button 
-              key={item.id} 
-              onClick={() => onItemSelect(item)}
-              className="w-full bg-white p-5 rounded-[3rem] border border-slate-50 shadow-sm transition-all hover:shadow-2xl hover:border-indigo-50 active:scale-[0.98] text-left group flex flex-col relative"
-            >
-              <div className="relative aspect-square w-full mb-6 overflow-hidden rounded-[2.2rem] bg-slate-50 shadow-inner">
-                <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1s]" loading="lazy" />
-                {item.is_popular && (
-                  <div className="absolute top-5 left-5 bg-slate-900/90 backdrop-blur-md text-white text-[8px] font-black uppercase tracking-[0.3em] px-4 py-2 rounded-full shadow-lg">Featured</div>
-                )}
-              </div>
-              <div className="px-2 flex-1 flex flex-col">
-                <div className="mb-4">
-                  <h4 className="font-black text-slate-900 text-2xl uppercase tracking-tight italic leading-tight mb-2 truncate pr-2">{item.name}</h4>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{item.cat_name}</span>
-                    <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
-                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{item.serving_time}</span>
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed mb-8 font-medium">{item.description}</p>
-                <div className="flex justify-between items-center mt-auto">
-                  <div className="flex flex-col">
-                     <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1 leading-none">Price</span>
-                     <span className="text-3xl font-black text-slate-900 tracking-tighter leading-none">₱{item.price}</span>
-                  </div>
-                  <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 group-hover:bg-brand-primary group-hover:text-white transition-all shadow-sm">
-                    <i className="fa-solid fa-plus text-sm"></i>
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-        
-        {searchResults.length === 0 && (
-          <div className="py-64 text-center flex flex-col items-center">
-            <div className="w-32 h-32 bg-slate-50 rounded-full flex items-center justify-center text-slate-100 text-5xl mb-10 shadow-inner">
-              <i className="fa-solid fa-search"></i>
-            </div>
-            <p className="text-slate-300 text-sm font-black uppercase tracking-[0.6em]">No results found</p>
-            <button onClick={() => onSearchChange('')} className="mt-8 bg-slate-900 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Clear Search</button>
-          </div>
-        )}
-      </div>
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };

@@ -1,34 +1,69 @@
+
 export interface Category {
-  id: number;
+  id: number | string;
   name: string;
   icon?: string;
 }
 
+export interface Variation {
+  name: string;
+  options: string[];
+}
+
+export interface ItemOption {
+  id?: string;
+  name: string;
+  price: number;
+}
+
+export interface ItemOptionGroup {
+  id?: string;
+  name: string;
+  required: boolean;
+  min_choices: number;
+  max_choices: number;
+  options: ItemOption[];
+}
+
+export interface Theme {
+  primary_color: string;
+  secondary_color: string;
+  font_family: string;
+  template?: 'classic' | 'midnight' | 'loft' | 'premium' | 'modern';
+  logo_url?: string;
+}
+
 export interface MenuItem {
-  id: number;
+  id: number | string;
   name: string;
   price: number;
   description: string;
   image_url: string;
-  category_id: number | null;
+  category_id: number | string | null;
   cat_name: string;
   is_popular: boolean;
   is_available: boolean;
   ingredients: any[];
   pax: string;
   serving_time: string;
+  variations?: Variation[];
+  parent_id?: number | string | null;
+  has_variations?: boolean;
+  has_options?: boolean;
+  option_groups?: ItemOptionGroup[];
 }
 
 export type OrderMode = 'Dine-in' | 'Takeout' | 'Delivery';
 
-// ViewState defines the possible views/routes in the application
-export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'create-menu' | 'payment' | 'qr-verify' | 'group' | 'test-supabase' | 'super-admin' | 'accept-invite' | 'ai-assistant';
+export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'create-menu' | 'payment' | 'qr-verify' | 'group' | 'test-supabase' | 'super-admin' | 'accept-invite' | 'ai-assistant' | 'admin-faq';
 
 export interface CartItem extends MenuItem {
   quantity: number;
   customInstructions?: string;
   orderTo?: string;
   orderMode: OrderMode;
+  selectedVariations?: Record<string, string>;
+  selectedOptions?: Record<string, string[]>; // groupId -> optionNames
 }
 
 export interface Feedback {
@@ -42,7 +77,7 @@ export interface Feedback {
 export interface SalesRecord {
   timestamp: string;
   amount: number;
-  itemId: number;
+  itemId: number | string;
   itemName: string;
   categoryName: string;
   quantity: number;

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
 import AdminQR from './AdminQR';
@@ -9,12 +10,7 @@ import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
 
-type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'accounts' | 'import-preview';
-
-interface ProgressItem {
-  data: any;
-  exists: boolean;
-}
+type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'accounts';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -29,27 +25,27 @@ interface AdminDashboardProps {
   adminCreds: any;
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
   onLogoUpdate: (logo: string | null) => void;
+  onThemeUpdate: (theme: any) => void;
+  appTheme: any;
+  onOpenFAQ?: () => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
-  onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate 
+  onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ 
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('menu');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [activeAlertCount, setActiveAlertCount] = useState(0);
+  const [menuId, setMenuId] = useState<number | null>(null);
   
   const sessionRaw = localStorage.getItem('foodie_supabase_session');
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   const restaurantId = session?.restaurant?.id;
-  const userRole = session?.user?.role;
-  const isSuperAdmin = userRole === 'super-admin';
 
   useEffect(() => {
     if (!restaurantId || restaurantId === "undefined") return;
     refreshAllData();
     
-    // Alert listener
     const orderChannel = supabase.channel('admin-sidebar-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` }, () => {
         checkActiveAlerts();
@@ -74,84 +70,85 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const refreshAllData = async () => {
     if (!restaurantId || restaurantId === "undefined") return;
-    setIsSyncing(true);
     try {
       const cloudMenu = await MenuService.getMenuByRestaurantId(restaurantId);
       if (cloudMenu) {
+        setMenuId(cloudMenu.menu_id);
         setMenuItems(cloudMenu.items || []);
         setCategories(cloudMenu.categories || []);
       }
+      
+      const cloudFeedbacks = await MenuService.getFeedbacks(restaurantId);
+      setFeedbacks(cloudFeedbacks);
+
     } catch (err: any) {
       console.error("Refresh failed", err);
-    } finally {
-      setIsSyncing(false);
     }
   };
 
-  const navItem = (id: AdminTab, icon: string, label: string) => (
+  const navItemsConfig: { id: AdminTab; icon: string; label: string }[] = [
+    { id: 'menu', icon: 'fa-utensils', label: 'Menu Editor' },
+    { id: 'orders', icon: 'fa-message', label: 'Console' },
+    { id: 'analytics', icon: 'fa-chart-pie', label: 'Stats' },
+    { id: 'qr', icon: 'fa-qrcode', label: 'QR Tokens' },
+    { id: 'accounts', icon: 'fa-user-group', label: 'Team' },
+    { id: 'settings', icon: 'fa-gears', label: 'Settings' }
+  ];
+
+  const renderNavButton = (config: typeof navItemsConfig[0]) => (
     <button 
-      onClick={() => { setActiveTab(id); setIsSidebarOpen(false); }}
-      className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl text-sm font-bold transition-all ${activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+      key={config.id}
+      onClick={() => { setActiveTab(config.id); setIsSidebarOpen(false); }}
+      className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold transition-all group mb-1 text-left ${activeTab === config.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
     >
-      <div className="flex items-center gap-4 relative">
-        <i className={`fa-solid ${icon}`}></i>
-        <span>{label}</span>
-        {id === 'orders' && activeAlertCount > 0 && (
-            <span className="absolute -left-1 -top-1 w-2.5 h-2.5 bg-orange-500 rounded-full border-2 border-[#0f172a] shadow-sm animate-pulse"></span>
+      <i className={`fa-solid ${config.icon} text-base transition-colors ${activeTab === config.id ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}></i> 
+      <div className="flex-1 flex items-center justify-between">
+        <span className="uppercase tracking-widest text-[11px] font-bold">{config.label}</span>
+        {config.id === 'orders' && activeAlertCount > 0 && (
+          <span className="bg-[#FF3B30] text-white text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse">{activeAlertCount}</span>
         )}
       </div>
-      {id === 'orders' && activeAlertCount > 0 && (
-        <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-black">{activeAlertCount}</span>
-      )}
     </button>
   );
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} />;
-      case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} />;
+      case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} menuId={menuId} restaurantId={restaurantId} onOpenFAQ={onOpenFAQ} />;
+      case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} />;
       case 'qr': return <AdminQR />;
       case 'orders': return <AdminOrders />;
       case 'accounts': return <AdminAccounts setActiveTab={setActiveTab} />;
-      case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} />;
+      case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onThemeUpdate={onThemeUpdate} />;
       default: return null;
     }
   };
 
-  return (
-    <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-jakarta">
-      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-black/50 z-[90] backdrop-blur-sm" />}
-      
-      <aside className={`fixed lg:static inset-y-0 left-0 w-72 bg-[#0f172a] text-slate-400 h-full p-6 flex flex-col z-[100] transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="mb-10 flex justify-between items-center px-2">
-          <h1 className="text-xl font-black tracking-tighter text-white uppercase italic">SHARP. <span className="text-indigo-500">ADMIN</span></h1>
-        </div>
-        <nav className="flex-1 space-y-2">
-          {navItem('menu', 'fa-utensils', 'Menu Editor')}
-          {navItem('orders', 'fa-bell', 'Alerts')}
-          {navItem('analytics', 'fa-chart-pie', 'Sales & Stats')}
-          {navItem('qr', 'fa-qrcode', 'QR Codes')}
-          {navItem('accounts', 'fa-user-group', 'Staff & Accounts')}
-          {navItem('settings', 'fa-gears', 'Settings')}
-        </nav>
-        <div className="mt-auto pt-6 border-t border-slate-800 px-2">
-           <button onClick={onLogout} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-xs font-black uppercase text-rose-400 hover:bg-rose-500/10">
-            <i className="fa-solid fa-right-from-bracket"></i> Exit
-          </button>
-        </div>
-      </aside>
+  const currentTabLabel = navItemsConfig.find(n => n.id === activeTab)?.label || 'Dashboard';
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="sticky top-0 z-50 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 shadow-sm">
-          <div className="flex items-center gap-4">
-             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-600"><i className="fa-solid fa-bars-staggered"></i></button>
-             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Hub / <span className="text-slate-900 uppercase">{activeTab === 'orders' ? 'ALERTS' : activeTab}</span></h2>
+  return (
+    <div className="flex h-screen w-full bg-[#F2F2F7] overflow-hidden font-jakarta">
+      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90]" />}
+      <aside className={`fixed lg:static inset-y-0 left-0 w-80 bg-[#0f172a] h-full flex flex-col z-[100] transition-transform duration-500 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-8 pb-4 shrink-0">
+          <div className="flex items-center gap-3 mb-12">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg"><i className="fa-solid fa-utensils text-sm"></i></div>
+            <h1 className="font-black text-2xl text-white tracking-tighter uppercase">FOODIE</h1>
           </div>
-          <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
-             <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">{session?.restaurant?.name || 'Restaurant'}</span>
+          <nav className="space-y-1">{navItemsConfig.map(config => renderNavButton(config))}</nav>
+        </div>
+        <div className="mt-auto p-6"><button onClick={onLogout} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-700 hover:bg-rose-600 transition-all">Sign Out</button></div>
+      </aside>
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/40 h-24 flex items-center justify-between px-6 md:px-12 shrink-0">
+          <div className="flex items-center gap-6">
+             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm"><i className="fa-solid fa-bars-staggered text-sm"></i></button>
+             <h2 className="text-2xl font-black tracking-tight text-slate-900">{currentTabLabel}</h2>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white shadow-xl"><i className="fa-solid fa-user-tie text-[14px]"></i></div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto bg-slate-50 relative no-scrollbar">{renderContent()}</main>
+        <main className="flex-1 overflow-y-auto no-scrollbar bg-[#F2F2F7] p-4 md:p-8">{renderContent()}</main>
       </div>
     </div>
   );
