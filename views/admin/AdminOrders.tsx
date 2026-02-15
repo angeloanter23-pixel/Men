@@ -6,6 +6,7 @@ import LiveOrdersConsole from './LiveOrdersConsole';
 import AdminMessages from './AdminMessages';
 import AdminSessions from './AdminSessions';
 import AdminWaiterRequests from './AdminWaiterRequests';
+import MenuFAQ from './menu/MenuFAQ';
 
 type SubTab = 'Live orders' | 'Messages' | 'Waiter request' | 'Sessions';
 
@@ -16,6 +17,7 @@ export default function AdminOrders() {
   const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const [qrNodes, setQrNodes] = useState<any[]>([]);
   const [now, setNow] = useState(new Date());
+  const [showFaq, setShowFaq] = useState(false);
   
   const [isUpdating, setIsUpdating] = useState(false);
   
@@ -62,7 +64,6 @@ export default function AdminOrders() {
       }, (payload) => {
         setMessages(prev => {
             if (prev.some(m => m.id === payload.new.id)) return prev;
-            // Decode the message text from the raw DB payload
             const msg = { 
                 ...payload.new, 
                 text: MenuService.decodeMessage(payload.new.text) 
@@ -118,15 +119,38 @@ export default function AdminOrders() {
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const liveOrdersFaqs = [
+    { q: "How do I clear an order from the list?", a: "Click on an order and update its status to 'Served'. If you want to hide it completely, ensure 'Show History' is toggled off in the top sort menu." },
+    { q: "What is a Waiter Request?", a: "This is a priority alert triggered by a guest at a physical table. It requires immediate staff attention. Click the request to acknowledge you are heading there." },
+    { q: "Are messages private?", a: "Messages are securely encrypted. Only authorized staff and the guest at that specific table can see the conversation thread." },
+    { q: "Can I manage table PINs?", a: "Yes, go to the 'Sessions' tab. You can see active table codes or manually start a session for a walk-in guest." }
+  ];
+
+  if (showFaq) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-12">
+        <MenuFAQ 
+            onBack={() => setShowFaq(false)} 
+            title="Orders Support" 
+            subtitle="Operations Guide"
+            items={liveOrdersFaqs}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
       <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
-        <header className="px-2 flex items-end justify-between">
-          <div>
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase italic">Console</h1>
-            <p className="text-[10px] font-black text-indigo-500 uppercase mt-2 tracking-[0.2em] italic">Live order management & guest communications</p>
+        <header className="px-2 text-center relative">
+          <div className="space-y-3">
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Live Orders</h1>
+            <p className="text-[17px] font-medium text-slate-500 leading-relaxed">
+              Manage incoming guest requests and sessions.
+              <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+            </p>
           </div>
-          <button onClick={fetchData} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-300 hover:text-indigo-600 shadow-sm border border-slate-200 active:rotate-180 transition-all">
+          <button onClick={fetchData} className="absolute top-0 right-0 w-11 h-11 bg-white rounded-2xl flex items-center justify-center text-slate-300 hover:text-indigo-600 shadow-sm border border-slate-200/60 active:rotate-180 transition-all">
             <i className={`fa-solid fa-arrows-rotate ${isUpdating ? 'animate-spin text-indigo-600' : ''}`}></i>
           </button>
         </header>

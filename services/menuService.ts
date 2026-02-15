@@ -51,6 +51,17 @@ export async function getQRCodeByCode(token: string) {
   };
 }
 
+export async function getActiveSessionByQR(qrId: string) {
+    const { data } = await supabase.from('table_sessions')
+        .select('*')
+        .eq('qr_code_id', qrId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    return data;
+}
+
 export async function getMenuByRestaurantId(restaurantId: string) {
   const { data: menu, error: menuErr } = await supabase.from('menus').select('id').eq('restaurant_id', restaurantId).maybeSingle();
   if (menuErr || !menu) return { items: [], categories: [], menu_id: null };
@@ -129,7 +140,8 @@ export async function createManualSession(qrId: string) {
       qr_code_id: qrId, 
       session_token: crypto.randomUUID(), 
       status: 'active',
-      verification_code: pin
+      verification_code: pin,
+      pin_required: true
     }])
     .select()
     .single();
@@ -149,6 +161,16 @@ export async function verifySessionPin(qrId: string, pin: string) {
 
 export async function getSessionStatus(sessionId: string) {
     const { data } = await supabase.from('table_sessions').select('*').eq('id', sessionId).maybeSingle();
+    return data;
+}
+
+export async function updateTableSession(sessionId: string, updates: any) {
+    const { data, error } = await supabase.from('table_sessions')
+        .update(updates)
+        .eq('id', sessionId)
+        .select()
+        .single();
+    if (error) throw error;
     return data;
 }
 

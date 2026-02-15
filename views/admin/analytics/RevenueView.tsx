@@ -1,8 +1,6 @@
 
 import React from 'react';
 
-declare const Chart: any;
-
 interface RevenueViewProps {
   filteredHistory: any[];
   chartRef: React.RefObject<HTMLCanvasElement | null>;

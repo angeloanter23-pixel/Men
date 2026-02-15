@@ -10,72 +10,63 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentView }) => {
-  const navItem = (view: ViewState, icon: string, label: string, badge?: string) => (
-    <button 
-      onClick={() => { onNavigate(view); onClose(); }} 
-      className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold transition-all group text-left ${currentView === view ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-50/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-    >
-      <i className={`fa-solid ${icon} text-base transition-colors ${currentView === view ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}></i> 
-      <div className="flex-1 flex items-center justify-between">
-        <span className="uppercase tracking-widest text-[11px]">{label}</span>
-        {badge && <span className="bg-[#FF6B00] text-white text-[7px] px-2 py-0.5 rounded-full font-black tracking-tighter">{badge}</span>}
-      </div>
-    </button>
-  );
+  const navItems: { id: ViewState; label: string; icon: string }[] = [
+    { id: 'landing', label: 'Product Overview', icon: 'fa-circle-info' },
+    { id: 'terms', label: 'Terms and Agreement', icon: 'fa-file-contract' },
+    { id: 'privacy', label: 'Privacy Policy', icon: 'fa-shield-halved' },
+  ];
 
   return (
     <>
+      {/* Backdrop */}
       <div 
         onClick={onClose}
-        className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[2000] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       />
-      <aside className={`fixed top-0 left-0 h-full w-80 bg-[#0f172a] text-slate-400 z-[110] shadow-2xl transition-transform duration-500 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-8 h-full flex flex-col">
-          <div className="flex justify-between items-center mb-12 px-2">
-            <div className="flex items-center gap-3">
-               <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                  <i className="fa-solid fa-utensils text-sm"></i>
-               </div>
-               <h2 className="font-black text-2xl text-white tracking-tighter uppercase leading-none">FOODIE</h2>
-            </div>
-            <button onClick={onClose} className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 hover:text-white hover:bg-slate-800 transition-all active:scale-90">
-              <i className="fa-solid fa-xmark text-xl"></i>
-            </button>
-          </div>
-          
-          <nav className="space-y-2 flex-1 overflow-y-auto no-scrollbar pr-2">
-            <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Main Menu</p>
-            {navItem('menu', 'fa-house', 'Home')}
-            {navItem('ai-assistant', 'fa-wand-magic-sparkles', 'AI Assistant', 'AI')}
-            {navItem('group', 'fa-users', 'Group Order')}
-            
-            <div className="my-8 border-t border-slate-800 pt-8 space-y-2">
-              <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Support & Account</p>
-              {navItem('orders', 'fa-receipt', 'My Orders')}
-              {navItem('feedback-data', 'fa-star', 'Reviews')}
-              {navItem('feedback', 'fa-comment-dots', 'Write Review')}
-            </div>
 
-            <div className="my-2 space-y-2">
-              <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mb-4">Dining Tools</p>
-              {navItem('landing', 'fa-rocket', 'Landing Page')}
-              {navItem('super-admin', 'fa-shield-halved', 'System Status')}
+      {/* Drawer Panel */}
+      <aside 
+        className={`fixed inset-y-0 left-0 z-[2001] w-72 bg-white shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col font-jakarta ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white">
+              <span className="text-[10px] font-bold">M</span>
             </div>
-          </nav>
-
-          <div className="mt-auto pt-8 border-t border-slate-800 text-center px-2">
-            <button 
-              onClick={() => { onNavigate('admin'); onClose(); }} 
-              className="group flex items-center justify-between p-6 bg-slate-800 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-xl active:scale-95 w-full border border-slate-700 hover:border-indigo-500"
-            >
-              <span>Merchant Log In</span>
-              <i className="fa-solid fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
-            </button>
-            <div className="mt-8 space-y-1">
-              <p className="text-[8px] text-slate-600 font-bold uppercase tracking-[0.4em] leading-none">Premium Digital Interface</p>
-              <p className="text-[7px] text-slate-700 font-bold uppercase tracking-[0.2em] leading-none">V3.5.0 Clean Core</p>
-            </div>
+            <h2 className="text-lg font-black tracking-tighter uppercase text-slate-900">mymenu</h2>
           </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-slate-900 transition-colors">
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
+          <div>
+            <p className="px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">System Navigation</p>
+            <nav className="space-y-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => { onNavigate(item.id); onClose(); }}
+                  className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-[14px] font-bold transition-all group ${currentView === item.id ? 'bg-orange-50 text-orange-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <i className={`fa-solid ${item.icon} w-5 text-center ${currentView === item.id ? 'text-orange-500' : 'text-slate-400 group-hover:text-slate-600'}`}></i>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-50">
+          <button 
+            onClick={() => { onNavigate('admin'); onClose(); }}
+            className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-[14px] font-bold text-indigo-600 hover:bg-indigo-50 transition-all group"
+          >
+            <i className="fa-solid fa-user-tie w-5 text-center text-indigo-400"></i>
+            <span>Merchant Login</span>
+          </button>
+          <p className="mt-6 text-center text-[9px] font-black text-slate-200 uppercase tracking-widest leading-none">v4.5.2 Platinum</p>
         </div>
       </aside>
     </>

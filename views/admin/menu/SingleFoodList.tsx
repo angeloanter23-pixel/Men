@@ -26,12 +26,12 @@ const SingleFoodList: React.FC<SingleFoodListProps> = ({ items, onEdit, onDelete
         {items.length > 0 ? items.map((item) => (
           <div key={item.id} className="flex items-center justify-between p-4 group active:bg-slate-50 transition-colors">
             <div className="flex items-center gap-4 min-w-0">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-50">
+              <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-50">
                 <img src={item.image_url} className="w-full h-full object-cover" alt="" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-[16px] truncate leading-none">{item.name}</h4>
+                  <h4 className="font-bold text-slate-900 text-[16px] truncate leading-none uppercase">{item.name}</h4>
                   {item.is_popular && <i className="fa-solid fa-star text-[10px] text-amber-500"></i>}
                 </div>
                 <div className="flex items-center gap-2 mt-1.5">
@@ -41,8 +41,8 @@ const SingleFoodList: React.FC<SingleFoodListProps> = ({ items, onEdit, onDelete
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={() => onEdit(item)} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-300 hover:text-[#007AFF] active:scale-90 transition-all"><i className="fa-solid fa-pen text-sm"></i></button>
-              <button onClick={() => onDelete(item)} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 active:scale-90 transition-all"><i className="fa-solid fa-trash-can text-sm"></i></button>
+              <button onClick={() => onEdit(item)} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-200 hover:text-[#007AFF] active:scale-90 transition-all"><i className="fa-solid fa-pen text-sm"></i></button>
+              <button onClick={() => onDelete(item)} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-200 hover:text-rose-500 active:scale-90 transition-all"><i className="fa-solid fa-trash-can text-sm"></i></button>
             </div>
           </div>
         )) : (

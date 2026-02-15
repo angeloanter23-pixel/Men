@@ -6,8 +6,9 @@ import * as MenuService from '../../services/menuService';
 // Modular Components
 import SingleFoodList from './menu/SingleFoodList';
 import DishGroupsList from './menu/DishGroupsList';
-import SectionsList from './sections/SectionsList';
+import CategoryList from './sections/SectionsList';
 import DishModal from './menu/DishModal';
+import MenuFAQ from './menu/MenuFAQ';
 
 interface AdminMenuProps {
   items: MenuItem[];
@@ -23,6 +24,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
   const [activeTab, setActiveTab] = useState<'items' | 'variations' | 'categories'>('items');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showFaq, setShowFaq] = useState(false);
 
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showDishModal, setShowDishModal] = useState(false);
@@ -117,24 +119,30 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     setShowDishModal(true);
   };
 
-  const handleAddCategory = async (name: string) => {
+  const handleSaveCategory = async (id: string | number | null, name: string) => {
     if (!menuId) return;
     setLoading(true);
     try {
-      const res = await MenuService.upsertCategory({ name, menu_id: menuId, order_index: cats.length });
-      setCats([...cats, res]);
-      showToast("Section Published", "success");
-    } catch (e) { showToast("Error adding section", "error"); }
+      const res = await MenuService.upsertCategory({ 
+        id: id || undefined, 
+        name, 
+        menu_id: menuId, 
+        order_index: id ? undefined : cats.length 
+      });
+      if (id) setCats(cats.map(c => c.id === id ? res : c));
+      else setCats([...cats, res]);
+      showToast("Inventory Synchronized", "success");
+    } catch (e) { showToast("Sync Error", "error"); }
     finally { setLoading(false); }
   };
 
   const handleDeleteCategory = async (id: string | number) => {
-    if (!confirm('Delete this section?')) return;
+    if (!confirm('Delete this category?')) return;
     try {
       await MenuService.deleteCategory(id);
       setCats(cats.filter(c => c.id !== id));
-      showToast("Section Purged", "success");
-    } catch (e) { showToast("Error deleting section", "error"); }
+      showToast("Category Purged", "success");
+    } catch (e) { showToast("Error deleting category", "error"); }
   };
 
   const groupedItems = useMemo(() => {
@@ -149,28 +157,49 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     return { standalone, headers, variationMap: map };
   }, [items]);
 
+  const menuFaqs = [
+    { q: "What is the difference between a Dish and a Group?", a: "A Single Dish is an item with one set price, like 'Espresso'. A Dish Group is a container for items that come in different sizes or formats, like 'French Fries' which contains 'Regular', 'Large', and 'Bucket' as individual variants." },
+    { q: "How do I add variants to a group?", a: "Go to the 'Dish Groups' tab and click the '+' button on any group header. This will open the editor where you can add a sub-item like 'Small' or 'Medium' with its own specific price." },
+    { q: "Can I rearrange the categories on my menu?", a: "Yes. Categories appear in the order they were created. You can delete and re-add them if you wish to change the sequence." },
+    { q: "What does 'Show on Menu' do?", a: "Toggling this off immediately hides the item from your customers. This is perfect for items that are temporarily out of stock or seasonal dishes." }
+  ];
+
+  if (showFaq) {
+    return (
+      <div className="animate-fade-in">
+        <MenuFAQ 
+            onBack={() => setShowFaq(false)} 
+            title="Catalog Support" 
+            subtitle="Get expert help with organizing your digital menu and inventory categories."
+            items={menuFaqs}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
       {toast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[5000] animate-fade-in w-full max-w-sm px-6">
            <div className={`p-4 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-2xl border ${toast.type === 'success' ? 'bg-slate-900/90 text-white border-white/10' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-              <p className="text-[11px] font-black uppercase tracking-widest flex-1 text-center italic">{toast.message}</p>
+              <p className="text-[11px] font-black uppercase tracking-widest flex-1 text-center">{toast.message}</p>
            </div>
         </div>
       )}
 
       <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
-        <header className="px-2 text-center sm:text-left">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Menu Editor</h1>
-          <p className="text-slate-500 text-sm font-medium mt-3 leading-relaxed">
-            Manage your digital menu and sections. <button onClick={onOpenFAQ} className="text-[#007AFF] font-bold hover:underline">Learn more about the Menu Editor</button>
+        <header className="px-2 text-center">
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Dish Editor</h1>
+          <p className="text-slate-500 text-[17px] font-medium mt-3 leading-relaxed">
+            Modify your digital inventory and categories. 
+            <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
           </p>
         </header>
 
         <div className="bg-[#E8E8ED] p-1.5 rounded-2xl flex border border-slate-200/50 shadow-inner overflow-x-auto no-scrollbar gap-1">
           {(['items', 'variations', 'categories'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 min-w-[110px] py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>
-              {tab === 'items' ? 'Single Food' : tab === 'variations' ? 'Dish Groups' : 'Sections'}
+              {tab === 'items' ? 'Single Food' : tab === 'variations' ? 'Dish Groups' : 'Categories'}
             </button>
           ))}
         </div>
@@ -197,9 +226,9 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
         )}
 
         {activeTab === 'categories' && (
-          <SectionsList 
+          <CategoryList 
             cats={cats} 
-            onAdd={handleAddCategory} 
+            onSave={handleSaveCategory} 
             onDelete={handleDeleteCategory} 
             loading={loading} 
           />
@@ -220,11 +249,11 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
 
       {itemToDelete && (
         <div className="fixed inset-0 z-[5000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl animate-fade-in font-jakarta">
-            <div className="bg-white w-full max-w-sm rounded-[3.5rem] p-10 shadow-2xl space-y-8 animate-scale text-center">
-                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center mx-auto text-3xl shadow-inner border border-rose-100/50"><i className="fa-solid fa-trash-can"></i></div>
+            <div className="bg-white w-full max-w-sm rounded-[2rem] p-10 shadow-2xl space-y-8 animate-scale text-center">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[1.5rem] flex items-center justify-center mx-auto text-3xl shadow-inner border border-rose-100/50"><i className="fa-solid fa-trash-can"></i></div>
                 <div className="space-y-3">
                   <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">Remove Entry?</h3>
-                  <p className="text-slate-500 text-xs font-bold leading-relaxed px-4 italic">Permanently delete "{itemToDelete.name}" from your menu.</p>
+                  <p className="text-slate-500 text-xs font-bold leading-relaxed px-4">Permanently delete "{itemToDelete.name}" from your menu.</p>
                 </div>
                 <div className="grid grid-cols-1 gap-3 w-full">
                     <button onClick={async () => {

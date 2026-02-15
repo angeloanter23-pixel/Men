@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as MenuService from '../../services/menuService';
-
-declare const QRious: any;
+import MenuFAQ from './menu/MenuFAQ';
 
 interface QRAsset {
   id: string;
@@ -21,7 +21,8 @@ const ShareModal: React.FC<{
     const finalUrl = `${productionBase}${asset.code}`;
 
     useEffect(() => {
-        if (canvasRef.current && typeof QRious !== 'undefined') {
+        const QRious = (window as any).QRious;
+        if (canvasRef.current && QRious) {
             new QRious({ element: canvasRef.current, size: 512, value: finalUrl, level: 'H', foreground: '#000000', background: '#ffffff', padding: 12 });
         }
     }, [finalUrl]);
@@ -78,6 +79,7 @@ const ShareModal: React.FC<{
 const AdminQR: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'gen' | 'saved'>('gen');
   const [baseName, setBaseName] = useState('Table ');
+  const [showFaq, setShowFaq] = useState(false);
   
   const [savedQrs, setSavedQrs] = useState<QRAsset[]>([]);
   const [loading, setLoading] = useState(false);
@@ -129,23 +131,46 @@ const AdminQR: React.FC = () => {
 
   const isDuplicate = savedQrs.some(q => q.label.toLowerCase().trim() === baseName.toLowerCase().trim());
 
+  const qrFaqs = [
+    { q: "What is a Table Node?", a: "A node is a persistent digital entry point mapped to a physical location in your venue. Deleting a node will invalidate any printed QR codes associated with it." },
+    { q: "Can I customize the QR link?", a: "Tokens are auto-generated for maximum security. However, the label (e.g., Table 10) is fully customizable by you." },
+    { q: "How do I get the QR for printing?", a: "In the 'Archive' tab, click the Expand icon on any node. You can then download a high-resolution PNG artifact perfect for professional printing." },
+    { q: "Is there a limit to concurrent scans?", a: "No. Each table node can support unlimited simultaneous guest connections without performance degradation." }
+  ];
+
+  if (showFaq) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-12">
+        <MenuFAQ 
+            onBack={() => setShowFaq(false)} 
+            title="Nodes Support" 
+            subtitle="Deployment Guide"
+            items={qrFaqs}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
       <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
         
         {/* Page Header */}
-        <header className="px-2 flex items-end justify-between">
-          <div>
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none">QR Codes</h1>
-            <p className="text-slate-500 text-sm font-medium mt-2">Generate and manage table tokens.</p>
+        <header className="px-2 text-center relative">
+          <div className="space-y-3">
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">QR Registry</h1>
+            <p className="text-slate-500 text-[17px] font-medium leading-relaxed">
+              Manage digital table access and physical assets.
+              <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+            </p>
           </div>
-          <button onClick={fetchQRCodes} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-300 hover:text-indigo-600 shadow-sm border border-slate-200">
+          <button onClick={fetchQRCodes} className="absolute top-0 right-0 w-11 h-11 bg-white rounded-2xl flex items-center justify-center text-slate-300 hover:text-indigo-600 shadow-sm border border-slate-200/60 active:rotate-180 transition-all">
             <i className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`}></i>
           </button>
         </header>
 
         {/* Tab Switcher */}
-        <div className="bg-slate-200/50 p-1 rounded-2xl flex border border-slate-200">
+        <div className="bg-slate-200/50 p-1 rounded-2xl flex border border-slate-200 shadow-inner">
           <button onClick={() => setActiveTab('gen')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'gen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Create New</button>
           <button onClick={() => setActiveTab('saved')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Archive ({savedQrs.length})</button>
         </div>

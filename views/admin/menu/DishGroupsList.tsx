@@ -45,7 +45,7 @@ const DishGroupsList: React.FC<DishGroupsListProps> = ({
                 className="p-4 flex justify-between items-center active:bg-slate-50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-100 overflow-hidden shrink-0">
+                  <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden shrink-0">
                     <img src={header.image_url} className="w-full h-full object-cover" />
                   </div>
                   <div className="min-w-0">
@@ -58,7 +58,7 @@ const DishGroupsList: React.FC<DishGroupsListProps> = ({
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={(e) => { e.stopPropagation(); onEditHeader(header); }} 
-                    className="w-9 h-9 rounded-full text-slate-300 hover:text-[#007AFF] active:scale-90 transition-all flex items-center justify-center"
+                    className="w-9 h-9 rounded-full text-slate-200 hover:text-[#007AFF] active:scale-90 transition-all flex items-center justify-center"
                   >
                     <i className="fa-solid fa-pen text-xs"></i>
                   </button>
@@ -68,7 +68,7 @@ const DishGroupsList: React.FC<DishGroupsListProps> = ({
                   >
                     <i className="fa-solid fa-plus text-xs"></i>
                   </button>
-                  <i className={`fa-solid fa-chevron-down text-slate-300 transition-transform duration-300 ml-2 ${isExpanded ? 'rotate-180' : ''}`}></i>
+                  <i className={`fa-solid fa-chevron-down text-slate-200 transition-transform duration-300 ml-2 ${isExpanded ? 'rotate-180' : ''}`}></i>
                 </div>
               </div>
 
@@ -84,13 +84,13 @@ const DishGroupsList: React.FC<DishGroupsListProps> = ({
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <button onClick={() => onEditVariant(child)} className="w-9 h-9 rounded-full text-slate-300 hover:text-[#007AFF] flex items-center justify-center transition-all active:scale-90"><i className="fa-solid fa-pen-to-square text-[10px]"></i></button>
-                        <button onClick={() => onDelete(child)} className="w-9 h-9 rounded-full text-slate-300 hover:text-rose-500 flex items-center justify-center transition-all active:scale-90"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
+                        <button onClick={() => onEditVariant(child)} className="w-9 h-9 rounded-full text-slate-200 hover:text-[#007AFF] flex items-center justify-center transition-all active:scale-90"><i className="fa-solid fa-pen-to-square text-[10px]"></i></button>
+                        <button onClick={() => onDelete(child)} className="w-9 h-9 rounded-full text-slate-200 hover:text-rose-500 flex items-center justify-center transition-all active:scale-90"><i className="fa-solid fa-trash-can text-[10px]"></i></button>
                       </div>
                     </div>
                   ))}
                   {children.length === 0 && (
-                    <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest py-6 px-12 italic">No variants added.</p>
+                    <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest py-6 px-12">No variants added.</p>
                   )}
                 </div>
               )}

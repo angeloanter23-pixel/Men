@@ -9,6 +9,7 @@ interface AdminSettingsProps {
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
   onImportClick?: () => void;
   onThemeUpdate: (theme: any) => void;
+  onSubTabChange?: (sub: string) => void;
 }
 
 const FONTS = [
@@ -49,10 +50,9 @@ const TEMPLATES = [
     }
 ];
 
-const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate }) => {
+const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate, onSubTabChange }) => {
   const [merchantData, setMerchantData] = useState<any>(null);
   const [isLoadingMerchant, setIsLoadingMerchant] = useState(false);
-  const [isEditingMerchant, setIsEditingMerchant] = useState(false);
   const [isEditingTheme, setIsEditingTheme] = useState(false);
   
   const [theme, setTheme] = useState({
@@ -119,8 +119,11 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate }
     }
   };
 
-  const SettingRow: React.FC<{ icon: string; color: string; label: string; children: React.ReactNode; last?: boolean }> = ({ icon, color, label, children, last }) => (
-    <div className={`flex items-center justify-between py-4 ${!last ? 'border-b border-slate-100' : ''}`}>
+  const SettingRow: React.FC<{ icon: string; color: string; label: string; children: React.ReactNode; last?: boolean; onClick?: () => void }> = ({ icon, color, label, children, last, onClick }) => (
+    <div 
+      onClick={onClick}
+      className={`flex items-center justify-between py-4 ${!last ? 'border-b border-slate-100' : ''} ${onClick ? 'cursor-pointer hover:bg-slate-50 transition-all rounded-xl -mx-2 px-2' : ''}`}
+    >
       <div className="flex items-center gap-4">
         <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white shadow-sm`}>
           <i className={`fa-solid ${icon} text-[14px]`}></i>
@@ -134,7 +137,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate }
   );
 
   return (
-    <div className="min-h-screen font-jakarta pb-40">
+    <div className="min-h-screen font-jakarta pb-40 px-4 md:px-0">
       <div className="max-w-2xl mx-auto space-y-10">
         
         <header className="flex items-end justify-between px-2">
@@ -217,6 +220,46 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate }
             </SettingRow>
             <SettingRow icon="fa-envelope" color="bg-sky-500" label="Authorized Email" last>
               <span className="text-slate-400 font-medium text-sm">{currentEmail}</span>
+            </SettingRow>
+          </div>
+        </section>
+
+        {/* NEW ABOUT SECTION */}
+        <section className="space-y-3">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">About</h3>
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200/50">
+            <SettingRow 
+              icon="fa-circle-info" 
+              color="bg-orange-500" 
+              label="About Us" 
+              last 
+              onClick={() => onSubTabChange?.('about')}
+            >
+              <i className="fa-solid fa-chevron-right text-slate-200 text-xs"></i>
+            </SettingRow>
+          </div>
+        </section>
+
+        {/* NEW LEGAL SECTION */}
+        <section className="space-y-3">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Legal</h3>
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200/50">
+            <SettingRow 
+              icon="fa-file-contract" 
+              color="bg-emerald-500" 
+              label="Terms and Agreement" 
+              onClick={() => onSubTabChange?.('legal')}
+            >
+              <i className="fa-solid fa-chevron-right text-slate-200 text-xs"></i>
+            </SettingRow>
+            <SettingRow 
+              icon="fa-shield-halved" 
+              color="bg-blue-500" 
+              label="Privacy Policy" 
+              last 
+              onClick={() => onSubTabChange?.('legal')}
+            >
+              <i className="fa-solid fa-chevron-right text-slate-200 text-xs"></i>
             </SettingRow>
           </div>
         </section>

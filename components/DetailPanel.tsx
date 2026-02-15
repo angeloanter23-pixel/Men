@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MenuItem, CartItem, OrderMode } from '../types';
 
@@ -42,7 +43,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
           item.variations.forEach(v => { if (v.name.toLowerCase() !== 'size') defaults[v.name] = v.options[0]; });
           setSelectedVariations(defaults);
       }
-      // Initialize required options
       if (item?.option_groups) {
           const groupDefaults: Record<string, string[]> = {};
           item.option_groups.forEach(g => {
@@ -62,9 +62,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
     const currentScrollTop = e.currentTarget.scrollTop;
     const scrollHeight = e.currentTarget.scrollHeight;
     const clientHeight = e.currentTarget.clientHeight;
-
     const isAtBottom = currentScrollTop + clientHeight >= scrollHeight - 60;
-
     if (isAtBottom) {
       setFooterVisible(true);
     } else if (currentScrollTop > lastScrollTop.current && currentScrollTop > 40) {
@@ -81,34 +79,17 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
     const isRequired = group?.required;
     
     let next;
-
     if (maxChoices === 1) {
-        if (current.includes(optionName)) {
-            // Deselect if already selected AND not required
-            next = isRequired ? [optionName] : [];
-        } else {
-            next = [optionName];
-        }
+        next = isRequired && current.includes(optionName) ? [optionName] : [optionName];
     } else {
-        if (current.includes(optionName)) {
-            next = current.filter(o => o !== optionName);
-        } else {
-            if (current.length < maxChoices) {
-                next = [...current, optionName];
-            } else {
-                next = current; // Limit reached
-            }
-        }
+        next = current.includes(optionName) ? current.filter(o => o !== optionName) : (current.length < maxChoices ? [...current, optionName] : current);
     }
-
     setSelectedOptions(p => ({ ...p, [groupName]: next }));
   };
 
   const totalPrice = useMemo(() => {
     if (!item) return 0;
     let base = item.price;
-    
-    // Add option costs
     if (item.option_groups) {
         item.option_groups.forEach(g => {
             const selectedInGroup = selectedOptions[g.name] || [];
@@ -118,7 +99,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
             });
         });
     }
-
     return base * quantity;
   }, [item, quantity, selectedOptions]);
 
@@ -142,7 +122,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
     orderTo: orderTo.trim() || 'Guest',
     selectedVariations,
     selectedOptions,
-    price: totalPrice / quantity // Effective price per unit
+    price: totalPrice / quantity
   });
 
   const isMidnight = template === 'midnight';
@@ -154,9 +134,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
 
   return (
     <div className={containerClass}>
-      {/* SCROLLABLE BODY */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth" onScroll={handleScroll}>
-        {/* TOP SECTION */}
         <div className="relative w-full animate-fade-in">
           <button onClick={onClose} className={`absolute top-6 left-6 z-20 w-11 h-11 flex items-center justify-center shadow-xl active:scale-90 transition-all ${
               isMidnight ? 'bg-white/10 text-white rounded-xl' : 
@@ -175,7 +153,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
           </div>
         </div>
 
-        {/* CONTENT CORE */}
         <div className="px-6 py-6 space-y-10 max-w-2xl mx-auto w-full">
           <div className={`animate-fade-in-up delay-75 ${isLoft ? 'text-center' : 'space-y-3'}`}>
              <p className={`text-[10px] font-bold uppercase tracking-widest ${
@@ -191,7 +168,28 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
              }`}>{item.description}</p>
           </div>
 
-          {/* DYNAMIC OPTIONS */}
+          {/* METADATA ROW: TIME & PAX */}
+          <div className="flex items-center gap-6 animate-fade-in-up delay-100">
+             <div className="flex items-center gap-2">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isMidnight ? 'bg-white/5 text-indigo-400' : 'bg-slate-50 text-slate-400'}`}>
+                  <i className="fa-solid fa-clock text-xs"></i>
+                </div>
+                <div>
+                   <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Time</p>
+                   <p className="text-[13px] font-bold leading-none">{item.serving_time}</p>
+                </div>
+             </div>
+             <div className="flex items-center gap-2">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isMidnight ? 'bg-white/5 text-indigo-400' : 'bg-slate-50 text-slate-400'}`}>
+                  <i className="fa-solid fa-user-group text-xs"></i>
+                </div>
+                <div>
+                   <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Serves</p>
+                   <p className="text-[13px] font-bold leading-none">{item.pax}</p>
+                </div>
+             </div>
+          </div>
+
           {item.option_groups && item.option_groups.map((group, gIdx) => (
               <div key={gIdx} className="space-y-4 animate-fade-in-up">
                   <div className="flex items-center justify-between">
@@ -234,7 +232,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
               </div>
           ))}
 
-          {/* INGREDIENTS */}
           {item.ingredients && item.ingredients.length > 0 && (
             <div className="space-y-3 animate-fade-in-up">
               <h3 className={`text-[9px] font-bold uppercase tracking-widest ${isMidnight ? 'opacity-40' : 'text-slate-400'}`}>Ingredients</h3>
@@ -250,7 +247,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
             </div>
           )}
 
-          {/* INPUTS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8 border-t border-black/5 animate-fade-in-up delay-300">
               <div className="space-y-2">
                 <h3 className={`text-[9px] font-bold uppercase tracking-widest ${isMidnight ? 'opacity-40' : 'text-slate-400'}`}>Guest</h3>
@@ -277,22 +273,17 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
         </div>
       </div>
 
-      {/* APPLE iOS STYLE STICKY FOOTER */}
       <footer className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-400 transform ${
           footerVisible ? 'translate-y-0' : 'translate-y-full'
       } ${
           isMidnight ? 'bg-[#0A0A0B]/90 border-t border-white/10' : isLoft ? 'bg-[#FCFAF8]/95 border-t border-[#2D2926]/10' : 'bg-white/80 border-t border-slate-200/50'
       } backdrop-blur-2xl shadow-[0_-15px_40px_rgba(0,0,0,0.08)]`}>
         <div className="max-w-2xl mx-auto px-6 py-4 space-y-4">
-            
-            {/* ROW 1: iOS STEPPER & PRICE */}
             <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                     <p className={`text-[8px] font-bold uppercase mb-0.5 ${isMidnight ? 'text-indigo-400/60' : 'text-slate-400'}`}>Total Amount</p>
                     <span className={`text-2xl font-bold tracking-tight leading-none ${isMidnight ? 'text-indigo-400' : 'text-slate-900'}`}>₱{totalPrice.toLocaleString()}</span>
                 </div>
-
-                {/* iOS Style Segmented Stepper */}
                 <div className={`flex items-center gap-4 px-4 py-2 border ${
                     isMidnight ? 'bg-white/5 border-white/10 rounded-xl' : isLoft ? 'border-[#2D2926] rounded-none' : 'bg-slate-100/50 border-slate-200/60 rounded-full'
                 }`}>
@@ -302,7 +293,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
                 </div>
             </div>
 
-            {/* ROW 2: SMALLENED SIDE-BY-SIDE BUTTONS */}
             <div className="grid grid-cols-2 gap-3 pb-2">
                 <button 
                     onClick={() => { onAddToCart(getFinalItem()); onClose(); resetState(); }}
@@ -337,8 +327,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
         .animate-fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
         .delay-75 { animation-delay: 75ms; }
         .delay-100 { animation-delay: 100ms; }
-        .delay-150 { animation-delay: 150ms; }
-        .delay-200 { animation-delay: 200ms; }
         .delay-300 { animation-delay: 300ms; }
       `}</style>
     </div>

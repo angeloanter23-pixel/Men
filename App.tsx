@@ -22,14 +22,16 @@ import OrdersView from './views/OrdersView';
 import QRVerifyView from './views/QRVerifyView';
 import AdminView from './views/AdminView';
 import LandingView from './views/LandingView';
-import GroupView from './views/GroupView';
+import AboutView from './views/AboutView';
 import FeedbackDataView from './views/FeedbackDataView';
 import SuperAdminView from './views/SuperAdminView';
 import TestSupabaseView from './views/TestSupabaseView';
 import AcceptInviteView from './views/AcceptInviteView';
 import AIAssistantView from './views/AIAssistantView';
 import CreateMenuView from './views/CreateMenuView';
+import DemoHubView from './views/DemoHubView';
 import MenuFAQ from './views/admin/menu/MenuFAQ';
+import LegalView from './views/LegalView';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('landing');
@@ -129,22 +131,43 @@ export default function App() {
     const path = window.location.pathname;
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
-      const reserved = ['menu', 'cart', 'orders', 'admin', 'landing', 'group', 'feedback', 'feedback-data', 'super-admin', 'test-supabase', 'ai-assistant', 'create-menu', 'admin-faq'];
+      const reserved = ['menu', 'cart', 'orders', 'admin', 'landing', 'about', 'feedback', 'feedback-data', 'super-admin', 'test-supabase', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'privacy', 'terms'];
       if (!reserved.includes(token.toLowerCase())) {
         try {
             const details = await MenuService.getQRCodeByCode(token);
             if (details) {
-                setInitialTokenFromUrl(token);
-                const menu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
-                if (menu.items && menu.items.length > 0) {
-                  setMenuItems(menu.items);
-                  setCategories(menu.categories);
+                const existingSession = await MenuService.getActiveSessionByQR(details.id);
+                if (existingSession) {
+                    const fullSession = { 
+                      ...existingSession, 
+                      label: details.label, 
+                      restaurantName: details.restaurant_name, 
+                      theme: details.theme, 
+                      restaurant_id: details.restaurant_id,
+                      qr_token: details.code 
+                    };
+
+                    if (existingSession.pin_required === false) {
+                        setActiveSession(fullSession);
+                        localStorage.setItem('foodie_active_session', JSON.stringify(fullSession));
+                        
+                        const menu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
+                        if (menu.items && menu.items.length > 0) {
+                          setMenuItems(menu.items);
+                          setCategories(menu.categories);
+                        }
+                        if (details.theme) applyTheme(details.theme);
+                        refreshFeedbacks(details.restaurant_id);
+                        
+                        window.history.replaceState({}, '', '/');
+                        navigateTo('menu');
+                        return;
+                    } else {
+                        setInitialTokenFromUrl(token);
+                        navigateTo('qr-verify');
+                        return;
+                    }
                 }
-                if (details.theme) applyTheme(details.theme);
-                refreshFeedbacks(details.restaurant_id);
-                window.history.replaceState({}, '', '/');
-                navigateTo('menu');
-                return;
             }
         } catch (e) { console.error("Link sync error"); }
       }
@@ -208,7 +231,7 @@ export default function App() {
       navigateTo('orders');
     } catch (e: any) { 
       setLastError({ msg: "Your order could not be sent to the kitchen.", log: e.message || "" });
-    } finally { setIsDispatching(false); }
+    } finally { tragedy: setIsDispatching(false); }
   };
 
   const handleItemSelect = (item: MenuItem) => {
@@ -219,8 +242,9 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'landing': return <LandingView onStart={() => navigateTo('menu')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={() => {}} />;
+      case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} />;
       case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={() => navigateTo('admin')} />;
+      case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={() => navigateTo('menu')} />;
       case 'menu': 
         if (appTheme.template === 'premium') return <PremiumMenuView categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
         if (appTheme.template === 'modern') return <ModernMenuView categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
@@ -228,7 +252,9 @@ export default function App() {
       case 'cart': return <CartView cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))} onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => activeSession ? finalizeOrder() : navigateTo('qr-verify')} onGoBack={() => navigateTo('menu')} />;
       case 'qr-verify': return <QRVerifyView initialToken={initialTokenFromUrl} onVerify={handleVerificationSuccess} onCancel={() => navigateTo('menu')} />;
       case 'orders': return <OrdersView restaurantId={activeSession?.restaurant_id} tableNumber={activeSession?.label} onIdentifyTable={() => navigateTo('qr-verify')} onPayNow={() => {}} onGoToMenu={() => navigateTo('menu')} />;
-      case 'group': return <GroupView />;
+      case 'about': return <AboutView />;
+      case 'privacy': return <LegalView title="Privacy Policy" />;
+      case 'terms': return <LegalView title="Terms and Agreement" />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} appTheme={appTheme} />;
       case 'feedback': return <FeedbackForm restaurantId={activeSession?.restaurant_id} onSubmit={() => { navigateTo('feedback-data'); }} onCancel={() => navigateTo('menu')} appTheme={appTheme} />;
       case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
@@ -244,10 +270,10 @@ export default function App() {
   if (isBooting) return <div className="flex flex-col items-center justify-center min-h-screen bg-white"><div className="w-16 h-16 border-4 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className={`min-h-screen relative overflow-x-hidden ${['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
+    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
       <style>{`.menu-theme-container { --brand-primary: ${appTheme.primary_color}; --brand-secondary: ${appTheme.secondary_color}; font-family: '${appTheme.font_family}', sans-serif !important; }`}</style>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
-      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col ${appTheme.template === 'premium' || appTheme.template === 'modern' ? 'bg-[#F8F8F8]' : 'bg-[#FBFBFD]'}` : 'min-h-screen flex flex-col'}>
+      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col ${appTheme.template === 'premium' || appTheme.template === 'modern' ? 'bg-[#F8F8F8]' : 'bg-[#FBFBFD]'}` : 'min-h-screen flex flex-col'}>
         {appTheme.template === 'modern' ? (
            <ModernDetailPanel item={selectedItem} isOpen={!!selectedItem} isProcessing={isDispatching} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={(item) => activeSession ? finalizeOrder(activeSession, [item]) : (setPendingSingleItem(item), navigateTo('qr-verify'))} />
         ) : appTheme.template === 'premium' ? (
@@ -257,13 +283,13 @@ export default function App() {
         )}
         <VariationDrawer item={activeVariantSource} variants={menuItems.filter(i => i.parent_id === activeVariantSource?.id)} isOpen={!!activeVariantSource} onClose={() => setActiveVariantSource(null)} onSelect={(v) => { setActiveVariantSource(null); setSelectedItem(v); }} />
         <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} />
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq'].includes(currentView) && (
+        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo'].includes(currentView) && (
           <Navbar logo={null} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.length} />
         )}
-        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq'].includes(currentView) ? 'pb-24' : ''}`}>
+        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo'].includes(currentView) ? 'pb-24' : ''}`}>
           {renderView()}
         </main>
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq'].includes(currentView) && (
+        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo'].includes(currentView) && (
           <BottomNav currentView={currentView} onNavigate={navigateTo} onSupportClick={() => setIsSupportHubOpen(true)} isSupportOpen={isSupportHubOpen} cartCount={cart.length} />
         )}
       </div>

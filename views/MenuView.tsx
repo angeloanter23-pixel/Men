@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MenuItem, Category } from '../types';
 
@@ -43,6 +44,7 @@ const MenuView: React.FC<MenuViewProps> = ({
   const sessionRaw = localStorage.getItem('foodie_active_session') || localStorage.getItem('foodie_supabase_session');
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
   const template = session?.theme?.template || 'classic';
+  const isDemo = session?.qr_token?.startsWith('DEMO') || session?.qr_token?.includes('CAFE') || session?.qr_token?.includes('FINE') || session?.qr_token?.includes('BISTRO');
 
   const isMidnight = template === 'midnight';
   const isLoft = template === 'loft';
@@ -54,6 +56,12 @@ const MenuView: React.FC<MenuViewProps> = ({
     return availableItems.filter(item => item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query) || item.cat_name.toLowerCase().includes(query));
   }, [availableItems, searchQuery]);
 
+  const handleExitDemo = () => {
+    localStorage.removeItem('foodie_active_session');
+    window.location.hash = '#/landing';
+    window.location.reload();
+  };
+
   return (
     <div className={`animate-fade-in w-full min-h-screen pb-40 transition-colors duration-700 ${
         isMidnight ? 'bg-[#0A0A0B] text-white font-outfit' : 
@@ -64,17 +72,29 @@ const MenuView: React.FC<MenuViewProps> = ({
       {/* HEADER & SEARCH SECTION */}
       <header className={`px-6 pt-16 md:pt-24 pb-12 max-w-[1200px] mx-auto ${isLoft ? 'text-center' : ''}`}>
         <Reveal>
-          <div className="mb-10">
-            <h2 className={`text-[12px] font-black uppercase tracking-[0.4em] leading-none mb-4 ${
-                isMidnight ? 'text-indigo-400' : isLoft ? 'text-[#8B7E74]' : 'text-[#FF6B00]'
-            }`}>
-                {isLoft ? 'La Sélection' : 'Curated Selection'}
-            </h2>
-            <h1 className={`text-[44px] md:text-[84px] font-bold tracking-[-0.05em] leading-[1] ${
-                isMidnight ? 'text-white' : isLoft ? 'text-[#2D2926] italic' : 'text-[#1D1D1F]'
-            }`}>
-              {isLoft ? 'The Art of Dining.' : <>Discover our <br className="md:hidden" /> <span className={isMidnight ? 'text-indigo-500' : 'text-[#86868B]'}>Menu.</span></>}
-            </h1>
+          <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <h2 className={`text-[12px] font-black uppercase tracking-[0.4em] leading-none mb-4 ${
+                  isMidnight ? 'text-indigo-400' : isLoft ? 'text-[#8B7E74]' : 'text-[#FF6B00]'
+              }`}>
+                  {isLoft ? 'Selection' : 'Explore Menu'}
+              </h2>
+              <h1 className={`text-[44px] md:text-[84px] font-black tracking-[-0.05em] leading-[1] uppercase ${
+                  isMidnight ? 'text-white' : isLoft ? 'text-[#2D2926]' : 'text-[#1D1D1F]'
+              }`}>
+                {isLoft ? 'Fine Dining.' : <>Discover our <br className="md:hidden" /> <span className={isMidnight ? 'text-indigo-500' : 'text-[#86868B]'}>Dishes.</span></>}
+              </h1>
+            </div>
+
+            {isDemo && (
+              <button 
+                onClick={handleExitDemo}
+                className="px-6 py-3 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-sm flex items-center gap-2"
+              >
+                <i className="fa-solid fa-right-from-bracket"></i>
+                Exit Demo
+              </button>
+            )}
           </div>
         </Reveal>
         
@@ -88,13 +108,13 @@ const MenuView: React.FC<MenuViewProps> = ({
               <i className={`fa-solid fa-magnifying-glass text-[17px] ${isMidnight ? 'text-indigo-400' : isLoft ? 'text-[#2D2926]' : 'text-[#86868B]'}`}></i>
               <input 
                 type="text" 
-                placeholder={isLoft ? "Search our exquisite collection..." : "Find your favorite..."} 
+                placeholder={isLoft ? "Search our collection..." : "Find your favorite..."} 
                 value={searchQuery} 
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className={`flex-1 bg-transparent border-none outline-none text-[17px] placeholder:opacity-50 ${
-                    isMidnight ? 'text-white' : isLoft ? 'text-[#2D2926] italic' : 'text-[#1D1D1F]'
+                className={`flex-1 bg-transparent border-none outline-none text-[17px] font-bold placeholder:opacity-50 ${
+                    isMidnight ? 'text-white' : isLoft ? 'text-[#2D2926]' : 'text-[#1D1D1F]'
                 }`}
               />
             </div>
@@ -120,7 +140,7 @@ const MenuView: React.FC<MenuViewProps> = ({
                     : (isMidnight ? 'text-white/30 hover:text-white' : 'text-[#86868B] hover:text-[#1D1D1F]')
                 }`}
               >
-                {cat === 'all' ? (isLoft ? 'Comprehensive' : 'The Whole Menu') : cat}
+                {cat === 'all' ? (isLoft ? 'Full Menu' : 'All') : cat}
                 {activeCategory === cat && !isLoft && <div className={`absolute -bottom-6 left-0 right-0 h-[3px] rounded-full ${isMidnight ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-[#007AFF]'}`}></div>}
                 {activeCategory === cat && isLoft && <div className="absolute -top-1 -right-2 w-1.5 h-1.5 bg-[#8B7E74] rounded-full"></div>}
               </button>
@@ -146,7 +166,6 @@ const MenuView: React.FC<MenuViewProps> = ({
                     'bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm flex-col hover:shadow-xl'
                 }`}
               >
-                {/* Image Section */}
                 <div className={`relative overflow-hidden shrink-0 ${
                     isMidnight ? 'aspect-[4/3] w-full mb-6 rounded-2xl' : 
                     isLoft ? 'w-32 md:w-56 aspect-square rounded-none' : 
@@ -156,23 +175,33 @@ const MenuView: React.FC<MenuViewProps> = ({
                   {item.is_popular && !isLoft && (
                       <div className={`absolute top-4 left-4 px-3 py-1 text-[8px] font-black uppercase tracking-widest ${
                           isMidnight ? 'bg-indigo-600 text-white' : 'bg-[#FF6B00] text-white'
-                      }`}>Favorite</div>
+                      }`}>Popular</div>
                   )}
                 </div>
                 
-                {/* Content Section */}
                 <div className={`flex-1 flex flex-col ${isLoft ? 'pl-8 md:pl-12 pr-6' : 'px-2'}`}>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mb-1.5 ${
-                      isMidnight ? 'text-indigo-400' : 'text-[#86868B]'
-                  }`}>{item.cat_name}</p>
+                  <div className="flex justify-between items-start mb-2">
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${
+                        isMidnight ? 'text-indigo-400' : 'text-[#86868B]'
+                    }`}>{item.cat_name}</p>
+                    {/* Cooking Time & Pax displayed on card */}
+                    <div className="flex items-center gap-3">
+                       <span className="flex items-center gap-1 text-[9px] font-bold text-slate-300 uppercase">
+                         <i className="fa-solid fa-clock opacity-40"></i> {item.serving_time}
+                       </span>
+                       <span className="flex items-center gap-1 text-[9px] font-bold text-slate-300 uppercase">
+                         <i className="fa-solid fa-user-group opacity-40"></i> {item.pax}
+                       </span>
+                    </div>
+                  </div>
                   
-                  <h4 className={`font-bold tracking-tight leading-tight mb-2 ${
+                  <h4 className={`font-black tracking-tight leading-tight mb-2 uppercase ${
                       isMidnight ? 'text-2xl text-white' : 
-                      isLoft ? 'text-3xl font-playfair italic md:text-4xl' : 
+                      isLoft ? 'text-3xl md:text-4xl' : 
                       'text-[22px] text-[#1D1D1F]'
                   }`}>{item.name}</h4>
                   
-                  <p className={`text-[14px] leading-relaxed line-clamp-2 mb-6 ${
+                  <p className={`text-[14px] font-bold leading-relaxed line-clamp-2 mb-6 ${
                       isMidnight ? 'text-white/50' : 'text-[#86868B]'
                   }`}>{item.description}</p>
                   
@@ -203,11 +232,6 @@ const MenuView: React.FC<MenuViewProps> = ({
           </div>
         </Reveal>
       </div>
-
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 };

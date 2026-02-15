@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ViewState } from '../types';
 
@@ -29,7 +30,7 @@ const Navbar: React.FC<NavbarProps> = ({
         {logo ? (
           <img src={logo} alt="Logo" className="h-8 w-auto object-contain max-w-[140px]" />
         ) : (
-          <h1 className="font-black text-2xl tracking-tighter text-[#FF6B00] uppercase">FOODIE.</h1>
+          <h1 className="font-black text-2xl tracking-tighter text-[#1D1D1F] uppercase">mymenu<span className="text-[#FF6B00]">.asia</span></h1>
         )}
       </div>
       

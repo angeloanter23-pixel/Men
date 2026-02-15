@@ -6,11 +6,14 @@ import AdminQR from './AdminQR';
 import AdminSettings from './AdminSettings';
 import AdminOrders from './AdminOrders';
 import AdminAccounts from './AdminAccounts';
+import AdminLegal from './AdminLegal';
+import AdminAbout from './AdminAbout';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
 
 type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'accounts';
+type SettingsSubTab = 'general' | 'about' | 'legal';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -34,6 +37,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ 
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('menu');
+  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('general');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [menuId, setMenuId] = useState<number | null>(null);
@@ -92,13 +96,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'analytics', icon: 'fa-chart-pie', label: 'Stats' },
     { id: 'qr', icon: 'fa-qrcode', label: 'QR Tokens' },
     { id: 'accounts', icon: 'fa-user-group', label: 'Team' },
-    { id: 'settings', icon: 'fa-gears', label: 'Settings' }
+    { id: 'settings', icon: 'fa-gears', label: 'Site Settings' }
   ];
 
   const renderNavButton = (config: typeof navItemsConfig[0]) => (
     <button 
       key={config.id}
-      onClick={() => { setActiveTab(config.id); setIsSidebarOpen(false); }}
+      onClick={() => { setActiveTab(config.id); setSettingsSubTab('general'); setIsSidebarOpen(false); }}
       className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold transition-all group mb-1 text-left ${activeTab === config.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
     >
       <i className={`fa-solid ${config.icon} text-base transition-colors ${activeTab === config.id ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}></i> 
@@ -118,7 +122,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'qr': return <AdminQR />;
       case 'orders': return <AdminOrders />;
       case 'accounts': return <AdminAccounts setActiveTab={setActiveTab} />;
-      case 'settings': return <AdminSettings onLogout={onLogout} adminCreds={adminCreds} setAdminCreds={setAdminCreds} onThemeUpdate={onThemeUpdate} />;
+      case 'settings':
+        return (
+          <div className="animate-fade-in space-y-6">
+            {settingsSubTab !== 'general' && (
+              <button 
+                onClick={() => setSettingsSubTab('general')}
+                className="group flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all shadow-sm active:scale-95 ml-2"
+              >
+                <i className="fa-solid fa-arrow-left text-[8px] group-hover:-translate-x-0.5 transition-transform"></i>
+                Back to Identity
+              </button>
+            )}
+            {settingsSubTab === 'general' && (
+              <AdminSettings 
+                onLogout={onLogout} 
+                adminCreds={adminCreds} 
+                setAdminCreds={setAdminCreds} 
+                onThemeUpdate={onThemeUpdate} 
+                onSubTabChange={(sub) => setSettingsSubTab(sub as SettingsSubTab)}
+              />
+            )}
+            {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} />}
+            {settingsSubTab === 'legal' && <AdminLegal restaurantId={restaurantId} />}
+          </div>
+        );
       default: return null;
     }
   };
@@ -142,7 +170,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/40 h-24 flex items-center justify-between px-6 md:px-12 shrink-0">
           <div className="flex items-center gap-6">
              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm"><i className="fa-solid fa-bars-staggered text-sm"></i></button>
-             <h2 className="text-2xl font-black tracking-tight text-slate-900">{currentTabLabel}</h2>
+             <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase italic tracking-tighter">{currentTabLabel}</h2>
           </div>
           <div className="flex items-center gap-4">
              <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white shadow-xl"><i className="fa-solid fa-user-tie text-[14px]"></i></div>

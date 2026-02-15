@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import * as MenuService from '../../services/menuService';
-
-declare const QRious: any;
+import MenuFAQ from './menu/MenuFAQ';
 
 interface NodesStepProps {
   nodes: { label: string; code: string }[];
@@ -11,10 +10,11 @@ interface NodesStepProps {
 
 type SubTab = 'generate' | 'list';
 
-const faqs = [
-  { q: "What is a Node?", a: "A node is a unique QR code for a specific table. Guests scan it to see your menu." },
-  { q: "Can I print these?", a: "Yes. Once setup is done, you can download all QR codes from your dashboard." },
-  { q: "Is there a limit?", a: "No. You can create as many table nodes as you need for your restaurant." }
+const nodeFaqs = [
+  { q: "What is a Node?", a: "A node is a unique QR identity for a specific table or location in your restaurant. Guests scan it to see your menu and start an ordering session." },
+  { q: "Can I print these?", a: "Yes. Once your setup is complete, you can download all high-resolution QR codes as PNG images from your dashboard for physical printing." },
+  { q: "Is there a limit?", a: "No. You can create as many table nodes as you need. Whether you have 5 tables or 500, the platform scales with you." },
+  { q: "What happens if I delete a node?", a: "If you delete a node, the physical QR code associated with it will stop working immediately. You would need to print a new code for that table." }
 ];
 
 const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
@@ -22,14 +22,15 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
   const [tableLabel, setTableLabel] = useState('Table ' + (nodes.length + 1));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showFaq, setShowFaq] = useState(false);
   const [inspectingNode, setInspectingNode] = useState<{ label: string; code: string } | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (inspectingNode && qrCanvasRef.current && typeof QRious !== 'undefined') {
+    const QRious = (window as any).QRious;
+    if (inspectingNode && qrCanvasRef.current && QRious) {
       const finalUrl = `https://men-brown.vercel.app/${inspectingNode.code}`;
       new QRious({ 
         element: qrCanvasRef.current, 
@@ -97,15 +98,28 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
     }
   };
 
+  if (showFaq) {
+    return (
+      <MenuFAQ 
+        onBack={() => setShowFaq(false)} 
+        title="Node Support" 
+        items={nodeFaqs}
+      />
+    );
+  }
+
   return (
     <div className="space-y-10 animate-fade-in pb-20">
-      <header className="space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-[34px] font-bold tracking-tight text-slate-900 leading-tight">Table QR Codes</h1>
-          <p className="text-[17px] text-slate-500 font-medium">Create digital spots for your tables.</p>
+      <header className="space-y-6 text-center">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Deployment Nodes</h1>
+          <p className="text-[13px] font-medium text-slate-400 leading-relaxed px-4">
+            Generate QR nodes for your tables.
+            <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+          </p>
         </div>
 
-        <div className="bg-[#E8E8ED] p-1 rounded-2xl flex border border-slate-200/50 shadow-inner">
+        <div className="bg-[#E8E8ED] p-1 rounded-2xl flex border border-slate-200/50 shadow-inner max-w-sm mx-auto">
           <button onClick={() => setActiveTab('generate')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'generate' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Add New</button>
           <button onClick={() => setActiveTab('list')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all relative ${activeTab === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>My List {nodes.length > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white shadow-sm"></span>}</button>
         </div>
@@ -114,30 +128,15 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
       <main>
         {activeTab === 'generate' ? (
           <div className="space-y-10 animate-fade-in">
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200/60 space-y-8">
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200/60 space-y-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4">Table Name</label>
-                <input type="text" value={tableLabel} onChange={e => setTableLabel(e.target.value)} className={`w-full bg-slate-50 border border-slate-100 p-6 rounded-[2rem] text-[17px] font-bold outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner ${error ? 'border-rose-200' : ''}`} placeholder="e.g. Window Seat" />
+                <input type="text" value={tableLabel} onChange={e => setTableLabel(e.target.value)} className={`w-full bg-slate-50 border border-slate-100 p-6 rounded-[2rem] text-[17px] font-bold outline-none transition-all focus:bg-white focus:ring-4 ring-indigo-500/5 shadow-inner ${error ? 'border-rose-200' : ''}`} placeholder="e.g. Window Seat" />
                 {error && <p className="text-rose-500 text-[11px] font-bold ml-4 animate-fade-in">{error}</p>}
               </div>
               <button onClick={handleAddNode} disabled={loading || !tableLabel.trim()} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[12px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all disabled:opacity-50">
                 {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Create Table'}
               </button>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-[11px] font-bold uppercase text-slate-400 tracking-widest px-4">Helpful Tips</h3>
-              <div className="bg-white rounded-[2.5rem] border border-slate-200/60 overflow-hidden shadow-sm">
-                {faqs.map((faq, i) => (
-                  <div key={i} className={`border-b border-slate-50 last:border-none transition-all ${openFaq === i ? 'bg-slate-50/50' : ''}`}>
-                    <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full p-6 flex items-center justify-between group text-left">
-                      <span className="font-bold text-slate-800 text-[15px]">{faq.q}</span>
-                      <i className={`fa-solid fa-chevron-down text-slate-300 transition-transform duration-300 ${openFaq === i ? 'rotate-180 text-indigo-600' : ''}`}></i>
-                    </button>
-                    <div className={`overflow-hidden transition-all duration-300 ${openFaq === i ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}><p className="px-6 pb-6 text-sm text-slate-500 font-medium leading-relaxed">{faq.a}</p></div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         ) : (
@@ -158,7 +157,7 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
                   </div>
                 </div>
               )) : (
-                <div className="py-24 bg-white/50 border-4 border-dashed border-white rounded-[3.5rem] text-center flex flex-col items-center gap-6">
+                <div className="py-24 bg-white/50 border-4 border-dashed border-white rounded-[2rem] text-center flex flex-col items-center gap-6">
                   <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-slate-100 shadow-sm"><i className="fa-solid fa-chair text-3xl"></i></div>
                   <p className="text-[11px] font-black uppercase text-slate-300 tracking-[0.5em]">No tables added</p>
                   <button onClick={() => setActiveTab('generate')} className="px-8 py-3 bg-indigo-600 text-white rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 active:scale-95 transition-all">Add First Table</button>
@@ -171,7 +170,7 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
 
       {inspectingNode && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center animate-fade-in p-0">
-          <div onClick={() => setInspectingNode(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" />
+          <div onClick={() => setInspectingNode(null)} className="absolute inset-0 bg-transparent backdrop-blur-xl" />
           <div className="relative bg-[#F2F2F7] w-full max-w-sm rounded-t-[3rem] shadow-2xl flex flex-col p-0 animate-slide-up overflow-hidden">
             <div className="w-12 h-1.5 bg-slate-300/50 rounded-full mx-auto my-5 shrink-0" />
             <header className="px-10 pb-6 shrink-0 text-center">
@@ -179,15 +178,15 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Code: {inspectingNode.code}</p>
             </header>
             <div className="p-8 pt-0 space-y-8">
-              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col items-center">
+              <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center">
                 <canvas ref={qrCanvasRef} className="w-48 h-48"></canvas>
               </div>
               <div className="grid grid-cols-1 gap-3">
-                 <button onClick={handleCopyLink} className={`w-full py-5 rounded-[1.5rem] font-bold text-[14px] transition-all active:scale-95 flex items-center justify-center gap-3 ${isCopied ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white'}`}>
+                 <button onClick={handleCopyLink} className={`w-full py-5 rounded-none font-bold text-[14px] transition-all active:scale-95 flex items-center justify-center gap-3 ${isCopied ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white'}`}>
                    {isCopied ? <i className="fa-solid fa-check"></i> : <i className="fa-solid fa-link text-indigo-400"></i>}
                    <span>{isCopied ? 'Link Copied' : 'Copy Link'}</span>
                  </button>
-                 <button onClick={handleDownloadPNG} className="w-full py-5 bg-white border border-slate-200 text-slate-700 rounded-[1.5rem] font-bold text-[14px] active:bg-slate-50 transition-colors">Save PNG Image</button>
+                 <button onClick={handleDownloadPNG} className="w-full py-5 bg-white border border-slate-200 text-slate-700 rounded-none font-bold text-[14px] active:bg-slate-50 transition-colors">Save PNG Image</button>
               </div>
               <button onClick={() => setInspectingNode(null)} className="w-full py-2 text-slate-300 font-black uppercase text-[10px] tracking-widest">Close</button>
             </div>

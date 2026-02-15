@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 import * as MenuService from '../services/menuService';
+import { LandingOverlay } from '../landing-page/LandingOverlay';
+import { TermsSection } from '../landing-page/TermsSection';
 
 interface AdminViewProps {
   menuItems: MenuItem[];
@@ -26,16 +28,13 @@ const AdminView: React.FC<AdminViewProps> = ({
   menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ 
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [view, setView] = useState<'login' | 'signup'>('login');
-  
-  const [email, setEmail] = useState('jes@jes');
-  const [password, setPassword] = useState('loy010402');
-  
-  const [businessName, setBusinessName] = useState('');
+  const [email, setEmail] = useState('Jes@jes2');
+  const [password, setPassword] = useState('Loy010402');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
+  const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
   const [clientIp, setClientIp] = useState('0.0.0.0');
   const [isBlocked, setIsBlocked] = useState(false);
   const [countdown, setCountdown] = useState<number>(0);
@@ -68,7 +67,7 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreedToTerms) { setError("Agreement required to proceed."); return; }
+    if (!agreedToTerms) { setError("Please agree to the terms to continue."); return; }
     if (isBlocked || loading) return;
     setLoading(true); setError('');
     try {
@@ -78,21 +77,8 @@ const AdminView: React.FC<AdminViewProps> = ({
       setIsAuthenticated(true);
     } catch (dbErr: any) {
       await MenuService.recordLoginFailure(email, clientIp);
-      setError("Incorrect Merchant ID or password.");
+      setError("We couldn't find a matching account with those details.");
     } finally { setLoading(false); }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!agreedToTerms) { setError("Agreement required to proceed."); return; }
-    if (!email || !password || !businessName) return;
-    setLoading(true); setError('');
-    try {
-      const res = await MenuService.authSignUp(email, password, businessName);
-      localStorage.setItem('foodie_supabase_session', JSON.stringify(res));
-      setIsAuthenticated(true);
-    } catch (err: any) { setError(err.message || "Enrollment failed."); } 
-    finally { setLoading(false); }
   };
 
   if (isAuthenticated) {
@@ -113,44 +99,96 @@ const AdminView: React.FC<AdminViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center p-6 font-jakarta">
-      <div className="w-full max-w-sm flex flex-col items-center">
+    <div className="min-h-screen bg-[#FBFBFD] flex flex-col items-center justify-center p-6 font-jakarta">
+      <div className="w-full max-w-[400px] flex flex-col">
         
-        <div className="flex flex-col items-center text-center mb-10">
-          <div className="w-24 h-24 bg-slate-900 rounded-[1.8rem] flex items-center justify-center text-white shadow-2xl mb-8">
-            <i className="fa-solid fa-shield-halved text-4xl"></i>
+        <header className="mb-12 text-center">
+          <div className="flex justify-center mb-8">
+            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
+              <span className="text-xl font-bold">M</span>
+            </div>
           </div>
-          <h1 className="text-[36px] font-black text-slate-900 tracking-tighter leading-none mb-3 uppercase">Merchant Hub</h1>
-          <p className="text-slate-500 text-[15px] font-medium leading-snug">Secure access to your restaurant node.</p>
-        </div>
+          <h1 className="text-[32px] font-bold text-slate-900 tracking-tight leading-none mb-4">Owner Login</h1>
+          <p className="text-slate-500 text-[16px] font-medium leading-snug">Access your restaurant dashboard.</p>
+        </header>
 
-        <div className="w-full bg-white rounded-[2.5rem] border border-slate-200/60 p-10 shadow-xl">
-          <form onSubmit={view === 'signup' ? handleSignUp : handleLogin} className="space-y-6">
-            <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner">
-              {view === 'signup' && (
-                <input required type="text" value={businessName} onChange={e => setBusinessName(e.target.value)} className="w-full px-5 py-4 text-sm font-bold bg-slate-50 outline-none border-b border-slate-100" placeholder="Restaurant Name" />
-              )}
-              <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-5 py-4 text-sm font-bold bg-slate-50 outline-none border-b border-slate-100" placeholder="Merchant Email" />
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+              <input 
+                required 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-[15px] font-medium outline-none focus:ring-4 ring-slate-900/5 focus:border-slate-400 transition-all" 
+                placeholder="name@business.com" 
+              />
+            </div>
+            
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
               <div className="relative">
-                <input required type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full px-5 py-4 text-sm font-bold bg-slate-50 outline-none" placeholder="Password" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-600 transition-colors"><i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
+                <input 
+                  required 
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-[15px] font-medium outline-none focus:ring-4 ring-slate-900/5 focus:border-slate-400 transition-all" 
+                  placeholder="Enter password" 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors"
+                >
+                  <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                </button>
               </div>
             </div>
+          </div>
 
-            {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest">{error}</p>}
-            
-            <button type="submit" disabled={loading || isBlocked} className="w-full h-14 bg-slate-900 text-white rounded-full font-black uppercase text-[12px] tracking-[0.2em] shadow-xl active:scale-95 disabled:opacity-30">
-              {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : (view === 'signup' ? 'Enroll Node' : 'Initialize Session')}
-            </button>
+          <div className="flex items-start gap-3 px-1">
+            <div 
+              onClick={() => setAgreedToTerms(!agreedToTerms)}
+              className={`mt-0.5 w-5 h-5 rounded-md border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-400'}`}
+            >
+              {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
+            </div>
+            <p className="text-[13px] font-medium text-slate-500 leading-tight">
+              I agree to the <button type="button" onClick={() => setIsTermsOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Terms and Conditions</button>
+            </p>
+          </div>
 
-            <button type="button" onClick={() => setView(view === 'login' ? 'signup' : 'login')} className="w-full text-indigo-600 text-[11px] font-black uppercase tracking-widest">
-              {view === 'login' ? "Create New Node" : "Back to Sign In"}
-            </button>
-          </form>
+          {error && (
+            <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl">
+              <p className="text-rose-600 text-[12px] font-bold text-center leading-relaxed">{error}</p>
+            </div>
+          )}
+          
+          <button 
+            type="submit" 
+            disabled={loading || isBlocked || !agreedToTerms} 
+            className="w-full h-[60px] bg-slate-900 text-white rounded-full font-bold text-[15px] shadow-xl hover:bg-black active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : (isBlocked ? `Wait ${countdown}s` : 'Log In')}
+          </button>
+        </form>
+
+        <div className="mt-12 text-center">
+          <button onClick={onExit} className="text-slate-400 text-[13px] font-bold hover:text-slate-900 transition-colors uppercase tracking-widest">
+            Back to Home
+          </button>
         </div>
-
-        <button onClick={onExit} className="mt-12 text-slate-400 text-[11px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors">Return to Site</button>
       </div>
+
+      {/* Reusable Terms Overlay from Landing Page */}
+      <LandingOverlay 
+        isOpen={isTermsOverlayOpen} 
+        onClose={() => setIsTermsOverlayOpen(null as any)} 
+      >
+        <TermsSection />
+      </LandingOverlay>
     </div>
   );
 };

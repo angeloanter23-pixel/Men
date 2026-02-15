@@ -68,23 +68,39 @@ const FeedbackDataView: React.FC<FeedbackDataViewProps> = ({ feedbacks, onAddFee
         <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 uppercase">Reviews</h1>
       </header>
 
+      {/* NEW CTA SECTION AT THE TOP */}
+      <div className="max-w-2xl mx-auto mb-12">
+        <div className="bg-slate-900 rounded-[3rem] p-10 text-white relative overflow-hidden shadow-2xl">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
+           <div className="relative z-10 space-y-6">
+              <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Your voice <br/> matters.</h2>
+              <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-[240px]">Loved the meal? Let us know. Your honest feedback helps us reach culinary excellence.</p>
+              <button 
+                onClick={onAddFeedback}
+                className="bg-[#FF6B00] text-white px-8 py-4 rounded-full font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all"
+              >
+                Write a Review
+              </button>
+           </div>
+        </div>
+      </div>
+
       <div className="max-w-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
          <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center justify-center text-center">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Average Score</p>
             <h2 className="text-6xl font-black text-[#FF6B00] tracking-tighter leading-none">{getGlobalAvg()}</h2>
             <div className="mt-4 flex gap-0.5 text-amber-400">{'★'.repeat(Math.round(Number(getGlobalAvg()))).padEnd(5, '☆')}</div>
          </div>
-         <div className="bg-slate-900 p-8 rounded-[3rem] shadow-xl text-white flex flex-col items-center justify-center text-center">
-            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Total Reviews</p>
-            <h2 className="text-6xl font-black tracking-tighter leading-none">{feedbacks.length}</h2>
-            <p className="text-[10px] font-bold text-slate-500 uppercase mt-4">Verified Transactions</p>
+         <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center justify-center text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Reviews</p>
+            <h2 className="text-6xl font-black text-slate-900 tracking-tighter leading-none">{feedbacks.length}</h2>
+            <p className="text-[10px] font-bold text-slate-300 uppercase mt-4">Verified Users</p>
          </div>
       </div>
 
       <div className="bg-white rounded-[3.5rem] p-8 shadow-xl border border-slate-100 mb-12 max-w-2xl mx-auto">
         <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest text-center mb-8">Rating Matrix</h3>
-        <div className="h-[40vh] w-full"><canvas ref={chartRef}></canvas></div>
-        <button onClick={onAddFeedback} className="w-full mt-10 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all">Write a Review</button>
+        <div className="h-[35vh] w-full"><canvas ref={chartRef}></canvas></div>
       </div>
 
       <div className="space-y-6 mb-20 max-w-2xl mx-auto">
@@ -96,19 +112,30 @@ const FeedbackDataView: React.FC<FeedbackDataViewProps> = ({ feedbacks, onAddFee
             return (
               <div key={f.id} onClick={() => setSelectedReview(f)} className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all group">
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="font-black text-base text-slate-800 uppercase tracking-tight">{f.name}</h4>
-                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">{f.date}</p>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 font-black text-lg">
+                      {f.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="font-black text-base text-slate-800 uppercase tracking-tight">{f.name}</h4>
+                      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">{f.date}</p>
+                    </div>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[#FF6B00] font-black text-lg tracking-tighter leading-none">{avg}</span>
                     <div className="text-[8px] flex text-amber-400 mt-1">{'★'.repeat(Math.round(Number(avg)))}</div>
                   </div>
                 </div>
-                <p className="text-sm text-slate-500 font-medium line-clamp-2 leading-relaxed">"{f.note}"</p>
+                <p className="text-sm text-slate-500 font-medium line-clamp-2 leading-relaxed italic">"{f.note}"</p>
               </div>
             );
           })}
+          {feedbacks.length === 0 && (
+            <div className="py-20 text-center opacity-20">
+               <i className="fa-solid fa-comments text-5xl mb-4"></i>
+               <p className="font-black uppercase tracking-widest">No reviews yet</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -119,7 +146,14 @@ const FeedbackDataView: React.FC<FeedbackDataViewProps> = ({ feedbacks, onAddFee
                <div><h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-2">{selectedReview.name}</h2><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedReview.date}</p></div>
                <button onClick={() => setSelectedReview(null)} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300"><i className="fa-solid fa-xmark"></i></button>
             </div>
-            <div className="bg-[#FFF3E0]/30 p-8 rounded-[2.5rem] mb-10 border border-[#FF6B00]/5"><p className="text-slate-700 text-lg leading-relaxed font-medium">"{selectedReview.note}"</p></div>
+            
+            {selectedReview.image_url && (
+              <div className="mb-8 aspect-video rounded-3xl overflow-hidden shadow-inner border border-slate-100">
+                <img src={selectedReview.image_url} className="w-full h-full object-cover" alt="Review" />
+              </div>
+            )}
+
+            <div className="bg-[#FFF3E0]/30 p-8 rounded-[2.5rem] mb-10 border border-[#FF6B00]/5"><p className="text-slate-700 text-lg leading-relaxed font-medium italic">"{selectedReview.note}"</p></div>
             <div className="space-y-3 px-2">
               {categories.map(cat => (
                 <div key={cat} className="flex justify-between items-center border-b border-slate-50 py-2.5">

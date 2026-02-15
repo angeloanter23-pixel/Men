@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import jsQR from 'https://esm.sh/jsqr@1.4.0';
 import * as MenuService from '../services/menuService';
@@ -114,7 +115,21 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
       const details = await MenuService.getQRCodeByCode(token);
       if (details) {
         setDetectedToken(token);
-        setMode('pin');
+        // Check for active session and see if PIN is required
+        const session = await MenuService.getActiveSessionByQR(details.id);
+        if (session && session.pin_required === false) {
+            // Auto-verify and skip PIN screen
+            onVerify({ 
+              ...session, 
+              label: details.label, 
+              restaurantName: details.restaurant_name, 
+              theme: details.theme, 
+              restaurant_id: details.restaurant_id,
+              qr_token: details.code 
+            });
+        } else {
+            setMode('pin');
+        }
       } else { 
         setError("QR not found. Please scan an active table code."); 
       }

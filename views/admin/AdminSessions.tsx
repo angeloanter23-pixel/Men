@@ -10,7 +10,7 @@ interface AdminSessionsProps {
 }
 
 export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getRelativeTime }: AdminSessionsProps) {
-  const [sessionToEnd, setSessionToEnd] = useState<any | null>(null);
+  const [selectedSession, setSelectedSession] = useState<any | null>(null);
   const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -22,12 +22,29 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
   }, [activeSessions, qrNodes]);
 
   const handleEndSession = async (sessionId: string) => {
+    setIsUpdating(true);
     try {
         await MenuService.endTableSession(sessionId);
-        setSessionToEnd(null);
+        setSelectedSession(null);
         onRefresh();
     } catch (e) {
         console.error("End session failed");
+    } finally {
+        setIsUpdating(false);
+    }
+  };
+
+  const handleTogglePin = async (sessionId: string, currentStatus: boolean) => {
+    setIsUpdating(true);
+    const nextStatus = !currentStatus;
+    try {
+        await MenuService.updateTableSession(sessionId, { pin_required: nextStatus });
+        setSelectedSession(prev => prev ? { ...prev, pin_required: nextStatus } : null);
+        onRefresh();
+    } catch (e) {
+        console.error("Toggle PIN failed");
+    } finally {
+        setIsUpdating(false);
     }
   };
 
@@ -55,7 +72,7 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
             {sessionsList.map((session) => (
                 <button 
                     key={session.id} 
-                    onClick={() => setSessionToEnd(session)}
+                    onClick={() => setSelectedSession(session)}
                     className="w-full p-5 flex items-center justify-between active:bg-slate-50 transition-colors text-left group"
                 >
                     <div className="flex items-center gap-4">
@@ -70,7 +87,9 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
                     <div className="flex items-center gap-3 shrink-0">
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] font-black text-emerald-600 uppercase">PIN: {session.verification_code}</span>
-                            <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">Active Sync</span>
+                            <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">
+                                {session.pin_required !== false ? 'PIN Required' : 'PIN Disabled'}
+                            </span>
                         </div>
                         <i className="fa-solid fa-chevron-right text-slate-200 text-[10px] group-active:translate-x-1 transition-transform"></i>
                     </div>
@@ -79,34 +98,54 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
         </div>
         {sessionsList.length === 0 && <div className="py-24 text-center opacity-20 italic">No Active Table Sessions</div>}
 
-        {/* TERMINATE SESSION MODAL */}
-        {sessionToEnd && (
-            <div className="fixed inset-0 z-[3000] flex items-end justify-center animate-fade-in p-4">
-                <div onClick={() => setSessionToEnd(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" />
-                <div className="relative w-full max-w-lg space-y-3 animate-slide-up">
-                    <div className="bg-white/95 backdrop-blur-2xl rounded-[1.5rem] overflow-hidden flex flex-col shadow-2xl">
-                        <div className="px-10 py-10 text-center">
-                            <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl shadow-inner">
-                                <i className="fa-solid fa-power-off"></i>
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none mb-3">Terminate Session</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed px-4">
-                                End current session for <span className="font-bold text-slate-900">{sessionToEnd.table_label}</span>? 
-                                <br/><span className="text-[10px] text-rose-500 font-black uppercase mt-2 block">System will reset Token and PIN.</span>
-                            </p>
+        {selectedSession && (
+            <div className="fixed inset-0 z-[3000] flex items-end justify-center animate-fade-in p-0">
+                <div onClick={() => !isUpdating && setSelectedSession(null)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
+                <div className="relative bg-white w-full max-w-lg rounded-t-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up pb-12">
+                    <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-5 shrink-0" />
+                    
+                    <div className="px-10 pb-8 flex justify-between items-start border-b border-slate-50">
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none">{selectedSession.table_label}</h3>
+                            <p className="text-[10px] font-black text-indigo-600 uppercase mt-2 tracking-[0.2em] leading-none">Session Context Settings</p>
                         </div>
-                        <div className="p-4 border-t border-slate-100 flex flex-col gap-2">
+                        <button onClick={() => setSelectedSession(null)} className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 hover:text-slate-900 transition-colors"><i className="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div className="p-10 space-y-10">
+                        <div className="flex items-center justify-between bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
+                            <div className="space-y-1 pr-4">
+                                <h4 className="text-[15px] font-black uppercase text-slate-900 leading-none">PIN Verification</h4>
+                                <p className="text-[11px] font-medium text-slate-400 leading-tight">Require 4-digit code to place orders</p>
+                            </div>
                             <button 
-                                onClick={() => handleEndSession(sessionToEnd.id)} 
-                                className="w-full py-5 bg-rose-600 text-white rounded-2xl font-black text-[14px] uppercase tracking-[0.2em] shadow-xl shadow-rose-100 active:scale-95 transition-all"
+                                onClick={() => handleTogglePin(selectedSession.id, selectedSession.pin_required !== false)}
+                                disabled={isUpdating}
+                                className={`w-16 h-8 rounded-full transition-all duration-300 relative flex items-center px-1 border-2 ${selectedSession.pin_required !== false ? 'bg-indigo-600 border-indigo-700' : 'bg-slate-300 border-slate-400'}`}
                             >
-                                End Session Now
+                                <div className={`w-5 h-5 bg-white rounded-full shadow-lg transform transition-transform duration-300 ${selectedSession.pin_required !== false ? 'translate-x-8' : 'translate-x-0'}`} />
                             </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white border border-slate-100 p-5 rounded-3xl text-center shadow-sm">
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Active PIN</p>
+                                <p className="text-xl font-black text-indigo-600">{selectedSession.verification_code}</p>
+                            </div>
+                            <div className="bg-white border border-slate-100 p-5 rounded-3xl text-center shadow-sm">
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Connected</p>
+                                <p className="text-xl font-black text-slate-800">{getRelativeTime(selectedSession.created_at).split(' ')[0]}m</p>
+                            </div>
+                        </div>
+
+                        <div className="pt-6 border-t border-slate-100">
                             <button 
-                                onClick={() => setSessionToEnd(null)} 
-                                className="w-full py-4 text-slate-400 font-bold text-[14px] uppercase tracking-widest"
+                                onClick={() => handleEndSession(selectedSession.id)} 
+                                disabled={isUpdating}
+                                className="w-full py-6 bg-rose-50 text-rose-500 rounded-3xl font-black uppercase text-[11px] tracking-[0.3em] active:scale-95 transition-all flex items-center justify-center gap-3 border border-rose-100 shadow-inner"
                             >
-                                Cancel
+                                {isUpdating ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-power-off"></i>}
+                                <span>Terminate Session</span>
                             </button>
                         </div>
                     </div>
@@ -114,7 +153,6 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
             </div>
         )}
 
-        {/* ADD SESSION MODAL */}
         {isAddSessionOpen && (
             <div className="fixed inset-0 z-[3000] flex items-end justify-center animate-fade-in">
                 <div onClick={() => setIsAddSessionOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
@@ -137,9 +175,6 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
                                 Just pick an empty table below to start a new dining session. This will generate a code for the guests.
                             </p>
                         </div>
-
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">Which table is being occupied?</p>
-                        
                         <div className="grid grid-cols-1 gap-3">
                             {qrNodes.filter(node => !activeSessions.some(s => s.qr_code_id === node.id)).length > 0 ? (
                                 qrNodes.filter(node => !activeSessions.some(s => s.qr_code_id === node.id)).map(node => (
@@ -154,10 +189,7 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
                                             </div>
                                             <span className="font-black uppercase text-slate-800 tracking-tight text-lg">{node.label}</span>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Select Table</span>
-                                            <i className="fa-solid fa-plus text-slate-300 group-hover:text-indigo-600"></i>
-                                        </div>
+                                        <i className="fa-solid fa-plus text-slate-300 group-hover:text-indigo-600"></i>
                                     </button>
                                 ))
                             ) : (

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ViewState } from '../types';
 
@@ -12,7 +13,7 @@ interface BottomNavProps {
 const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, onSupportClick, isSupportOpen, cartCount }) => {
   const tabs = [
     { id: 'menu', icon: 'fa-house', label: 'Menu' },
-    { id: 'group', icon: 'fa-users', label: 'Group' },
+    { id: 'about', icon: 'fa-circle-info', label: 'About' },
     { id: 'support', icon: 'fa-comment-dots', label: 'Message', action: onSupportClick },
     { id: 'orders', icon: 'fa-receipt', label: 'Orders' },
   ];

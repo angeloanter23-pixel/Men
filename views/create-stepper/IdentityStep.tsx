@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import MenuFAQ from './menu/MenuFAQ';
 
 interface IdentityStepProps {
   brand: { name: string; email: string };
@@ -8,23 +9,36 @@ interface IdentityStepProps {
   verifying: boolean;
 }
 
-const faqs = [
-  { q: "Is the restaurant name permanent?", a: "No, you can update your restaurant name anytime through the Merchant Portal settings." },
-  { q: "Which email should I use?", a: "Use your primary business email. This will be your master login for the administration console." },
-  { q: "What if I have multiple branches?", a: "You can define additional territories and branch contexts once your primary account is active." }
+const identityFaqs = [
+  { q: "Is the restaurant name permanent?", a: "No, you can update your restaurant name anytime through the Merchant Portal settings once your account is fully activated." },
+  { q: "Which email should I use?", a: "Use your primary business email. This will be your master login for the administration console and where you will receive your license keys." },
+  { q: "What if I have multiple branches?", a: "You can define additional territories and branch contexts once your primary account is active. This wizard sets up your first main location." }
 ];
 
 const IdentityStep: React.FC<IdentityStepProps> = ({ brand, setBrand, errors, verifying }) => {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showFaq, setShowFaq] = useState(false);
+
+  if (showFaq) {
+    return (
+      <MenuFAQ 
+        onBack={() => setShowFaq(false)} 
+        title="Brand Support" 
+        items={identityFaqs}
+      />
+    );
+  }
 
   return (
     <div className="space-y-12 animate-fade-in">
-      <header className="space-y-2">
-        <h1 className="text-[34px] font-bold tracking-tight text-slate-900 leading-tight">Restaurant Identity</h1>
-        <p className="text-[17px] text-slate-500 font-medium leading-relaxed">Define the essence of your digital presence.</p>
+      <header className="space-y-3 text-center">
+        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Brand Identity</h1>
+        <p className="text-[13px] font-medium text-slate-400 leading-relaxed px-4">
+          Enter your restaurant name and email.
+          <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+        </p>
       </header>
 
-      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200/60 space-y-8 relative overflow-hidden">
+      <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200/60 space-y-8 relative overflow-hidden">
         <div className="space-y-6">
           <div className="space-y-2 relative">
             <label className="text-[11px] font-bold uppercase text-slate-400 tracking-wider ml-1">Restaurant Name</label>
@@ -63,26 +77,6 @@ const IdentityStep: React.FC<IdentityStepProps> = ({ brand, setBrand, errors, ve
             </div>
             {errors.email && <p className="text-rose-500 text-[11px] font-bold ml-1 animate-fade-in">{errors.email}</p>}
           </div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-[11px] font-bold uppercase text-slate-400 tracking-widest px-4">Setup Assistance</h3>
-        <div className="bg-white rounded-[2.5rem] border border-slate-200/60 overflow-hidden shadow-sm">
-          {faqs.map((faq, i) => (
-            <div key={i} className={`border-b border-slate-50 last:border-none transition-all ${openFaq === i ? 'bg-slate-50/50' : ''}`}>
-              <button 
-                onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="w-full p-6 flex items-center justify-between group text-left"
-              >
-                <span className="font-bold text-slate-800 text-[15px]">{faq.q}</span>
-                <i className={`fa-solid fa-chevron-down text-slate-300 transition-transform duration-300 ${openFaq === i ? 'rotate-180 text-indigo-600' : ''}`}></i>
-              </button>
-              <div className={`overflow-hidden transition-all duration-300 ${openFaq === i ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <p className="px-6 pb-6 text-sm text-slate-500 font-medium leading-relaxed">{faq.a}</p>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

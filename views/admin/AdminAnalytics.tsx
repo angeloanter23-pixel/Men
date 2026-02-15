@@ -6,8 +6,7 @@ import RevenueView from './analytics/RevenueView';
 import DishesView from './analytics/DishesView';
 import SectionsView from './analytics/SectionsView';
 import FeedbacksAnalyticsView from './analytics/FeedbacksAnalyticsView';
-
-declare const Chart: any;
+import MenuFAQ from './menu/MenuFAQ';
 
 type AnalyticsTab = 'Revenue' | 'Dishes' | 'Sections' | 'Feedbacks' | 'Record Sale';
 
@@ -28,6 +27,7 @@ export default function AdminAnalytics({
 }) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('Revenue');
   const [selectedProductId, setSelectedProductId] = useState<number | 'global'>('global');
+  const [showFaq, setShowFaq] = useState(false);
   
   const [dateFilter, setDateFilter] = useState(new Date().toLocaleDateString('en-CA'));
   const [dbSales, setDbSales] = useState<SalesRecord[]>([]);
@@ -140,7 +140,8 @@ export default function AdminAnalytics({
   };
 
   useEffect(() => {
-    if (!(window as any).Chart) return;
+    const Chart = (window as any).Chart;
+    if (!Chart) return;
     
     const commonOptions = {
         responsive: true,
@@ -182,68 +183,75 @@ export default function AdminAnalytics({
       if (chartInstances.current.revenue) chartInstances.current.revenue.destroy();
       const { results, labels } = getHourlyData('global');
       const ctx = chartRefs.revenue.current.getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-      gradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
-      gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+      if (ctx) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
 
-      chartInstances.current.revenue = new (window as any).Chart(ctx, {
-        type: 'line', 
-        data: { 
-          labels: labels, 
-          datasets: [{ 
-            data: results, 
-            fill: true, 
-            backgroundColor: gradient, 
-            borderColor: '#6366f1', 
-            borderWidth: 4,
-            pointRadius: 4,
-            pointBackgroundColor: '#fff',
-            pointBorderWidth: 3,
-            pointBorderColor: '#6366f1',
-            tension: 0.45 
-          }] 
-        },
-        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, suggestedMax: Math.max(...results) * 1.3 } } }
-      });
+        chartInstances.current.revenue = new Chart(ctx, {
+          type: 'line', 
+          data: { 
+            labels: labels, 
+            datasets: [{ 
+              data: results, 
+              fill: true, 
+              backgroundColor: gradient, 
+              borderColor: '#6366f1', 
+              borderWidth: 4,
+              pointRadius: 4,
+              pointBackgroundColor: '#fff',
+              pointBorderWidth: 3,
+              pointBorderColor: '#6366f1',
+              tension: 0.45 
+            }] 
+          },
+          options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, suggestedMax: Math.max(...results) * 1.3 } } }
+        });
+      }
     }
 
     if (activeTab === 'Dishes' && chartRefs.product.current) {
       if (chartInstances.current.product) chartInstances.current.product.destroy();
       const { results, labels } = getHourlyData(selectedProductId);
       const ctx = chartRefs.product.current.getContext('2d');
-      chartInstances.current.product = new (window as any).Chart(ctx, {
-        type: 'bar', 
-        data: { 
-            labels: labels, 
-            datasets: [{ 
-                data: results, 
-                backgroundColor: '#6366f1', 
-                borderRadius: 8, 
-                maxBarThickness: 40 
-            }] 
-        },
-        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, suggestedMax: Math.max(...results) * 1.3 } } }
-      });
+      if (ctx) {
+        chartInstances.current.product = new Chart(ctx, {
+          type: 'bar', 
+          data: { 
+              labels: labels, 
+              datasets: [{ 
+                  data: results, 
+                  backgroundColor: '#6366f1', 
+                  borderRadius: 8, 
+                  maxBarThickness: 40 
+              }] 
+          },
+          options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, suggestedMax: Math.max(...results) * 1.3 } } }
+        });
+      }
     }
 
     if (activeTab === 'Sections' && chartRefs.pie.current) {
       if (chartInstances.current.pie) chartInstances.current.pie.destroy();
       const catMap: Record<string, number> = {};
       filteredHistory.forEach(r => catMap[r.categoryName] = (catMap[r.categoryName] || 0) + r.amount);
-      chartInstances.current.pie = new (window as any).Chart(chartRefs.pie.current.getContext('2d'), {
-        type: 'doughnut', 
-        data: { 
-          labels: Object.keys(catMap).length ? Object.keys(catMap) : ['No Data'], 
-          datasets: [{ 
-            data: Object.values(catMap).length ? Object.values(catMap) : [1], 
-            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6'], 
-            borderWidth: 8,
-            borderColor: '#fff',
-            hoverOffset: 15
-          }] 
-        },
-        options: { ...commonOptions, scales: undefined, cutout: '82%', plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 30, font: { weight: '800', size: 10 }, color: '#64748b' } } } }
-      });
+      const ctx = chartRefs.pie.current.getContext('2d');
+      if (ctx) {
+        chartInstances.current.pie = new Chart(ctx, {
+          type: 'doughnut', 
+          data: { 
+            labels: Object.keys(catMap).length ? Object.keys(catMap) : ['No Data'], 
+            datasets: [{ 
+              data: Object.values(catMap).length ? Object.values(catMap) : [1], 
+              backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6'], 
+              borderWidth: 8,
+              borderColor: '#fff',
+              hoverOffset: 15
+            }] 
+          },
+          options: { ...commonOptions, scales: undefined, cutout: '82%', plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 30, font: { weight: '800', size: 10 }, color: '#64748b' } } } }
+        });
+      }
     }
 
     if (activeTab === 'Feedbacks' && chartRefs.feedback.current) {
@@ -254,30 +262,33 @@ export default function AdminAnalytics({
         return vals.length ? (vals.reduce((a, b) => (a as number) + (b as number), 0) / vals.length) : 0;
       });
 
-      chartInstances.current.feedback = new (window as any).Chart(chartRefs.feedback.current.getContext('2d'), {
-        type: 'radar',
-        data: {
-          labels: categories,
-          datasets: [{
-            data: avgScores,
-            fill: true,
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            borderColor: '#6366f1',
-            borderWidth: 2,
-            pointRadius: 4,
-            pointBackgroundColor: '#fff',
-            pointBorderColor: '#6366f1'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: { min: 0, max: 5, grid: { circular: false, color: '#f1f5f9' }, pointLabels: { font: { size: 10, weight: '800' }, color: '#94a3b8' }, ticks: { display: false, stepSize: 1 } }
+      const ctx = chartRefs.feedback.current.getContext('2d');
+      if (ctx) {
+        chartInstances.current.feedback = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: categories,
+            datasets: [{
+              data: avgScores,
+              fill: true,
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              borderColor: '#6366f1',
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: '#fff',
+              pointBorderColor: '#6366f1'
+            }]
           },
-          plugins: { legend: { display: false } }
-        }
-      });
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              r: { min: 0, max: 5, grid: { circular: false, color: '#f1f5f9' }, pointLabels: { font: { size: 10, weight: '800' }, color: '#94a3b8' }, ticks: { display: false, stepSize: 1 } }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
     }
   }, [activeTab, selectedProductId, dateFilter, dbSales, salesHistory, filteredHistory, feedbacks, appTheme]);
 
@@ -290,15 +301,37 @@ export default function AdminAnalytics({
     };
   }, [dateFilter]);
 
+  const analyticsFaqs = [
+    { q: "Where does the revenue data come from?", a: "Revenue is calculated strictly from orders marked as 'Paid'. Pending or unpaid orders are excluded from financial charts to ensure accuracy." },
+    { q: "How is 'Average Sale' calculated?", a: "It is the total gross revenue for the selected date divided by the number of unique paid transactions." },
+    { q: "Can I see sales for specific dishes?", a: "Yes. Switch to the 'Dishes' tab and select an item from the horizontal scroller to see its specific performance over time." },
+    { q: "What does the Radar Chart represent?", a: "It aggregates all guest reviews to show your venue's strengths and weaknesses across the custom metrics you've defined (e.g., Speed, Quality)." }
+  ];
+
+  if (showFaq) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-12">
+        <MenuFAQ 
+            onBack={() => setShowFaq(false)} 
+            title="Analytics Support" 
+            subtitle="Insights Guide"
+            items={analyticsFaqs}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
-      <header className="px-6 pt-12 pb-8 max-w-lg mx-auto flex flex-col items-center space-y-10">
+      <header className="px-6 pt-12 pb-8 max-w-lg mx-auto flex flex-col items-center space-y-8">
         <div className="text-center">
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none uppercase">Analytics</h1>
-            <p className="text-slate-400 text-sm font-medium mt-3">Business overview</p>
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Business Stats</h1>
+            <p className="text-slate-500 text-[17px] font-medium mt-3 leading-relaxed">
+              Monitor venue performance and guest engagement.
+              <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+            </p>
         </div>
 
-        {/* Tab Switcher - Strictly max-w-lg and rounded-2xl */}
         <div 
           ref={navContainerRef}
           className="bg-slate-200/50 p-1.5 rounded-2xl flex border border-slate-200 shadow-inner overflow-x-auto no-scrollbar gap-1 w-full"
@@ -314,7 +347,6 @@ export default function AdminAnalytics({
           ))}
         </div>
 
-        {/* Calendar Selection Card - Same roundness and width as nav bar */}
         <div className="w-full">
             <div className="relative group cursor-pointer w-full">
                 <div className={`bg-white p-5 rounded-2xl shadow-sm border border-slate-200/50 flex items-center gap-6 transition-all active:scale-[0.98]`}>

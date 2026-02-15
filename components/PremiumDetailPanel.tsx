@@ -86,7 +86,6 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
   return (
     <div className={`fixed inset-0 z-[1200] transition-all duration-700 bg-[#0A0A0B] text-white font-['Outfit'] flex flex-col ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}>
       
-      {/* FULL-BLEED IMAGE HEADER */}
       <div className="relative h-[45vh] w-full shrink-0 group">
           <img src={item.image_url} alt="" className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-[10s]" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0B] via-transparent to-black/30"></div>
@@ -101,16 +100,26 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
           </div>
       </div>
 
-      {/* CONTENT SCROLLER */}
       <div className="flex-1 overflow-y-auto no-scrollbar px-8 py-10 space-y-12 pb-48">
           <div className="max-w-2xl mx-auto space-y-10">
               
               <div className="p-8 bg-white/[0.03] border border-white/5 rounded-[2.5rem] relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
                   <p className="text-lg font-medium leading-relaxed text-white/60 italic">"{item.description}"</p>
+                  
+                  {/* METADATA CHIPS */}
+                  <div className="flex items-center gap-4 mt-8">
+                    <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-full flex items-center gap-2">
+                       <i className="fa-solid fa-clock text-[10px] text-indigo-400"></i>
+                       <span className="text-[11px] font-black uppercase tracking-widest text-indigo-100">{item.serving_time}</span>
+                    </div>
+                    <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-full flex items-center gap-2">
+                       <i className="fa-solid fa-user-group text-[10px] text-indigo-400"></i>
+                       <span className="text-[11px] font-black uppercase tracking-widest text-indigo-100">{item.pax}</span>
+                    </div>
+                  </div>
               </div>
 
-              {/* OPTIONS */}
               {item.option_groups?.map((group, gIdx) => (
                   <div key={gIdx} className="space-y-6">
                       <div className="flex items-center justify-between px-2">
@@ -152,7 +161,6 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
           </div>
       </div>
 
-      {/* LUXURY STICKY FOOTER */}
       <footer className="fixed bottom-0 left-0 right-0 z-[1250] p-8 bg-[#0A0A0B]/90 backdrop-blur-3xl border-t border-white/5">
           <div className="max-w-2xl mx-auto flex items-center justify-between gap-8">
               <div className="flex flex-col">
