@@ -91,11 +91,11 @@ const InventoryStep: React.FC<InventoryStepProps> = ({ items, setItems, categori
     setShowDishModal(true);
   };
 
-  const handleSaveCategory = (id: string | number | null, name: string) => {
+  const handleSaveCategory = (id: string | number | null, name: string, icon: string) => {
     if (id) {
-        setCategories(categories.map(c => c.id === id ? { ...c, name: name.trim() } : c));
+        setCategories(categories.map(c => c.id === id ? { ...c, name: name.trim(), icon: icon.trim() } : c));
     } else {
-        setCategories([...categories, { id: Date.now(), name: name.trim() }]);
+        setCategories([...categories, { id: Date.now(), name: name.trim(), icon: icon.trim() }]);
     }
   };
 

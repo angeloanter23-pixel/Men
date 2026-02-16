@@ -51,6 +51,14 @@ const MenuFAQ: React.FC<MenuFAQProps> = ({
     setSupportMessage('');
   };
 
+  const defaultItems = [
+    ...items,
+    { 
+      q: "Where can I find icon classes?", 
+      a: "We use FontAwesome 6.4.0. You can visit fontawesome.com/search?o=r&m=free to browse free icons. Copy the class name like 'fa-utensils' or 'fa-mug-saucer' and paste it into the category icon field." 
+    }
+  ];
+
   return (
     <div className="animate-fade-in space-y-12">
       <header className="flex items-center justify-center py-6 relative border-b border-slate-100/50">
@@ -61,7 +69,7 @@ const MenuFAQ: React.FC<MenuFAQProps> = ({
       </header>
 
       <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-200/60 overflow-hidden divide-y divide-slate-50">
-        {items.map((item, idx) => (
+        {defaultItems.map((item, idx) => (
           <FAQItem key={idx} question={item.q} answer={item.a} />
         ))}
       </div>
@@ -105,7 +113,7 @@ const MenuFAQ: React.FC<MenuFAQProps> = ({
               <button 
                 onClick={handleSendSupport}
                 disabled={!supportMessage.trim()}
-                className="w-full py-6 bg-slate-900 text-white rounded-none font-black uppercase text-[12px] tracking-[0.4em] shadow-xl active:scale-95 transition-all disabled:opacity-50"
+                className="w-full py-6 bg-slate-900 text-white rounded-none font-black uppercase text-[12px] tracking-[0.4em] shadow-xl active:scale-95 transition-all disabled:opacity-30"
               >
                 Send Request
               </button>

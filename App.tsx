@@ -32,6 +32,8 @@ import CreateMenuView from './views/CreateMenuView';
 import DemoHubView from './views/DemoHubView';
 import MenuFAQ from './views/admin/menu/MenuFAQ';
 import LegalView from './views/LegalView';
+import ArticlesView from './views/ArticlesView';
+import ArticleViewer from './views/ArticleViewer';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('landing');
@@ -41,6 +43,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSupportHubOpen, setIsSupportHubOpen] = useState(false);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   
   const [menuItems, setMenuItems] = useState<MenuItem[]>(mockupItems);
   const [categories, setCategories] = useState<Category[]>(mockupCategories);
@@ -131,7 +134,7 @@ export default function App() {
     const path = window.location.pathname;
     if (path !== '/' && path.length > 1) {
       const token = path.substring(1); 
-      const reserved = ['menu', 'cart', 'orders', 'admin', 'landing', 'about', 'feedback', 'feedback-data', 'super-admin', 'test-supabase', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'privacy', 'terms'];
+      const reserved = ['menu', 'cart', 'orders', 'admin', 'landing', 'about', 'feedback', 'feedback-data', 'super-admin', 'test-supabase', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'privacy', 'terms', 'articles', 'article'];
       if (!reserved.includes(token.toLowerCase())) {
         try {
             const details = await MenuService.getQRCodeByCode(token);
@@ -173,7 +176,13 @@ export default function App() {
       }
     }
     const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
-    const route = (hash.split('/')[0] || 'landing') as ViewState;
+    const hashParts = hash.split('/');
+    const route = (hashParts[0] || 'landing') as ViewState;
+    
+    if (route === 'article' && hashParts[1]) {
+      setSelectedArticleId(hashParts[1]);
+    }
+    
     setCurrentView(route);
   };
 
@@ -192,11 +201,16 @@ export default function App() {
     return () => window.removeEventListener('hashchange', syncStateWithURL);
   }, []);
 
-  const navigateTo = (view: ViewState) => { 
+  const navigateTo = (view: ViewState, param?: string) => { 
     setCurrentView(view); 
     setSelectedItem(null); 
     setIsSupportHubOpen(false);
-    window.location.hash = `/${view}`; 
+    if (view === 'article' && param) {
+      setSelectedArticleId(param);
+      window.location.hash = `/${view}/${param}`;
+    } else {
+      window.location.hash = `/${view}`; 
+    }
 
     if (view === 'feedback-data' && activeSession?.restaurant_id) {
       refreshFeedbacks(activeSession.restaurant_id);
@@ -245,6 +259,8 @@ export default function App() {
       case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} />;
       case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={() => navigateTo('admin')} />;
       case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={() => navigateTo('menu')} />;
+      case 'articles': return <ArticlesView onBack={() => navigateTo('landing')} />;
+      case 'article': return <ArticleViewer id={selectedArticleId} onBack={() => navigateTo('articles')} />;
       case 'menu': 
         if (appTheme.template === 'premium') return <PremiumMenuView categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
         if (appTheme.template === 'modern') return <ModernMenuView categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
@@ -270,10 +286,10 @@ export default function App() {
   if (isBooting) return <div className="flex flex-col items-center justify-center min-h-screen bg-white"><div className="w-16 h-16 border-4 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
+    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
       <style>{`.menu-theme-container { --brand-primary: ${appTheme.primary_color}; --brand-secondary: ${appTheme.secondary_color}; font-family: '${appTheme.font_family}', sans-serif !important; }`}</style>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
-      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col ${appTheme.template === 'premium' || appTheme.template === 'modern' ? 'bg-[#F8F8F8]' : 'bg-[#FBFBFD]'}` : 'min-h-screen flex flex-col'}>
+      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col ${appTheme.template === 'premium' || appTheme.template === 'modern' ? 'bg-[#F8F8F8]' : 'bg-[#FBFBFD]'}` : 'min-h-screen flex flex-col'}>
         {appTheme.template === 'modern' ? (
            <ModernDetailPanel item={selectedItem} isOpen={!!selectedItem} isProcessing={isDispatching} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={(item) => activeSession ? finalizeOrder(activeSession, [item]) : (setPendingSingleItem(item), navigateTo('qr-verify'))} />
         ) : appTheme.template === 'premium' ? (
@@ -283,13 +299,13 @@ export default function App() {
         )}
         <VariationDrawer item={activeVariantSource} variants={menuItems.filter(i => i.parent_id === activeVariantSource?.id)} isOpen={!!activeVariantSource} onClose={() => setActiveVariantSource(null)} onSelect={(v) => { setActiveVariantSource(null); setSelectedItem(v); }} />
         <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} />
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo'].includes(currentView) && (
+        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) && (
           <Navbar logo={null} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.length} />
         )}
-        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo'].includes(currentView) ? 'pb-24' : ''}`}>
+        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) ? 'pb-24' : ''}`}>
           {renderView()}
         </main>
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo'].includes(currentView) && (
+        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) && (
           <BottomNav currentView={currentView} onNavigate={navigateTo} onSupportClick={() => setIsSupportHubOpen(true)} isSupportOpen={isSupportHubOpen} cartCount={cart.length} />
         )}
       </div>

@@ -244,20 +244,22 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
                       <span className="text-sm font-black text-slate-900 uppercase italic">{selectedOrder.customer_name}</span>
                     </div>
                     
-                    <div className="space-y-3">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none">Payment</span>
-                      <div className="flex gap-2 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="space-y-4">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none ml-2">Payment Status</span>
+                      <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
                         <button 
                           onClick={() => setLocalPayment('Paid')}
-                          className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${localPayment === 'Paid' ? 'bg-emerald-50 text-white shadow-lg shadow-emerald-100' : 'text-slate-400'}`}
+                          className={`flex-1 py-4 rounded-xl text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${localPayment === 'Paid' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
                         >
-                          <i className="fa-solid fa-check"></i> Paid
+                          <i className="fa-solid fa-circle-check"></i> 
+                          Paid
                         </button>
                         <button 
                           onClick={() => setLocalPayment('Unpaid')}
-                          className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${localPayment === 'Unpaid' ? 'bg-orange-50 text-white shadow-lg shadow-orange-100' : 'text-slate-400'}`}
+                          className={`flex-1 py-4 rounded-xl text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${localPayment === 'Unpaid' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
                         >
-                          <i className="fa-solid fa-clock"></i> Unpaid
+                          <i className="fa-solid fa-clock"></i> 
+                          Unpaid
                         </button>
                       </div>
                     </div>

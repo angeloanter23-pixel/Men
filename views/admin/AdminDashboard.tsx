@@ -13,7 +13,7 @@ import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
 
 type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'accounts';
-type SettingsSubTab = 'general' | 'about' | 'legal';
+type SettingsSubTab = 'general' | 'about' | 'terms' | 'privacy';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -125,15 +125,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'settings':
         return (
           <div className="animate-fade-in space-y-6">
-            {settingsSubTab !== 'general' && (
-              <button 
-                onClick={() => setSettingsSubTab('general')}
-                className="group flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all shadow-sm active:scale-95 ml-2"
-              >
-                <i className="fa-solid fa-arrow-left text-[8px] group-hover:-translate-x-0.5 transition-transform"></i>
-                Back to Identity
-              </button>
-            )}
             {settingsSubTab === 'general' && (
               <AdminSettings 
                 onLogout={onLogout} 
@@ -143,8 +134,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onSubTabChange={(sub) => setSettingsSubTab(sub as SettingsSubTab)}
               />
             )}
-            {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} />}
-            {settingsSubTab === 'legal' && <AdminLegal restaurantId={restaurantId} />}
+            {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} onBack={() => setSettingsSubTab('general')} />}
+            {settingsSubTab === 'terms' && <AdminLegal restaurantId={restaurantId} initialDocType="terms" onBack={() => setSettingsSubTab('general')} />}
+            {settingsSubTab === 'privacy' && <AdminLegal restaurantId={restaurantId} initialDocType="privacy" onBack={() => setSettingsSubTab('general')} />}
           </div>
         );
       default: return null;
@@ -170,10 +162,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/40 h-24 flex items-center justify-between px-6 md:px-12 shrink-0">
           <div className="flex items-center gap-6">
              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm"><i className="fa-solid fa-bars-staggered text-sm"></i></button>
-             <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase italic tracking-tighter">{currentTabLabel}</h2>
+             <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">{currentTabLabel}</h2>
           </div>
           <div className="flex items-center gap-4">
-             <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white shadow-xl"><i className="fa-solid fa-user-tie text-[14px]"></i></div>
+             {/* Account icon removed */}
           </div>
         </header>
         <main className="flex-1 overflow-y-auto no-scrollbar bg-[#F2F2F7] p-4 md:p-8">{renderContent()}</main>

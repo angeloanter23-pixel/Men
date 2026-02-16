@@ -4,28 +4,28 @@ import { Category } from '../../../types';
 
 interface CategoryListProps {
   cats: Category[];
-  onSave: (id: string | number | null, name: string) => void;
+  onSave: (id: string | number | null, name: string, icon: string) => void;
   onDelete: (id: string | number) => void;
   loading: boolean;
 }
 
 const CategoryList: React.FC<CategoryListProps> = ({ cats, onSave, onDelete, loading }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCat, setEditingCat] = useState<{id: string | number | null, name: string}>({id: null, name: ''});
+  const [editingCat, setEditingCat] = useState<{id: string | number | null, name: string, icon: string}>({id: null, name: '', icon: ''});
 
   const openAdd = () => {
-    setEditingCat({id: null, name: ''});
+    setEditingCat({id: null, name: '', icon: ''});
     setIsModalOpen(true);
   };
 
   const openEdit = (cat: Category) => {
-    setEditingCat({id: cat.id, name: cat.name});
+    setEditingCat({id: cat.id, name: cat.name, icon: cat.icon || ''});
     setIsModalOpen(true);
   };
 
   const handleConfirm = () => {
     if (!editingCat.name.trim()) return;
-    onSave(editingCat.id, editingCat.name.trim());
+    onSave(editingCat.id, editingCat.name.trim(), editingCat.icon.trim());
     setIsModalOpen(false);
   };
 
@@ -46,7 +46,7 @@ const CategoryList: React.FC<CategoryListProps> = ({ cats, onSave, onDelete, loa
           <div key={cat.id} className="flex items-center justify-between p-5 group active:bg-slate-50 transition-colors">
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center border border-slate-100/50">
-                <i className="fa-solid fa-tag text-xs"></i>
+                <i className={`fa-solid ${cat.icon || 'fa-tag'} text-xs`}></i>
               </div>
               <span className="font-bold text-slate-800 uppercase tracking-tight text-[16px]">{cat.name}</span>
             </div>
@@ -87,6 +87,23 @@ const CategoryList: React.FC<CategoryListProps> = ({ cats, onSave, onDelete, loa
                   className="w-full bg-slate-50 border border-transparent p-6 rounded-2xl font-bold text-lg outline-none focus:bg-white focus:border-slate-100 transition-all shadow-inner" 
                   placeholder="e.g. Signature Dishes" 
                 />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center px-4">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Icon Class (FA)</label>
+                  <div className="flex items-center gap-1.5 opacity-50">
+                    <i className={`fa-solid ${editingCat.icon || 'fa-icons'} text-xs text-indigo-500`}></i>
+                    <span className="text-[8px] font-bold uppercase">Preview</span>
+                  </div>
+                </div>
+                <textarea 
+                  value={editingCat.icon} 
+                  onChange={e => setEditingCat({...editingCat, icon: e.target.value})}
+                  className="w-full bg-slate-50 border border-transparent p-6 rounded-2xl font-bold text-sm outline-none focus:bg-white focus:border-slate-100 transition-all shadow-inner h-24 resize-none" 
+                  placeholder="e.g. fa-utensils" 
+                />
+                <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest px-4">Search icons on fontawesome.com</p>
               </div>
             </div>
 

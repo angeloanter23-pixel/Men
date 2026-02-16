@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import * as MenuService from '../../services/menuService';
 
@@ -21,7 +22,7 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
 
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({ email: '', role: 'waiter' });
+  const [formData, setFormData] = useState({ email: '' });
   const [generatedInvite, setGeneratedInvite] = useState<string | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,19 +63,20 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
           setModalLoading(false); 
           return; 
         }
-        const invite = await MenuService.createStaffInvite(formData.email, formData.role, restaurantId);
+        // Role defaults to 'waiter' automatically
+        const invite = await MenuService.createStaffInvite(formData.email, 'waiter', restaurantId);
         const inviteLink = `${window.location.origin}/#/accept-invite/${invite.invite_token}`;
         setGeneratedInvite(inviteLink); 
         await fetchStaff();
     } catch (err: any) { 
-      setError(err.message || "Invite failed."); 
+      setError(err.message || "Invitation system error."); 
     } finally { 
       setModalLoading(false); 
     }
   };
 
   const handleRemoveStaff = async (id: string, role: string, email: string) => {
-    if (role === 'super-admin') return alert("Main accounts cannot be removed here.");
+    if (role === 'super-admin') return alert("Main accounts cannot be removed.");
     if (confirm(`Remove ${email} from your team?`)) {
         try { 
           await MenuService.deleteStaffMember(id); 
@@ -106,7 +108,7 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
     return (
       <div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-4 border-white border-t-indigo-600 rounded-full animate-spin shadow-sm"></div>
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Loading Team...</p>
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Accessing records...</p>
       </div>
     );
   }
@@ -116,15 +118,18 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
       <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
         
         {/* Page Header */}
-        <header className="px-2">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none">Team</h1>
-          <p className="text-slate-500 text-sm font-medium mt-2">Manage staff and account permissions.</p>
+        <header className="px-2 text-center">
+          <p className="text-[10px] font-bold uppercase text-orange-500 tracking-[0.4em] mb-2">Team Access</p>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Team Members</h1>
+          <p className="text-slate-500 text-[17px] font-medium mt-3 leading-relaxed">
+            Manage who can access your dashboard.
+          </p>
         </header>
 
-        {/* Group 1: Your Profile */}
+        {/* Your Profile */}
         <section className="space-y-3">
-          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Your Account</h3>
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/50">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Your Profile</h3>
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200/50">
             {staffGroups.you && (
               <SettingRow 
                 icon="fa-crown" 
@@ -134,17 +139,17 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
                 last
               >
                 <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  Master
+                  Owner
                 </span>
               </SettingRow>
             )}
           </div>
         </section>
 
-        {/* Group 2: Active Team Members */}
+        {/* Team Members */}
         <section className="space-y-3">
-          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Team Members</h3>
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/50">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Active Staff</h3>
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200/50">
             {staffGroups.others.length > 0 ? staffGroups.others.map((s, idx) => (
               <SettingRow 
                 key={s.id} 
@@ -162,23 +167,23 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
                 </div>
               </SettingRow>
             )) : (
-              <p className="py-4 text-center text-sm font-medium text-slate-300 italic">No other staff added yet.</p>
+              <p className="py-4 text-center text-sm font-medium text-slate-300 italic">No other staff members added.</p>
             )}
           </div>
         </section>
 
-        {/* Group 3: Pending Invites */}
+        {/* Pending Invites */}
         {staffGroups.pending.length > 0 && (
           <section className="space-y-3">
-            <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Pending Invites</h3>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/50">
+            <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Pending Setup</h3>
+            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200/50">
               {staffGroups.pending.map((s, idx) => (
                 <SettingRow 
                   key={s.id} 
                   icon="fa-envelope" 
                   color="bg-amber-400" 
                   label={s.email} 
-                  sub="Waiting for setup"
+                  sub="Waiting for password setup"
                   last={idx === staffGroups.pending.length - 1}
                 >
                   <button onClick={() => handleRemoveStaff(s.id, s.role, s.email)} className="text-rose-400 hover:text-rose-600 transition-colors p-2">
@@ -190,10 +195,10 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
           </section>
         )}
 
-        {/* Group 4: Add Member Form */}
+        {/* Add Member Form */}
         <section className="space-y-3">
-          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Invite Staff</h3>
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/50">
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">New Invitation</h3>
+          <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-200/50">
             {generatedInvite ? (
               <div className="text-center space-y-6 animate-fade-in">
                 <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto text-xl">
@@ -201,45 +206,28 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
                 </div>
                 <div>
                   <h4 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-2">Invite Ready</h4>
-                  <p className="text-xs text-slate-500 font-medium">Send this link to your new team member.</p>
+                  <p className="text-xs text-slate-500 font-medium">Copy this link and send it to your staff member.</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl break-all border border-slate-100 shadow-inner">
                   <p className="text-[10px] font-mono font-bold text-indigo-600 leading-relaxed">{generatedInvite}</p>
                 </div>
                 <div className="flex gap-4">
-                  <button onClick={() => { navigator.clipboard.writeText(generatedInvite!); alert("Copied to clipboard!"); }} className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-100">Copy Link</button>
-                  <button onClick={() => setGeneratedInvite(null)} className="flex-1 py-3.5 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest">Done</button>
+                  <button onClick={() => { navigator.clipboard.writeText(generatedInvite!); alert("Copied!"); }} className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg">Copy Link</button>
+                  <button onClick={() => { setGeneratedInvite(null); setFormData({ email: '' }); }} className="flex-1 py-3.5 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest">Done</button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleAddStaff} className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Work Email</label>
-                    <input 
-                      required 
-                      type="email" 
-                      value={formData.email} 
-                      onChange={e => setFormData({...formData, email: e.target.value})} 
-                      className="w-full bg-slate-50 border border-slate-200/60 p-4 rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner" 
-                      placeholder="e.g. jason@restaurant.com" 
-                    />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Role</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.role} 
-                        onChange={e => setFormData({...formData, role: e.target.value as any})} 
-                        className="w-full bg-slate-50 border border-slate-200/60 p-4 rounded-2xl font-bold text-sm text-slate-900 outline-none appearance-none cursor-pointer focus:bg-white transition-all shadow-inner"
-                      >
-                        <option value="waiter">Staff Member</option>
-                        <option value="super-admin">Administrator</option>
-                      </select>
-                      <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none text-xs"></i>
-                    </div>
-                  </div>
+              <form onSubmit={handleAddStaff} className="space-y-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                  <input 
+                    required 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={e => setFormData({...formData, email: e.target.value})} 
+                    className="w-full bg-slate-50 border border-slate-200/60 p-5 rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner" 
+                    placeholder="staff@restaurant.com" 
+                  />
                 </div>
 
                 {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest">{error}</p>}
@@ -247,9 +235,9 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
                 <button 
                   type="submit" 
                   disabled={modalLoading} 
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  {modalLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Send Invitation'}
+                  {modalLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Send Invite'}
                 </button>
               </form>
             )}
@@ -257,7 +245,7 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
         </section>
 
         <footer className="text-center pt-8 opacity-40 pb-20">
-           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Team Security Node v1.2</p>
+           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Identity Security Core</p>
         </footer>
       </div>
     </div>

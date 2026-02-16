@@ -3,6 +3,20 @@ import { supabase } from '../lib/supabase';
 export { supabase };
 
 /**
+ * DATABASE SCHEMA REFERENCE (SQL)
+ * 
+ * -- Update categories table to support FontAwesome icons
+ * ALTER TABLE categories ADD COLUMN IF NOT EXISTS icon TEXT;
+ * 
+ * -- Example update for existing data:
+ * UPDATE categories SET icon = 'fa-bowl-food' WHERE name ILIKE '%main%';
+ * UPDATE categories SET icon = 'fa-mug-saucer' WHERE name ILIKE '%breakfast%';
+ * UPDATE categories SET icon = 'fa-glass-water' WHERE name ILIKE '%beverage%';
+ * UPDATE categories SET icon = 'fa-ice-cream' WHERE name ILIKE '%dessert%';
+ * UPDATE categories SET icon = 'fa-hamburger' WHERE name ILIKE '%snack%';
+ */
+
+/**
  * Generates a SHA-256 hash of a string.
  * Used for PASSWORDS ONLY (One-way).
  */

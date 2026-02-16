@@ -4,6 +4,7 @@ import { Reveal } from './Reveal';
 
 const ARTICLES = [
   {
+    id: "speed",
     title: "Mastering Speed",
     tag: "Operations",
     reads: "2.4k reads",
@@ -12,6 +13,7 @@ const ARTICLES = [
     color: "from-orange-500/80"
   },
   {
+    id: "design",
     title: "Menu Design Secrets",
     tag: "Marketing",
     reads: "1.8k reads",
@@ -20,6 +22,7 @@ const ARTICLES = [
     color: "from-indigo-500/80"
   },
   {
+    id: "guests",
     title: "Happy Guests Guide",
     tag: "Service",
     reads: "3.1k reads",
@@ -28,6 +31,7 @@ const ARTICLES = [
     color: "from-emerald-500/80"
   },
   {
+    id: "trends",
     title: "Digital Trends 2025",
     tag: "Future",
     reads: "1.2k reads",
@@ -61,10 +65,11 @@ export const ArticlesSection: React.FC = () => {
           {/* Horizontal Scroll Area */}
           <div className="relative -mx-6 px-6 lg:mx-0 lg:px-0">
             <Reveal delay={200}>
-              <div className="flex overflow-x-auto gap-6 pb-10 no-scrollbar snap-x">
+              <div className="flex overflow-x-auto no-scrollbar gap-6 pb-10 no-scrollbar snap-x">
                 {ARTICLES.map((article, idx) => (
                   <div 
                     key={idx}
+                    onClick={() => window.location.hash = `#/article/${article.id}`}
                     className="flex-shrink-0 w-[240px] md:w-[300px] aspect-[3/4] rounded-[2.5rem] overflow-hidden shadow-2xl relative group cursor-pointer hover:-translate-y-2 transition-all duration-500 border border-slate-100 snap-center"
                   >
                     <img 
@@ -96,8 +101,11 @@ export const ArticlesSection: React.FC = () => {
         {/* CTA Link - Blue Text Style */}
         <Reveal delay={400}>
           <div className="mt-16 text-center">
-            <button className="text-[#007AFF] font-semibold text-[17px] flex items-center justify-center gap-2 mx-auto group hover:underline transition-all">
-              Read all articles
+            <button 
+              onClick={() => window.location.hash = '#/articles'}
+              className="text-[#007AFF] font-semibold text-[17px] flex items-center justify-center gap-2 mx-auto group hover:underline transition-all"
+            >
+              Show more articles
               <i className="fa-solid fa-chevron-right text-[11px] transition-transform group-hover:translate-x-1"></i>
             </button>
           </div>

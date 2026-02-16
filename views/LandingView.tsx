@@ -5,6 +5,7 @@ import { HeroSection } from '../landing-page/HeroSection';
 import { KeyFeatures } from '../landing-page/KeyFeatures';
 import { BlueprintStepper } from '../landing-page/BlueprintStepper';
 import { FeedbackSection } from '../landing-page/FeedbackSection';
+import { TutorialSection } from '../landing-page/TutorialSection';
 import { ArticlesSection } from '../landing-page/ArticlesSection';
 import { LandingFaq } from '../landing-page/LandingFaq';
 import { LandingFooter } from '../landing-page/LandingFooter';
@@ -50,6 +51,8 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
       <BlueprintStepper />
       
       <FeedbackSection />
+
+      <TutorialSection />
       
       <KeyFeatures onPricingClick={() => setActiveOverlay('pricing')} />
 

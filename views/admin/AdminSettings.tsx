@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import * as MenuService from '../../services/menuService';
+import MenuFAQ from './menu/MenuFAQ';
 
 interface AdminSettingsProps {
   onLogout: () => void;
@@ -54,6 +55,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate, 
   const [merchantData, setMerchantData] = useState<any>(null);
   const [isLoadingMerchant, setIsLoadingMerchant] = useState(false);
   const [isEditingTheme, setIsEditingTheme] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
   
   const [theme, setTheme] = useState({
     primary_color: '#FF6B00',
@@ -119,6 +121,24 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate, 
     }
   };
 
+  const settingsFaqs = [
+    { q: "How do templates work?", a: "Templates change the entire layout and feel of your guest menu. 'Classic' is light and modern, 'Black Reserve' is luxury dark-mode, and 'Modern' is vibrant for delivery-style setups." },
+    { q: "Can I change my brand color?", a: "Yes. Use the color picker to select your primary brand color. This will update buttons, accents, and icons across your entire menu." },
+    { q: "What is Typography?", a: "It selects the font used for your headers and body text. Different fonts help match your restaurant's personality—like Playfair for fine dining or Outfit for modern cafes." }
+  ];
+
+  if (showFaq) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-12">
+        <MenuFAQ 
+          onBack={() => setShowFaq(false)} 
+          title="System Support" 
+          items={settingsFaqs}
+        />
+      </div>
+    );
+  }
+
   const SettingRow: React.FC<{ icon: string; color: string; label: string; children: React.ReactNode; last?: boolean; onClick?: () => void }> = ({ icon, color, label, children, last, onClick }) => (
     <div 
       onClick={onClick}
@@ -137,15 +157,16 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate, 
   );
 
   return (
-    <div className="min-h-screen font-jakarta pb-40 px-4 md:px-0">
-      <div className="max-w-2xl mx-auto space-y-10">
+    <div className="min-h-screen font-jakarta pb-40 px-4 md:px-0 bg-[#F2F2F7]">
+      <div className="max-w-2xl mx-auto space-y-12 pt-12">
         
-        <header className="flex items-end justify-between px-2">
-          <div>
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight italic uppercase">Identity</h1>
-            <p className="text-slate-500 text-sm font-medium mt-1">Design the digital experience.</p>
-          </div>
-          <button onClick={onLogout} className="px-5 py-2.5 bg-white text-rose-500 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm border border-slate-200 hover:bg-rose-50 transition-all">Logout</button>
+        <header className="px-2 text-center">
+          <p className="text-[10px] font-bold uppercase text-orange-500 tracking-[0.4em] mb-2">System Config</p>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">App Settings</h1>
+          <p className="text-slate-500 text-[17px] font-medium mt-3 leading-relaxed">
+            Change how your menu looks and works.
+            <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+          </p>
         </header>
 
         <section className="space-y-4">
@@ -224,14 +245,13 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate, 
           </div>
         </section>
 
-        {/* NEW ABOUT SECTION */}
         <section className="space-y-3">
-          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">About</h3>
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Brand Narrative</h3>
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200/50">
             <SettingRow 
               icon="fa-circle-info" 
               color="bg-orange-500" 
-              label="About Us" 
+              label="About Us Content" 
               last 
               onClick={() => onSubTabChange?.('about')}
             >
@@ -240,15 +260,14 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate, 
           </div>
         </section>
 
-        {/* NEW LEGAL SECTION */}
         <section className="space-y-3">
-          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Legal</h3>
+          <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Legal Registry</h3>
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-200/50">
             <SettingRow 
               icon="fa-file-contract" 
               color="bg-emerald-500" 
               label="Terms and Agreement" 
-              onClick={() => onSubTabChange?.('legal')}
+              onClick={() => onSubTabChange?.('terms')}
             >
               <i className="fa-solid fa-chevron-right text-slate-200 text-xs"></i>
             </SettingRow>
@@ -257,7 +276,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, onThemeUpdate, 
               color="bg-blue-500" 
               label="Privacy Policy" 
               last 
-              onClick={() => onSubTabChange?.('legal')}
+              onClick={() => onSubTabChange?.('privacy')}
             >
               <i className="fa-solid fa-chevron-right text-slate-200 text-xs"></i>
             </SettingRow>

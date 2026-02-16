@@ -119,13 +119,14 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     setShowDishModal(true);
   };
 
-  const handleSaveCategory = async (id: string | number | null, name: string) => {
+  const handleSaveCategory = async (id: string | number | null, name: string, icon: string) => {
     if (!menuId) return;
     setLoading(true);
     try {
       const res = await MenuService.upsertCategory({ 
         id: id || undefined, 
         name, 
+        icon,
         menu_id: menuId, 
         order_index: id ? undefined : cats.length 
       });

@@ -1,112 +1,101 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, forwardRef } from 'react';
 
 interface RichTextMenuProps {
   onFormat: (type: string, value?: string) => void;
   isVisible: boolean;
-  onValueTrigger?: () => void;
-  showPillars?: boolean;
 }
 
-type MenuCategory = 'format' | 'colors' | 'size' | null;
-
-const RichTextMenu: React.FC<RichTextMenuProps> = ({ 
+const RichTextMenu = forwardRef<HTMLDivElement, RichTextMenuProps>(({ 
   onFormat, 
-  isVisible, 
-  onValueTrigger,
-  showPillars = false
-}) => {
-  const [activeCategory, setActiveCategory] = useState<MenuCategory>(null);
+  isVisible
+}, ref) => {
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  useEffect(() => {
+    if (!window.visualViewport) return;
+    
+    const handleViewport = () => {
+      const offset = window.innerHeight - window.visualViewport!.height;
+      setKeyboardOffset(offset);
+    };
+
+    window.visualViewport.addEventListener('resize', handleViewport);
+    window.visualViewport.addEventListener('scroll', handleViewport);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewport);
+      window.visualViewport?.removeEventListener('scroll', handleViewport);
+    };
+  }, []);
 
   if (!isVisible) return null;
 
-  const toggleCategory = (cat: MenuCategory) => {
-    setActiveCategory(activeCategory === cat ? null : cat);
-  };
+  const SIZES = [
+    { label: 'XS', val: '12px' },
+    { label: 'S', val: '14px' },
+    { label: 'M', val: '16px' },
+    { label: 'L', val: '20px' },
+    { label: 'XL', val: '28px' }
+  ];
+
+  const ActionButton = ({ icon, label, onClick, className = "" }: { icon?: string, label?: string, onClick: (e: React.MouseEvent) => void, className?: string }) => (
+    <button 
+      onMouseDown={(e) => { 
+        // preventDefault is crucial to prevent focus loss from editor
+        e.preventDefault(); 
+        onClick(e); 
+      }}
+      className={`shrink-0 flex flex-col items-center justify-center gap-1 min-w-[52px] h-14 rounded-xl transition-all active:scale-90 hover:bg-slate-100 ${className}`}
+    >
+      {icon && <i className={`fa-solid ${icon} text-[15px]`}></i>}
+      {label && <span className="text-[10px] font-black uppercase tracking-tighter opacity-40 leading-none">{label}</span>}
+    </button>
+  );
 
   return (
-    <div className="w-full flex flex-col items-center pointer-events-none mb-4">
-      {/* Sub-Menus */}
-      <div className="mb-3 pointer-events-auto w-full flex justify-center">
-        {activeCategory === 'format' && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-1.5 flex items-center gap-1 shadow-xl animate-fade-in">
-            <button onMouseDown={(e) => { e.preventDefault(); onFormat('bold'); }} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-700 transition-all active:scale-90" title="Bold"><i className="fa-solid fa-bold"></i></button>
-            <button onMouseDown={(e) => { e.preventDefault(); onFormat('italic'); }} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-700 transition-all active:scale-90" title="Italic"><i className="fa-solid fa-italic"></i></button>
-            <button onMouseDown={(e) => { e.preventDefault(); onFormat('underline'); }} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-700 transition-all active:scale-90" title="Underline"><i className="fa-solid fa-underline"></i></button>
-          </div>
-        )}
+    <div 
+      ref={ref}
+      className="fixed left-0 right-0 z-[2500] flex flex-col items-center pointer-events-none px-4 transition-all duration-300 ease-out animate-fade-in"
+      style={{ bottom: `${keyboardOffset + 12}px` }}
+    >
+      <div 
+        className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] pointer-events-auto flex items-center overflow-x-auto no-scrollbar max-w-full w-full sm:w-auto p-1.5 gap-1"
+        onMouseDown={(e) => e.stopPropagation()} 
+      >
+        
+        {/* Basic Formatting */}
+        <ActionButton icon="fa-bold" label="Bold" onClick={() => onFormat('bold')} className="text-slate-900" />
+        <ActionButton icon="fa-italic" label="Italic" onClick={() => onFormat('italic')} className="text-slate-900" />
+        <ActionButton icon="fa-underline" label="Line" onClick={() => onFormat('underline')} className="text-slate-900" />
+        
+        <div className="w-px h-6 bg-slate-200 mx-1 shrink-0" />
 
-        {activeCategory === 'colors' && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-2.5 flex items-center gap-3 shadow-xl animate-fade-in">
-            <div className="flex gap-1.5">
-              {['#000000', '#FF6B00', '#007AFF', '#D81B60', '#10B981'].map(c => (
-                <button 
-                  key={c} 
-                  onMouseDown={(e) => { e.preventDefault(); onFormat('color', c); }}
-                  className="w-7 h-7 rounded-full shadow-inner border border-black/5" 
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-            <div className="w-px h-6 bg-slate-100"></div>
-            <div className="relative w-7 h-7 rounded-full overflow-hidden border border-slate-200">
-               <input 
-                type="color" 
-                onMouseDown={(e) => e.stopPropagation()} 
-                onChange={(e) => onFormat('color', e.target.value)}
-                className="absolute -inset-2 w-12 h-12 cursor-pointer border-none p-0 bg-transparent" 
-              />
-            </div>
-          </div>
-        )}
+        {/* Lists */}
+        <ActionButton icon="fa-list-ul" label="Bullet" onClick={() => onFormat('bullet')} className="text-slate-600" />
+        <ActionButton icon="fa-list-ol" label="Order" onClick={() => onFormat('number')} className="text-slate-600" />
 
-        {activeCategory === 'size' && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-1.5 flex items-center gap-1 shadow-xl animate-fade-in">
-            <button onMouseDown={(e) => { e.preventDefault(); onFormat('size', '14px'); }} className="px-4 py-2 text-[10px] font-black text-slate-500 hover:text-orange-500 uppercase transition-colors">Small</button>
-            <button onMouseDown={(e) => { e.preventDefault(); onFormat('size', '18px'); }} className="px-4 py-2 text-[12px] font-black text-slate-500 hover:text-orange-500 uppercase transition-colors">Regular</button>
-            <button onMouseDown={(e) => { e.preventDefault(); onFormat('size', '24px'); }} className="px-4 py-2 text-[14px] font-black text-slate-500 hover:text-orange-500 uppercase transition-colors">Large</button>
-            <button onMouseDown={(e) => { e.preventDefault(); onFormat('size', '32px'); }} className="px-4 py-2 text-[16px] font-black text-slate-500 hover:text-orange-500 uppercase transition-colors">XL</button>
-          </div>
-        )}
+        <div className="w-px h-6 bg-slate-200 mx-1 shrink-0" />
+
+        {/* Size Presets */}
+        <div className="flex items-center gap-1 px-1">
+          {SIZES.map((s) => (
+            <button
+              key={s.label}
+              onMouseDown={(e) => { e.preventDefault(); onFormat('size', s.val); }}
+              className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-400 hover:text-indigo-600 hover:bg-white hover:border-indigo-100 transition-all active:scale-90"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Main Categories Bar */}
-      <div className="bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl pointer-events-auto">
-        <button 
-          onMouseDown={(e) => { e.preventDefault(); toggleCategory('format'); }}
-          className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all ${activeCategory === 'format' ? 'bg-orange-500 text-white' : 'text-white/40 hover:text-white'}`}
-          title="Text Style"
-        >
-          <i className="fa-solid fa-font text-sm"></i>
-        </button>
-        
-        {showPillars && onValueTrigger && (
-          <button 
-            onMouseDown={(e) => { e.preventDefault(); onValueTrigger(); }}
-            className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all text-white/40 hover:text-white`}
-            title="Add Pillars"
-          >
-            <i className="fa-solid fa-gem text-sm"></i>
-          </button>
-        )}
-        
-        <button 
-          onMouseDown={(e) => { e.preventDefault(); toggleCategory('colors'); }}
-          className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all ${activeCategory === 'colors' ? 'bg-orange-500 text-white' : 'text-white/40 hover:text-white'}`}
-          title="Colors"
-        >
-          <i className="fa-solid fa-palette text-sm"></i>
-        </button>
-        
-        <button 
-          onMouseDown={(e) => { e.preventDefault(); toggleCategory('size'); }}
-          className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all ${activeCategory === 'size' ? 'bg-orange-500 text-white' : 'text-white/40 hover:text-white'}`}
-          title="Text Sizes"
-        >
-          <i className="fa-solid fa-text-height text-sm"></i>
-        </button>
-      </div>
+      
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
-};
+});
 
 export default RichTextMenu;

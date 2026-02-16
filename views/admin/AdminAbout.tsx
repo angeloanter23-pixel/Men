@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import MenuFAQ from './menu/MenuFAQ';
 
 interface AboutValue {
   icon: string;
@@ -51,12 +52,13 @@ const Reveal: React.FC<{ children: React.ReactNode; delay?: number }> = ({ child
   );
 };
 
-const AdminAbout: React.FC<{ restaurantId: string }> = ({ restaurantId }) => {
+const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ restaurantId, onBack }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [data, setData] = useState<AboutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [showFaq, setShowFaq] = useState(false);
   
   const [editingField, setEditingField] = useState<keyof AboutData | null>(null);
   const [tempText, setTempText] = useState('');
@@ -151,156 +153,187 @@ const AdminAbout: React.FC<{ restaurantId: string }> = ({ restaurantId }) => {
     </div>
   );
 
+  const aboutFaqs = [
+    { q: "What is Brand Identity?", a: "This section defines how your guests see your restaurant. It's the primary content for your 'About' page on the mobile menu." },
+    { q: "What are Core Values?", a: "Core values are brief highlights of what makes your restaurant special, like 'Speed', 'Quality', or 'Ethical Sourcing'." },
+    { q: "How do I add a new value?", a: "Click '+ Add New' in the Core Values section of the editor. You can pick an icon and write a short title and description." }
+  ];
+
+  if (showFaq) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-12">
+        <MenuFAQ 
+          onBack={() => setShowFaq(false)} 
+          title="Identity Support" 
+          items={aboutFaqs}
+        />
+      </div>
+    );
+  }
+
   if (loading || !data) return <div className="py-20 text-center font-bold text-slate-300 animate-pulse uppercase tracking-widest">Loading...</div>;
 
   return (
-    <div className="animate-fade-in bg-[#F2F2F7] min-h-screen relative font-jakarta">
+    <div className="animate-fade-in bg-[#F2F2F7] min-h-screen relative font-jakarta pb-40">
       
-      {/* INTERNAL VIEW TOGGLE (Editor vs Preview) */}
-      <div className="flex justify-center p-4">
-        <div className="bg-slate-200/50 p-1.5 rounded-2xl flex border border-slate-200 shadow-inner w-full max-w-sm gap-1">
-            <button 
-                onClick={() => setActiveTab('editor')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'editor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
-            >
-                Edit Mode
-            </button>
-            <button 
-                onClick={() => setActiveTab('preview')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
-            >
-                Live Preview
-            </button>
-        </div>
-      </div>
-
       {toast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[4000] bg-slate-900 text-white px-8 py-3 rounded-full shadow-2xl animate-fade-in border border-white/10">
           <p className="text-[11px] font-bold uppercase tracking-widest leading-none">{toast}</p>
         </div>
       )}
 
-      {activeTab === 'editor' ? (
-        <div className="max-w-4xl mx-auto px-6 py-12 space-y-12 animate-fade-in pt-4">
-          <header className="flex justify-between items-end">
-             <div className="flex flex-col space-y-1">
-                <p className="text-[10px] font-bold uppercase text-orange-500 tracking-[0.4em]">Brand Identity</p>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">About Us.</h1>
-             </div>
-             <button 
-               onClick={() => handleSave()}
-               disabled={saving}
-               className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-100 active:scale-95 transition-all flex items-center gap-3"
-             >
-               {saving ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-cloud-arrow-up"></i>}
-               Save changes
-             </button>
-          </header>
+      {/* TOP BAR NAVIGATION */}
+      <div className="flex items-center justify-between px-6 py-6 max-w-4xl mx-auto w-full">
+          <button 
+            onClick={onBack}
+            className="group flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all shadow-sm active:scale-95"
+          >
+            <i className="fa-solid fa-arrow-left text-[8px] group-hover:-translate-x-0.5 transition-transform"></i>
+            Back to Identity
+          </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <EditorBlock label="Main Headline" field="title" />
-            <EditorBlock label="Short Intro" field="intro" />
-            <div className="md:col-span-2">
-              <EditorBlock label="Our Story" field="story" />
-            </div>
-            <div className="md:col-span-2">
-              <div className="space-y-3">
-                 <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Core Values</label>
-                    <button onClick={() => openValueEditor(null)} className="text-orange-500 text-[10px] font-bold uppercase tracking-widest">+ Add New</button>
-                 </div>
-                 <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2">
-                    {data.values.map((v, i) => (
-                      <button key={i} onClick={() => openValueEditor(i)} className="shrink-0 bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 hover:border-orange-500/20 transition-all group min-w-[200px]">
-                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-orange-500 shadow-sm group-hover:bg-orange-500 group-hover:text-white transition-all"><i className={`fa-solid ${v.icon} text-base`}></i></div>
-                        <p className="text-[13px] font-bold text-slate-800 uppercase truncate pr-4">{v.label}</p>
-                      </button>
-                    ))}
-                 </div>
-              </div>
-            </div>
-            <div className="md:col-span-2">
-              <EditorBlock label="What makes us different" field="different" />
-            </div>
-            <div className="md:col-span-2">
-              <EditorBlock label="Thank You Message" field="thank_you" />
-            </div>
+          <button 
+            onClick={() => handleSave()}
+            disabled={saving}
+            className="rounded-none px-6 py-3 font-black text-[11px] tracking-[0.2em] text-slate-900 hover:text-indigo-600 transition-all disabled:opacity-30 active:scale-95"
+          >
+            {saving ? <i className="fa-solid fa-spinner animate-spin"></i> : 'save'}
+          </button>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 space-y-12">
+        <header className="px-2 text-center">
+          <p className="text-[10px] font-bold uppercase text-orange-500 tracking-[0.4em] mb-2">About Page</p>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Restaurant Info</h1>
+          <p className="text-slate-500 text-[17px] font-medium mt-3 leading-relaxed">
+            Tell your story to your guests.
+            <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+          </p>
+        </header>
+
+        {/* INTERNAL VIEW TOGGLE (Editor vs Preview) */}
+        <div className="flex justify-center">
+          <div className="bg-[#E8E8ED] p-1.5 rounded-2xl flex border border-slate-200/50 shadow-inner w-full max-w-sm gap-1">
+              <button 
+                  onClick={() => setActiveTab('editor')}
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'editor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+              >
+                  Edit Mode
+              </button>
+              <button 
+                  onClick={() => setActiveTab('preview')}
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+              >
+                  Live Preview
+              </button>
           </div>
         </div>
-      ) : (
-        /* LIVE PREVIEW - DOCUMENT FLOW */
-        <div className="bg-white animate-fade-in min-h-screen font-jakarta pb-40">
-          <div className="max-w-2xl mx-auto px-10 py-24 space-y-16">
-            
-            <header>
-              <Reveal>
-                <div className="flex items-center gap-3 mb-6">
-                   <div className="w-2 h-2 rounded-full bg-slate-900"></div>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Official Records</p>
+
+        {activeTab === 'editor' ? (
+          <div className="space-y-12 animate-fade-in pt-4 pb-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <EditorBlock label="Main Headline" field="title" />
+              <EditorBlock label="Short Intro" field="intro" />
+              <div className="md:col-span-2">
+                <EditorBlock label="Our Story" field="story" />
+              </div>
+              <div className="md:col-span-2">
+                <div className="space-y-3">
+                   <div className="flex justify-between items-center px-1">
+                      <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Core Values</label>
+                      <button onClick={() => openValueEditor(null)} className="text-[#007AFF] text-[10px] font-bold uppercase tracking-widest">+ Add New</button>
+                   </div>
+                   <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2">
+                      {data.values.map((v, i) => (
+                        <button key={i} onClick={() => openValueEditor(i)} className="shrink-0 bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 hover:border-indigo-500/20 transition-all group min-w-[200px] shadow-sm">
+                          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all"><i className={`fa-solid ${v.icon} text-base`}></i></div>
+                          <p className="text-[13px] font-bold text-slate-800 uppercase truncate pr-4">{v.label}</p>
+                        </button>
+                      ))}
+                   </div>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 uppercase leading-none mb-8">
-                  {data.title}
-                </h1>
-                <div className="h-1 w-12 bg-orange-500"></div>
+              </div>
+              <div className="md:col-span-2">
+                <EditorBlock label="What makes us different" field="different" />
+              </div>
+              <div className="md:col-span-2">
+                <EditorBlock label="Thank You Message" field="thank_you" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* LIVE PREVIEW - DOCUMENT FLOW */
+          <div className="bg-white animate-fade-in rounded-[3rem] shadow-sm border border-slate-200/50 mb-40">
+            <div className="max-w-2xl mx-auto px-10 py-24 space-y-16">
+              <header>
+                <Reveal>
+                  <div className="flex items-center gap-3 mb-6">
+                     <div className="w-2 h-2 rounded-full bg-slate-900"></div>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Official Records</p>
+                  </div>
+                  <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 uppercase leading-none mb-8">
+                    {data.title}
+                  </h1>
+                  <div className="h-1 w-12 bg-indigo-600"></div>
+                </Reveal>
+              </header>
+
+              <Reveal delay={100}>
+                <section className="space-y-6">
+                  <p className="text-[20px] md:text-[24px] text-slate-800 font-bold leading-snug">
+                    {data.intro}
+                  </p>
+                </section>
               </Reveal>
-            </header>
 
-            <Reveal delay={100}>
-              <section className="space-y-6">
-                <p className="text-[20px] md:text-[24px] text-slate-800 font-bold leading-snug">
-                  {data.intro}
-                </p>
-              </section>
-            </Reveal>
-
-            <Reveal delay={200}>
-              <section className="space-y-6">
-                <div className="text-[16px] text-slate-600 font-medium leading-relaxed">
-                  {data.story}
-                </div>
-              </section>
-            </Reveal>
-
-            {data.values.length > 0 && (
-              <Reveal delay={300}>
-                <section className="space-y-8">
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Core Values</h3>
-                  <div className="space-y-8">
-                    {data.values.map((v, i) => (
-                      <div key={i} className="flex gap-6 items-start">
-                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 shrink-0 border border-slate-100">
-                           <i className={`fa-solid ${v.icon} text-sm`}></i>
-                        </div>
-                        <div className="space-y-2">
-                           <h4 className="text-[15px] font-bold text-slate-900 uppercase tracking-tight leading-none">{v.label}</h4>
-                           <p className="text-[14px] text-slate-500 font-medium leading-relaxed">{v.description}</p>
-                        </div>
-                      </div>
-                    ))}
+              <Reveal delay={200}>
+                <section className="space-y-6">
+                  <div className="text-[16px] text-slate-600 font-medium leading-relaxed">
+                    {data.story}
                   </div>
                 </section>
               </Reveal>
-            )}
 
-            <Reveal delay={400}>
-              <section className="space-y-6 pt-8 border-t border-slate-50">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">What makes us different</h3>
-                <div className="text-[16px] text-slate-600 font-medium leading-relaxed">
-                  {data.different}
+              {data.values.length > 0 && (
+                <Reveal delay={300}>
+                  <section className="space-y-8">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Core Values</h3>
+                    <div className="space-y-8">
+                      {data.values.map((v, i) => (
+                        <div key={i} className="flex gap-6 items-start">
+                          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 shrink-0 border border-slate-100">
+                             <i className={`fa-solid ${v.icon} text-sm`}></i>
+                          </div>
+                          <div className="space-y-2">
+                             <h4 className="text-[15px] font-bold text-slate-900 uppercase tracking-tight leading-none">{v.label}</h4>
+                             <p className="text-[14px] text-slate-500 font-medium leading-relaxed">{v.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </Reveal>
+              )}
+
+              <Reveal delay={400}>
+                <section className="space-y-6 pt-8 border-t border-slate-50">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">What makes us different</h3>
+                  <div className="text-[16px] text-slate-600 font-medium leading-relaxed">
+                    {data.different}
+                  </div>
+                </section>
+              </Reveal>
+
+              <Reveal delay={500}>
+                <div className="text-center pt-20 border-t border-slate-100">
+                  <p className="text-[13px] font-medium text-slate-400 uppercase tracking-widest leading-none">{data.thank_you}</p>
+                  <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full mx-auto mt-8 animate-pulse"></div>
                 </div>
-              </section>
-            </Reveal>
-
-            <Reveal delay={500}>
-              <div className="text-center pt-20 border-t border-slate-100">
-                <p className="text-[13px] font-medium text-slate-400 uppercase tracking-widest leading-none">{data.thank_you}</p>
-                <div className="w-1.5 h-1.5 bg-orange-50 rounded-full mx-auto mt-8 animate-pulse"></div>
-              </div>
-            </Reveal>
-
+              </Reveal>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* BOTTOM SHEET EDITOR MODAL */}
       {editingField && (
