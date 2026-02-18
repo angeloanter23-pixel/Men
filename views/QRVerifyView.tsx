@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import jsQR from 'https://esm.sh/jsqr@1.4.0';
+import jsQR from 'jsqr';
 import * as MenuService from '../services/menuService';
 
 interface QRVerifyViewProps {
@@ -115,10 +114,8 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
       const details = await MenuService.getQRCodeByCode(token);
       if (details) {
         setDetectedToken(token);
-        // Check for active session and see if PIN is required
         const session = await MenuService.getActiveSessionByQR(details.id);
         if (session && session.pin_required === false) {
-            // Auto-verify and skip PIN screen
             onVerify({ 
               ...session, 
               label: details.label, 
@@ -141,7 +138,6 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
   };
 
   const handlePinChange = (index: number, value: string) => {
-    // Only allow numbers and take the last character
     const cleanValue = value.replace(/[^0-9]/g, '').slice(-1);
     if (!cleanValue && value !== "") return;
     
@@ -160,7 +156,6 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
     try {
         const details = await MenuService.getQRCodeByCode(detectedToken);
         if (details) {
-            // Using the requested SQL logic: fetch active session for the QR code
             const session = await MenuService.verifySessionPin(details.id, fullPin);
             if (session) {
                 onVerify({ 
@@ -286,7 +281,6 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
             {error && <div className="mt-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-center text-[10px] font-black text-rose-500 uppercase italic animate-fade-in">{error}</div>}
         </div>
       </div>
-      <style>{` @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } } .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards; } @keyframes scan { 0%, 100% { top: 15%; } 50% { top: 85%; } } .animate-scan { position: absolute; animation: scan 2.5s ease-in-out infinite; } `}</style>
     </div>
   );
 };

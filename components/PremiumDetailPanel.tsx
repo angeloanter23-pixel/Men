@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { MenuItem, CartItem, OrderMode } from '../types';
 
@@ -80,6 +79,7 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
     customInstructions: instructions.trim(),
     orderTo: orderTo.trim() || 'Guest',
     selectedOptions,
+    pay_as_you_order: !!item.pay_as_you_order, // PASS FLAG
     price: totalPrice / quantity
   });
 
@@ -104,10 +104,9 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
           <div className="max-w-2xl mx-auto space-y-10">
               
               <div className="p-8 bg-white/[0.03] border border-white/5 rounded-[2.5rem] relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full blur-[80px] group-hover:scale-150 transition-transform duration-700"></div>
                   <p className="text-lg font-medium leading-relaxed text-white/60 italic">"{item.description}"</p>
                   
-                  {/* METADATA CHIPS */}
                   <div className="flex items-center gap-4 mt-8">
                     <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-full flex items-center gap-2">
                        <i className="fa-solid fa-clock text-[10px] text-indigo-400"></i>
@@ -119,6 +118,23 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
                     </div>
                   </div>
               </div>
+
+              {/* INGREDIENTS SECTION */}
+              {item.ingredients && item.ingredients.length > 0 && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                     <h3 className="text-[12px] font-black uppercase tracking-[0.3em] text-indigo-400">Composition</h3>
+                     <div className="h-px bg-white/5 flex-1"></div>
+                  </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    {item.ingredients.map((ing, i) => (
+                      <span key={i} className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-indigo-100 hover:bg-indigo-600/20 transition-all cursor-default">
+                        {typeof ing === 'string' ? ing : (ing.label || ing.name)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {item.option_groups?.map((group, gIdx) => (
                   <div key={gIdx} className="space-y-6">

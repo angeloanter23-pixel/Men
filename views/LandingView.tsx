@@ -1,12 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { LandingNav } from '../landing-page/LandingNav';
 import { HeroSection } from '../landing-page/HeroSection';
-import { KeyFeatures } from '../landing-page/KeyFeatures';
 import { BlueprintStepper } from '../landing-page/BlueprintStepper';
 import { FeedbackSection } from '../landing-page/FeedbackSection';
-import { TutorialSection } from '../landing-page/TutorialSection';
-import { ArticlesSection } from '../landing-page/ArticlesSection';
+import { LibrarySection } from '../landing-page/LibrarySection';
 import { LandingFaq } from '../landing-page/LandingFaq';
 import { LandingFooter } from '../landing-page/LandingFooter';
 import { LandingMenu } from '../landing-page/LandingMenu';
@@ -17,6 +14,7 @@ import { AboutSection } from '../landing-page/AboutSection';
 import { PricingSection } from '../landing-page/PricingSection';
 import { ContactSection } from '../landing-page/ContactSection';
 import { TermsSection } from '../landing-page/TermsSection';
+import { InvestmentSection } from '../landing-page/InvestmentSection';
 
 interface LandingViewProps {
   onStart: () => void;
@@ -28,7 +26,7 @@ interface LandingViewProps {
 const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | null>(null);
+  const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | 'investment' | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -52,17 +50,17 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
       
       <FeedbackSection />
 
-      <TutorialSection />
+      <LibrarySection />
       
-      <KeyFeatures onPricingClick={() => setActiveOverlay('pricing')} />
-
-      <ArticlesSection />
-
       <LandingFaq onContactClick={() => setActiveOverlay('contact')} />
       
-      <LandingFooter onStart={onStart} onCreateMenu={onCreateMenu} />
+      <LandingFooter 
+        onStart={onStart} 
+        onCreateMenu={onCreateMenu} 
+        onInvestmentClick={() => setActiveOverlay('investment')}
+      />
 
-      {/* Detail Overlays - Simplified Header */}
+      {/* Detail Overlays */}
       <LandingOverlay 
         isOpen={activeOverlay === 'pricing'} 
         onClose={() => setActiveOverlay(null)} 
@@ -89,6 +87,13 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
         onClose={() => setActiveOverlay(null)} 
       >
         <TermsSection />
+      </LandingOverlay>
+
+      <LandingOverlay 
+        isOpen={activeOverlay === 'investment'} 
+        onClose={() => setActiveOverlay(null)} 
+      >
+        <InvestmentSection />
       </LandingOverlay>
     </div>
   );

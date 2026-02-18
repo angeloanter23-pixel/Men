@@ -1,12 +1,12 @@
-
 import React from 'react';
 
 interface LandingFooterProps {
   onStart: () => void;
   onCreateMenu: () => void;
+  onInvestmentClick?: () => void;
 }
 
-export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateMenu }) => (
+export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateMenu, onInvestmentClick }) => (
   <footer className="bg-slate-50 pt-24 pb-12 border-t border-slate-200/50 px-6 font-jakarta">
     <div className="max-w-[1100px] mx-auto">
        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 pb-20 border-b border-slate-200">
@@ -35,8 +35,8 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateM
             <ul className="space-y-3.5 text-[14px] font-semibold text-slate-400">
               <li><button onClick={onStart} className="hover:text-orange-500 transition-colors">Sandbox</button></li>
               <li><button onClick={onCreateMenu} className="hover:text-orange-500 transition-colors">Pricing</button></li>
+              <li><button onClick={onInvestmentClick} className="hover:text-orange-500 transition-colors text-orange-600 font-bold">Investment</button></li>
               <li><button className="hover:text-orange-500 transition-colors">Enterprise</button></li>
-              <li><button className="hover:text-orange-500 transition-colors">Security</button></li>
             </ul>
           </div>
 

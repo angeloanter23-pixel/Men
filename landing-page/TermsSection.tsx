@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Reveal } from './Reveal';
 import { supabase } from '../lib/supabase';
@@ -60,7 +59,7 @@ export const TermsSection: React.FC = () => {
                 <section className="space-y-3">
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">1. Restaurant Duty</h3>
                   <p className="text-slate-500 text-[13px] leading-relaxed font-medium">
-                    The owner is responsible for the menu, prices, and food info.
+                    The restaurant owner is responsible for the menu items, their prices, and the food information provided in this app.
                   </p>
                 </section>
               </Reveal>
@@ -69,7 +68,16 @@ export const TermsSection: React.FC = () => {
                 <section className="space-y-3">
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">2. Table Codes</h3>
                   <p className="text-slate-500 text-[13px] leading-relaxed font-medium">
-                    Keep your table QR codes safe. Do not share them without permission.
+                    Please keep your table QR codes safe. Do not share them with people who are not at your table.
+                  </p>
+                </section>
+              </Reveal>
+
+              <Reveal delay={300}>
+                <section className="space-y-3">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">3. Order Fulfillment</h3>
+                  <p className="text-slate-500 text-[13px] leading-relaxed font-medium">
+                    By placing an order, you agree to pay the restaurant for the items ordered. All orders are sent directly to the kitchen.
                   </p>
                 </section>
               </Reveal>

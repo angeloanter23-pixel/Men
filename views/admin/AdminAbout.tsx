@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import MenuFAQ from './menu/MenuFAQ';
@@ -19,14 +18,15 @@ interface AboutData {
 }
 
 const DEFAULT_CONTENT: AboutData = {
-  title: "Our journey and vision",
-  intro: "We provide an unmatched dining experience.",
-  story: "Experience a new level of hospitality. We removed the barriers between your hunger and our kitchen.",
-  different: "We are different because our kitchen is cloud-synced. Orders reach our chefs in less than a second.",
-  thank_you: "Thank you for visiting us.",
+  title: "Elevating the digital dining experience",
+  intro: "We bridge the gap between human hospitality and intelligent technology.",
+  story: "Our journey began with a simple observation: the most precious part of dining is the conversation, yet guests often spend their time waiting for service. We built this platform to put the power of the menu directly into your hands, allowing our staff to focus on what truly matters—your experience.",
+  different: "Unlike traditional menus, our digital ecosystem is cloud-synced to our kitchen. When you order, our chefs see it in less than a second. This precision reduces errors and ensures your meal arrives at the perfect temperature, every time.",
+  thank_you: "Thank you for choosing to dine with us today.",
   values: [
-    { icon: "fa-bolt", label: "Speed", description: "Fast sync between table and kitchen." },
-    { icon: "fa-shield-halved", label: "Privacy", description: "Your data is always kept safe." }
+    { icon: "fa-bolt", label: "Speed", description: "Sub-second synchronization between your table and our kitchen staff." },
+    { icon: "fa-shield-halved", label: "Privacy", description: "Your dining session is private. We only collect the data needed to serve your meal." },
+    { icon: "fa-leaf", label: "Sustainability", description: "Going digital eliminates paper waste and helps us manage inventory more efficiently." }
   ]
 };
 
@@ -247,7 +247,7 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
                       {data.values.map((v, i) => (
                         <button key={i} onClick={() => openValueEditor(i)} className="shrink-0 bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 hover:border-indigo-500/20 transition-all group min-w-[200px] shadow-sm">
                           <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all"><i className={`fa-solid ${v.icon} text-base`}></i></div>
-                          <p className="text-[13px] font-bold text-slate-800 uppercase truncate pr-4">{v.label}</p>
+                          <p className="text-[13px] font-bold text-slate-800 uppercase pr-4">{v.label}</p>
                         </button>
                       ))}
                    </div>

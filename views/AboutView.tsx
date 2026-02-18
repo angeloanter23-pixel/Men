@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -27,6 +26,7 @@ const Reveal: React.FC<{ children: React.ReactNode; delay?: number }> = ({ child
 const parseFormattedText = (text: string) => {
   if (!text) return null;
   let content: any[] = [text];
+  
   const applyTag = (parts: any[], regex: RegExp, wrapper: (match: string) => React.ReactNode) => {
     return parts.flatMap(part => {
       if (typeof part !== 'string') return part;
@@ -37,9 +37,11 @@ const parseFormattedText = (text: string) => {
       });
     });
   };
-  content = applyTag(content, /(\*\*\*.*?\*\*\*)/g, (m) => <strong className="font-black text-slate-900">{m.slice(3, -3)}</strong>);
-  content = applyTag(content, /(\/\/\/.*?(\/\/\/))/g, (m) => <em className="italic">{m.slice(3, -3)}</em>);
-  content = applyTag(content, /(___.*?___)/g, (m) => <u className="underline">{m.slice(3, -3)}</u>);
+
+  content = applyTag(content, /(\*{3}.*?\*{3})/g, (m) => <strong className="font-black text-slate-900">{m.slice(3, -3)}</strong>);
+  content = applyTag(content, /(\/{3}.*?\/{3})/g, (m) => <span className="font-medium">{m.slice(3, -3)}</span>);
+  content = applyTag(content, /(_{3}.*?_{3})/g, (m) => <u className="underline">{m.slice(3, -3)}</u>);
+  
   content = content.flatMap(part => {
     if (typeof part !== 'string') return part;
     const split = part.split(/(\[size:.*?\][\s\S]*?\[\/size\])/g);
@@ -49,6 +51,7 @@ const parseFormattedText = (text: string) => {
       return sub;
     });
   });
+
   content = content.flatMap(part => {
     if (typeof part !== 'string') return part;
     const split = part.split(/(\[color:.*?\][\s\S]*?\[\/color\])/g);
@@ -58,6 +61,7 @@ const parseFormattedText = (text: string) => {
       return sub;
     });
   });
+
   return <>{content}</>;
 };
 
@@ -90,12 +94,16 @@ const AboutView: React.FC = () => {
   }
 
   const identity = data || {
-    title: "Our journey and vision",
-    intro: "We provide an unmatched dining experience.",
-    story: "Experience a new level of hospitality. We removed the barriers between your hunger and our kitchen.",
-    different: "Our platform ensures real-time connection and zero friction.",
-    thank_you: "Thank you for visiting us.",
-    values: []
+    title: "Making Dining Simple",
+    intro: "We believe technology should be easy for everyone.",
+    story: "Mymenu was built to solve the wait time in busy restaurants. We wanted to make it easy for guests to see what is available and order instantly without waiting for a server.",
+    different: "Every table is connected to the kitchen cloud. This means your order is seen by the chef the moment you hit send. This reduces mistakes and gets your food to you faster.",
+    thank_you: "Thank you for being our guest.",
+    values: [
+      { icon: "fa-bolt", label: "Speed", description: "Our system sends orders to the kitchen in less than a second." },
+      { icon: "fa-shield-halved", label: "Privacy", description: "We only collect what is needed to serve your meal." },
+      { icon: "fa-heart", label: "Care", description: "We design our menu to be beautiful and easy to use." }
+    ]
   };
 
   return (

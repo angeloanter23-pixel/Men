@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -46,7 +45,7 @@ const LegalView: React.FC<LegalViewProps> = ({ title }) => {
     };
 
     fetchContent();
-  }, [isTerms]);
+  }, [isTerms, title]);
 
   if (loading) {
     return (
@@ -74,14 +73,61 @@ const LegalView: React.FC<LegalViewProps> = ({ title }) => {
           {content ? (
             <div dangerouslySetInnerHTML={{ __html: content }} />
           ) : (
-            <div className="space-y-12">
-               <section className="space-y-3">
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Document Pending</h3>
-                  <p className="text-slate-500 text-[13px] leading-relaxed font-medium">
-                    This document is currently being finalized by the restaurant owner.
+            isTerms ? (
+              <div className="space-y-12">
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">1. Your Order</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    When you place an order using our QR menu, the kitchen begins preparation immediately. You agree to pay for all items sent to the kitchen.
                   </p>
-               </section>
-            </div>
+                </section>
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">2. QR Code Use</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    The QR code on your table is linked to your physical location. Do not share this code or use it if you are not at the table.
+                  </p>
+                </section>
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">3. Prices and Availability</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    We try to keep all prices and food information correct. If an item is out of stock, we will let you know as soon as possible.
+                  </p>
+                </section>
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">4. Conduct</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    Please use our digital system respectfully. We want everyone to have a great dining experience.
+                  </p>
+                </section>
+              </div>
+            ) : (
+              <div className="space-y-12">
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">1. Information We Collect</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    We only collect your name and table number to help us serve your food correctly.
+                  </p>
+                </section>
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">2. How We Use Data</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    Your information is used only for your current dining session. It is shared with the kitchen and floor staff so they can complete your order.
+                  </p>
+                </section>
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">3. Security</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    We use secure connections to keep your messages and orders private. We do not sell your personal information to anyone.
+                  </p>
+                </section>
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">4. Session Data</h3>
+                  <p className="text-slate-500 text-[15px] leading-relaxed font-medium">
+                    Your session data is cleared once the restaurant closes the table session after you have finished your meal.
+                  </p>
+                </section>
+              </div>
+            )
           )}
         </div>
 

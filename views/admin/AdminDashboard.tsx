@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminMenu from './AdminMenu';
 import AdminAnalytics from './AdminAnalytics';
@@ -8,11 +7,12 @@ import AdminOrders from './AdminOrders';
 import AdminAccounts from './AdminAccounts';
 import AdminLegal from './AdminLegal';
 import AdminAbout from './AdminAbout';
+import AdminApps from './AdminApps';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
 
-type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'accounts';
+type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'accounts' | 'apps';
 type SettingsSubTab = 'general' | 'about' | 'terms' | 'privacy';
 
 interface AdminDashboardProps {
@@ -90,20 +90,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const navItemsConfig: { id: AdminTab; icon: string; label: string }[] = [
+  const mainNav: { id: AdminTab; icon: string; label: string }[] = [
     { id: 'menu', icon: 'fa-utensils', label: 'Menu Editor' },
     { id: 'orders', icon: 'fa-message', label: 'Console' },
     { id: 'analytics', icon: 'fa-chart-pie', label: 'Stats' },
-    { id: 'qr', icon: 'fa-qrcode', label: 'QR Tokens' },
+    { id: 'qr', icon: 'fa-qrcode', label: 'QR and Tables' },
+  ];
+
+  const teamNav: { id: AdminTab; icon: string; label: string }[] = [
     { id: 'accounts', icon: 'fa-user-group', label: 'Team' },
+  ];
+
+  const appsNav: { id: AdminTab; icon: string; label: string }[] = [
+    { id: 'apps', icon: 'fa-cubes', label: 'Apps' },
+  ];
+
+  const settingsNav: { id: AdminTab; icon: string; label: string }[] = [
     { id: 'settings', icon: 'fa-gears', label: 'Site Settings' }
   ];
 
-  const renderNavButton = (config: typeof navItemsConfig[0]) => (
+  const renderNavButton = (config: any) => (
     <button 
       key={config.id}
       onClick={() => { setActiveTab(config.id); setSettingsSubTab('general'); setIsSidebarOpen(false); }}
-      className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-sm font-bold transition-all group mb-1 text-left ${activeTab === config.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+      className={`w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all group mb-1 text-left ${activeTab === config.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
     >
       <i className={`fa-solid ${config.icon} text-base transition-colors ${activeTab === config.id ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}></i> 
       <div className="flex-1 flex items-center justify-between">
@@ -122,6 +132,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'qr': return <AdminQR />;
       case 'orders': return <AdminOrders />;
       case 'accounts': return <AdminAccounts setActiveTab={setActiveTab} />;
+      case 'apps': return <AdminApps />;
       case 'settings':
         return (
           <div className="animate-fade-in space-y-6">
@@ -143,18 +154,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const currentTabLabel = navItemsConfig.find(n => n.id === activeTab)?.label || 'Dashboard';
+  const currentTabLabel = activeTab === 'qr' ? 'QR and Tables' : (mainNav.find(n => n.id === activeTab) || teamNav.find(n => n.id === activeTab) || appsNav.find(n => n.id === activeTab) || settingsNav.find(n => n.id === activeTab))?.label || 'Dashboard';
 
   return (
     <div className="flex h-screen w-full bg-[#F2F2F7] overflow-hidden font-jakarta">
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90]" />}
       <aside className={`fixed lg:static inset-y-0 left-0 w-80 bg-[#0f172a] h-full flex flex-col z-[100] transition-transform duration-500 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-8 pb-4 shrink-0">
-          <div className="flex items-center gap-3 mb-12">
+          <div className="flex items-center gap-3 mb-10">
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg"><i className="fa-solid fa-utensils text-sm"></i></div>
             <h1 className="font-black text-2xl text-white tracking-tighter uppercase">FOODIE</h1>
           </div>
-          <nav className="space-y-1">{navItemsConfig.map(config => renderNavButton(config))}</nav>
+          
+          <nav className="space-y-6 overflow-y-auto no-scrollbar max-h-[70vh]">
+            <div>
+               <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Management</p>
+               {mainNav.map(n => renderNavButton(n))}
+            </div>
+            
+            <div>
+               <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Team & Security</p>
+               {teamNav.map(n => renderNavButton(n))}
+            </div>
+
+            <div>
+               <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Utilities</p>
+               {appsNav.map(n => renderNavButton(n))}
+            </div>
+
+            <div>
+               <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Preferences</p>
+               {settingsNav.map(n => renderNavButton(n))}
+            </div>
+          </nav>
         </div>
         <div className="mt-auto p-6"><button onClick={onLogout} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-700 hover:bg-rose-600 transition-all">Sign Out</button></div>
       </aside>
@@ -165,7 +197,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
              <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">{currentTabLabel}</h2>
           </div>
           <div className="flex items-center gap-4">
-             {/* Account icon removed */}
           </div>
         </header>
         <main className="flex-1 overflow-y-auto no-scrollbar bg-[#F2F2F7] p-4 md:p-8">{renderContent()}</main>

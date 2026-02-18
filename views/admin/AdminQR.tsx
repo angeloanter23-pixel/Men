@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import * as MenuService from '../../services/menuService';
 import MenuFAQ from './menu/MenuFAQ';
@@ -65,7 +64,7 @@ const ShareModal: React.FC<{
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 pt-2 pb-6 px-2">
-                    <button onClick={handleCopy} className={`py-5 rounded-[2rem] font-black uppercase text-[11px] tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3 ${isCopied ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white'}`}>
+                    <button onClick={handleCopy} className={`py-5 rounded-[2rem] font-black uppercase text-[11px] tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3 ${isCopied ? 'bg-emerald-50 text-white' : 'bg-slate-900 text-white'}`}>
                         {isCopied ? <i className="fa-solid fa-check"></i> : <i className="fa-solid fa-link"></i>}
                         {isCopied ? 'Link Copied' : 'Copy Digital Link'}
                     </button>
@@ -77,8 +76,11 @@ const ShareModal: React.FC<{
 };
 
 const AdminQR: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'gen' | 'saved'>('gen');
+  const [activeTab, setActiveTab] = useState<'gen' | 'bulk' | 'saved'>('gen');
   const [baseName, setBaseName] = useState('Table ');
+  const [bulkPrefix, setBulkPrefix] = useState('Table ');
+  const [bulkStart, setBulkStart] = useState(1);
+  const [bulkEnd, setBulkEnd] = useState(10);
   const [showFaq, setShowFaq] = useState(false);
   
   const [savedQrs, setSavedQrs] = useState<QRAsset[]>([]);
@@ -129,13 +131,38 @@ const AdminQR: React.FC = () => {
     } finally { setLoading(false); }
   };
 
+  const handleBulkGenerate = async () => {
+    if (loading || !restaurantId) return;
+    if (bulkEnd < bulkStart) return alert("End number must be greater than start.");
+    if (bulkEnd - bulkStart > 50) return alert("Maximum 50 codes at once.");
+
+    setLoading(true);
+    try {
+        const payload = [];
+        for (let i = bulkStart; i <= bulkEnd; i++) {
+            payload.push({
+                restaurant_id: restaurantId,
+                label: `${bulkPrefix}${i}`,
+                code: Math.random().toString(36).substr(2, 6).toUpperCase(),
+                type: 'menu'
+            });
+        }
+        await MenuService.bulkUpsertQRCodes(payload);
+        await fetchQRCodes();
+        setActiveTab('saved');
+    } catch (e: any) {
+        alert("Bulk creation failed: " + e.message);
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const isDuplicate = savedQrs.some(q => q.label.toLowerCase().trim() === baseName.toLowerCase().trim());
 
   const qrFaqs = [
     { q: "What is a Table Node?", a: "A node is a persistent digital entry point mapped to a physical location in your venue. Deleting a node will invalidate any printed QR codes associated with it." },
-    { q: "Can I customize the QR link?", a: "Tokens are auto-generated for maximum security. However, the label (e.g., Table 10) is fully customizable by you." },
-    { q: "How do I get the QR for printing?", a: "In the 'Archive' tab, click the Expand icon on any node. You can then download a high-resolution PNG artifact perfect for professional printing." },
-    { q: "Is there a limit to concurrent scans?", a: "No. Each table node can support unlimited simultaneous guest connections without performance degradation." }
+    { q: "How does Bulk Generation work?", a: "It allows you to create multiple tables at once. For example, setting Prefix to 'Table ', Start to 1, and End to 10 will create 'Table 1' through 'Table 10'." },
+    { q: "Can I print these?", a: "Yes. In the Archive tab, click the Expand icon on any node to download it as a PNG artifact for printing." }
   ];
 
   if (showFaq) {
@@ -158,7 +185,7 @@ const AdminQR: React.FC = () => {
         {/* Page Header */}
         <header className="px-2 text-center relative">
           <div className="space-y-3">
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">QR Registry</h1>
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">QR and Tables</h1>
             <p className="text-slate-500 text-[17px] font-medium leading-relaxed">
               Manage digital table access and physical assets.
               <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
@@ -170,14 +197,15 @@ const AdminQR: React.FC = () => {
         </header>
 
         {/* Tab Switcher */}
-        <div className="bg-slate-200/50 p-1 rounded-2xl flex border border-slate-200 shadow-inner">
-          <button onClick={() => setActiveTab('gen')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'gen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Create New</button>
-          <button onClick={() => setActiveTab('saved')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Archive ({savedQrs.length})</button>
+        <div className="bg-slate-200/50 p-1 rounded-2xl flex border border-slate-200 shadow-inner overflow-x-auto no-scrollbar gap-1">
+          <button onClick={() => setActiveTab('gen')} className={`flex-1 min-w-[100px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'gen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Single</button>
+          <button onClick={() => setActiveTab('bulk')} className={`flex-1 min-w-[100px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'bulk' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Bulk Tool</button>
+          <button onClick={() => setActiveTab('saved')} className={`flex-1 min-w-[100px] py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Archive ({savedQrs.length})</button>
         </div>
 
         {activeTab === 'gen' ? (
           <section className="space-y-4 animate-fade-in">
-            <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Deployment</h3>
+            <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Manual Setup</h3>
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/50 space-y-8">
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
@@ -208,14 +236,40 @@ const AdminQR: React.FC = () => {
                 <span>Deploy Node</span>
               </button>
             </div>
-
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/50 flex items-start gap-4">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                  <i className="fa-solid fa-shield-halved text-xs"></i>
+          </section>
+        ) : activeTab === 'bulk' ? (
+          <section className="space-y-4 animate-fade-in">
+            <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.1em]">Bulk Generator</h3>
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/50 space-y-8">
+                <div className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Prefix</label>
+                        <input type="text" value={bulkPrefix} onChange={e => setBulkPrefix(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm" placeholder="e.g. Table " />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Start Number</label>
+                            <input type="number" value={bulkStart} onChange={e => setBulkStart(parseInt(e.target.value) || 1)} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">End Number</label>
+                            <input type="number" value={bulkEnd} onChange={e => setBulkEnd(parseInt(e.target.value) || 10)} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm" />
+                        </div>
+                    </div>
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-4">
+                        <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0"><i className="fa-solid fa-wand-magic-sparkles"></i></div>
+                        <p className="text-[11px] text-indigo-900 font-bold leading-tight uppercase">Creates {bulkEnd - bulkStart + 1} nodes instantly.</p>
+                    </div>
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase tracking-tight">
-                  Tokens are unique and persistent. Deleting a node will invalidate all physical prints for that specific location.
-                </p>
+
+                <button 
+                    disabled={loading} 
+                    onClick={handleBulkGenerate} 
+                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                    {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-plus-circle"></i>}
+                    <span>Generate Bulk Nodes</span>
+                </button>
             </div>
           </section>
         ) : (

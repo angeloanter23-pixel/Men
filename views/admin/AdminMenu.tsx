@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { MenuItem, Category, ItemOptionGroup } from '../../types';
 import * as MenuService from '../../services/menuService';
@@ -21,19 +20,24 @@ interface AdminMenuProps {
 }
 
 const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, menuId, restaurantId, onOpenFAQ }) => {
-  const [activeTab, setActiveTab] = useState<'items' | 'variations' | 'categories'>('items');
+  const [activeTab, setActiveTab] = useState<'categories' | 'items' | 'variations'>('categories');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showFaq, setShowFaq] = useState(false);
+  const [dbFetchError, setDbFetchError] = useState<any>(null);
 
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showDishModal, setShowDishModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
+  
+  // Unified Delete State
+  const [entryToDelete, setEntryToDelete] = useState<{ id: string | number; name: string; type: 'item' | 'category' } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const initialFormState = { 
     name: '', desc: '', ingredients: '', price: '', cat: '', 
     people: '1 Person', mins: '15', image: '', 
-    isPopular: false, isAvailable: true, parent_id: null as string | number | null,
+    isPopular: false, isAvailable: true, pay_as_you_order: false, parent_id: null as string | number | null,
     has_variations: false,
     optionGroups: [] as ItemOptionGroup[]
   };
@@ -48,29 +52,50 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
 
   const showToast = (message: string, type: 'success' | 'error') => { setToast({ message, type }); };
 
+  const handleDiagnosticRefresh = async () => {
+    if (!restaurantId) return;
+    setLoading(true);
+    setDbFetchError(null);
+    try {
+        const res = await MenuService.getMenuByRestaurantId(restaurantId);
+        setItems(res.items || []);
+        setCats(res.categories || []);
+        
+        if ((res as any).db_error) {
+            const err = (res as any).db_error;
+            setDbFetchError(err);
+            // Also store globally for modal access
+            (window as any)._last_menu_db_error = err;
+            showToast("Database Link Error", "error");
+        } else {
+            (window as any)._last_menu_db_error = null;
+        }
+    } catch (e: any) {
+        showToast("Synchronization failed", "error");
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const handleSaveItem = async () => {
     if (loading || !formData.name.trim() || !restaurantId) return;
     
     setLoading(true);
     try {
       const targetCategory = cats.find(c => c.name === formData.cat);
-      const ingredientsArray = formData.has_variations ? [] : formData.ingredients
-        .split(',')
-        .map(i => i.trim())
-        .filter(Boolean)
-        .map(i => ({ label: i }));
-
+      
       const itemPayload: any = {
         name: formData.name.trim(), 
         price: Number(formData.price) || 0, 
         description: formData.desc,
-        ingredients: ingredientsArray, 
+        ingredients: formData.ingredients ? String(formData.ingredients).split(',').map((i: string) => ({ label: i.trim() })) : [], 
         image_url: formData.image || 'https://picsum.photos/seed/dish/400/400',
         category_id: targetCategory ? targetCategory.id : null, 
         pax: formData.has_variations ? 'Various' : formData.people, 
         serving_time: formData.has_variations ? 'Various' : formData.mins + " mins",
         is_popular: formData.isPopular, 
         is_available: formData.has_variations ? true : formData.isAvailable,
+        pay_as_you_order: !!formData.pay_as_you_order,
         parent_id: formData.parent_id,
         has_variations: formData.has_variations,
         has_options: formData.has_variations ? false : (formData.optionGroups.length > 0),
@@ -84,21 +109,44 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
         await MenuService.saveItemOptions(dbItem.id, formData.optionGroups);
       }
 
-      const savedItem = { 
-        ...dbItem, 
-        cat_name: targetCategory ? targetCategory.name : 'Uncategorized',
-        option_groups: formData.has_variations ? [] : formData.optionGroups
-      };
-      
-      if (editingItem) setItems(prev => prev.map(it => it.id === editingItem.id ? savedItem : it));
-      else setItems(prev => [savedItem, ...prev]);
-      
-      showToast("Inventory Updated", 'success');
+      await handleDiagnosticRefresh();
       setShowDishModal(false);
       setEditingItem(null);
+      showToast("Menu saved", "success");
     } catch (err: any) {
       showToast("Error: " + err.message, "error");
     } finally { setLoading(false); }
+  };
+
+  const executePurge = async (mode: 'default' | 'cascade' | 'orphan' = 'default') => {
+    if (!entryToDelete || isDeleting) return;
+    setIsDeleting(true);
+    try {
+        if (entryToDelete.type === 'item') {
+            await MenuService.deleteMenuItem(entryToDelete.id.toString());
+        } else {
+            if (mode === 'orphan') {
+                const itemsToUpdate = items.filter(i => String(i.category_id) === String(entryToDelete.id));
+                for (const item of itemsToUpdate) {
+                    const { cat_name, option_groups, ...cleanItem } = item as any;
+                    await MenuService.upsertMenuItem({ ...cleanItem, category_id: null });
+                }
+            } else if (mode === 'cascade') {
+                const itemsToDelete = items.filter(i => String(i.category_id) === String(entryToDelete.id));
+                for (const item of itemsToDelete) {
+                    await MenuService.deleteMenuItem(item.id.toString());
+                }
+            }
+            await MenuService.deleteCategory(entryToDelete.id);
+        }
+        await handleDiagnosticRefresh();
+        setEntryToDelete(null);
+        showToast("Entry removed", "success");
+    } catch (err: any) {
+        setDeleteError("Cannot delete entry.");
+    } finally {
+        setIsDeleting(false);
+    }
   };
 
   const startEdit = (item: MenuItem) => {
@@ -110,8 +158,10 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     setFormData({ 
       name: item.name, desc: item.description, ingredients: ingString, 
       price: item.price.toString(), cat: item.cat_name === 'Uncategorized' ? '' : item.cat_name, 
-      people: item.pax || '1 Person', mins: (item.serving_time || '').replace(/\D/g, ''), image: item.image_url, 
-      isPopular: !!item.is_popular, isAvailable: item.is_available !== undefined ? !!item.is_available : true,
+      people: item.pax || '1 Person', mins: (item.serving_time || '').replace(/\D/g, '') || '15', image: item.image_url, 
+      isPopular: !!item.is_popular, 
+      isAvailable: item.is_available !== undefined ? !!item.is_available : true,
+      pay_as_you_order: !!item.pay_as_you_order, 
       parent_id: item.parent_id || null,
       has_variations: !!item.has_variations,
       optionGroups: item.option_groups || []
@@ -120,37 +170,28 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
   };
 
   const handleSaveCategory = async (id: string | number | null, name: string, icon: string) => {
-    if (!menuId) return;
+    if (!restaurantId) return;
     setLoading(true);
     try {
-      const res = await MenuService.upsertCategory({ 
+      await MenuService.upsertCategory({ 
         id: id || undefined, 
         name, 
         icon,
-        menu_id: menuId, 
         order_index: id ? undefined : cats.length 
-      });
-      if (id) setCats(cats.map(c => c.id === id ? res : c));
-      else setCats([...cats, res]);
-      showToast("Inventory Synchronized", "success");
-    } catch (e) { showToast("Sync Error", "error"); }
+      }, restaurantId);
+      await handleDiagnosticRefresh();
+      showToast("Category updated", "success");
+    } catch (e: any) { 
+        showToast("Update failed", "error"); 
+    }
     finally { setLoading(false); }
-  };
-
-  const handleDeleteCategory = async (id: string | number) => {
-    if (!confirm('Delete this category?')) return;
-    try {
-      await MenuService.deleteCategory(id);
-      setCats(cats.filter(c => c.id !== id));
-      showToast("Category Purged", "success");
-    } catch (e) { showToast("Error deleting category", "error"); }
   };
 
   const groupedItems = useMemo(() => {
     const standalone = items.filter(i => !i.parent_id && !i.has_variations);
-    const headers = items.filter(i => i.has_variations);
+    const headers = items.filter(i => !!i.has_variations);
     const map: Record<string, MenuItem[]> = {};
-    items.filter(i => i.parent_id).forEach(c => {
+    items.filter(i => !!i.parent_id).forEach(c => {
         const pid = String(c.parent_id);
         if (!map[pid]) map[pid] = [];
         map[pid].push(c);
@@ -158,59 +199,74 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     return { standalone, headers, variationMap: map };
   }, [items]);
 
-  const menuFaqs = [
-    { q: "What is the difference between a Dish and a Group?", a: "A Single Dish is an item with one set price, like 'Espresso'. A Dish Group is a container for items that come in different sizes or formats, like 'French Fries' which contains 'Regular', 'Large', and 'Bucket' as individual variants." },
-    { q: "How do I add variants to a group?", a: "Go to the 'Dish Groups' tab and click the '+' button on any group header. This will open the editor where you can add a sub-item like 'Small' or 'Medium' with its own specific price." },
-    { q: "Can I rearrange the categories on my menu?", a: "Yes. Categories appear in the order they were created. You can delete and re-add them if you wish to change the sequence." },
-    { q: "What does 'Show on Menu' do?", a: "Toggling this off immediately hides the item from your customers. This is perfect for items that are temporarily out of stock or seasonal dishes." }
-  ];
-
-  if (showFaq) {
-    return (
-      <div className="animate-fade-in">
-        <MenuFAQ 
-            onBack={() => setShowFaq(false)} 
-            title="Catalog Support" 
-            subtitle="Get expert help with organizing your digital menu and inventory categories."
-            items={menuFaqs}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
+    <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40 relative">
       {toast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[5000] animate-fade-in w-full max-w-sm px-6">
            <div className={`p-4 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-2xl border ${toast.type === 'success' ? 'bg-slate-900/90 text-white border-white/10' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-              <p className="text-[11px] font-black uppercase tracking-widest flex-1 text-center">{toast.message}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest flex-1 text-center">{toast.message}</p>
            </div>
+        </div>
+      )}
+
+      {dbFetchError && (
+        <div className="max-w-2xl mx-auto px-6 pt-6">
+          <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 text-rose-800 space-y-3">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <i className="fa-solid fa-database text-rose-500"></i>
+                    <h4 className="font-black uppercase text-[10px] tracking-widest">Relational Sync Failure</h4>
+                </div>
+                <button onClick={() => setDbFetchError(null)} className="text-rose-300 hover:text-rose-500"><i className="fa-solid fa-xmark"></i></button>
+             </div>
+             <p className="text-[12px] font-bold leading-relaxed">The server could not link your modifiers to your items. This usually means the 'item_options' table relationship is broken or named differently in Supabase.</p>
+             <div className="bg-white/50 p-4 rounded-xl font-mono text-[9px] break-all border border-rose-100 shadow-inner max-h-40 overflow-y-auto no-scrollbar">
+                <span className="text-rose-600 font-bold">RAW ERROR:</span> {JSON.stringify(dbFetchError)}
+             </div>
+             <p className="text-[10px] text-slate-400 font-medium italic">Hint: Ensure your foreign keys correctly point to item_option_groups(id).</p>
+          </div>
         </div>
       )}
 
       <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
         <header className="px-2 text-center">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Dish Editor</h1>
-          <p className="text-slate-500 text-[17px] font-medium mt-3 leading-relaxed">
-            Modify your digital inventory and categories. 
-            <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight leading-none uppercase">Menu Editor</h1>
+          <p className="text-slate-500 text-[15px] font-medium mt-3 leading-relaxed">
+            Manage categories and menu items.
+            <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">Help</button>
           </p>
         </header>
 
+        {/* REARRANGED TABS */}
         <div className="bg-[#E8E8ED] p-1.5 rounded-2xl flex border border-slate-200/50 shadow-inner overflow-x-auto no-scrollbar gap-1">
-          {(['items', 'variations', 'categories'] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 min-w-[110px] py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>
-              {tab === 'items' ? 'Single Food' : tab === 'variations' ? 'Dish Groups' : 'Categories'}
+          {(['categories', 'items', 'variations'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 min-w-[110px] py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>
+              {tab === 'categories' ? 'Categories' : tab === 'items' ? 'Single Food' : 'Groups'}
             </button>
           ))}
         </div>
+
+        {activeTab === 'categories' && (
+          <CategoryList 
+            cats={cats} 
+            onAdd={(name) => handleSaveCategory(null, name, 'fa-tag')} 
+            onDelete={(id) => {
+                const cat = cats.find(c => c.id === id);
+                if (cat) setEntryToDelete({ id, name: cat.name, type: 'category' });
+            }} 
+            onEdit={(cat) => handleSaveCategory(cat.id, cat.name, cat.icon || 'fa-tag')} 
+            loading={loading} 
+          />
+        )}
 
         {activeTab === 'items' && (
           <SingleFoodList 
             items={groupedItems.standalone} 
             onEdit={startEdit} 
-            onDelete={setItemToDelete} 
-            onAddNew={() => { setEditingItem(null); setFormData(initialFormState); setShowDishModal(true); }} 
+            onDelete={(item) => setEntryToDelete({ id: item.id, name: item.name, type: 'item' })} 
+            onAddNew={() => { setEditingItem(null); setFormData(initialFormState); setShowDishModal(true); }}
+            onDiagnosticRefresh={handleDiagnosticRefresh}
+            loading={loading}
           />
         )}
 
@@ -221,17 +277,8 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
             onEditHeader={startEdit}
             onEditVariant={startEdit}
             onAddVariant={(pid, cat) => { setEditingItem(null); setFormData({ ...initialFormState, parent_id: pid, cat: cat }); setShowDishModal(true); }}
-            onDelete={setItemToDelete}
+            onDelete={(item) => setEntryToDelete({ id: item.id, name: item.name, type: 'item' })}
             onAddNewGroup={() => { setEditingItem(null); setFormData({ ...initialFormState, has_variations: true }); setShowDishModal(true); }}
-          />
-        )}
-
-        {activeTab === 'categories' && (
-          <CategoryList 
-            cats={cats} 
-            onSave={handleSaveCategory} 
-            onDelete={handleDeleteCategory} 
-            loading={loading} 
           />
         )}
       </div>
@@ -248,24 +295,53 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
         />
       )}
 
-      {itemToDelete && (
-        <div className="fixed inset-0 z-[5000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl animate-fade-in font-jakarta">
-            <div className="bg-white w-full max-w-sm rounded-[2rem] p-10 shadow-2xl space-y-8 animate-scale text-center">
-                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[1.5rem] flex items-center justify-center mx-auto text-3xl shadow-inner border border-rose-100/50"><i className="fa-solid fa-trash-can"></i></div>
-                <div className="space-y-3">
-                  <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">Remove Entry?</h3>
-                  <p className="text-slate-500 text-xs font-bold leading-relaxed px-4">Permanently delete "{itemToDelete.name}" from your menu.</p>
-                </div>
-                <div className="grid grid-cols-1 gap-3 w-full">
-                    <button onClick={async () => {
-                      setLoading(true);
-                      await MenuService.deleteMenuItem(itemToDelete.id.toString());
-                      setItems(prev => prev.filter(it => it.id !== itemToDelete.id));
-                      setItemToDelete(null); 
-                      setLoading(false);
-                      showToast("Entry Removed", "success");
-                    }} className="w-full py-5 bg-rose-600 text-white rounded-full font-black uppercase text-[10px] tracking-[0.4em] shadow-xl shadow-rose-100 active:scale-95 transition-all">Execute Purge</button>
-                    <button onClick={() => setItemToDelete(null)} className="w-full py-5 bg-slate-50 text-slate-400 rounded-full font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Cancel</button>
+      {/* UNIFIED DELETE CONFIRMATION MODAL */}
+      {entryToDelete && (
+        <div className="fixed inset-0 z-[5000] flex items-end justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in font-jakarta">
+            <div className="relative w-full max-w-lg space-y-3 animate-slide-up flex flex-col">
+                <div className="bg-white/95 backdrop-blur-2xl rounded-[2.5rem] p-10 shadow-2xl flex flex-col items-center text-center space-y-8">
+                    <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center text-3xl shadow-inner border transition-all ${deleteError ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                        <i className={`fa-solid ${isDeleting ? 'fa-spinner animate-spin' : deleteError ? 'fa-triangle-exclamation' : 'fa-trash-can'}`}></i>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h3 className="text-2xl font-bold uppercase tracking-tighter text-slate-900 leading-none">Confirm Deletion</h3>
+                      <p className="text-slate-500 text-[14px] font-medium leading-relaxed px-4">
+                        Permanently remove "{entryToDelete.name}"?
+                      </p>
+                    </div>
+
+                    <div className="w-full flex flex-col gap-3">
+                        {entryToDelete.type === 'category' ? (
+                            <>
+                                <button 
+                                    onClick={() => executePurge('orphan')} 
+                                    className="w-full py-5 bg-slate-900 text-white rounded-full font-bold uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                                >
+                                    Keep items as Uncategorized
+                                </button>
+                                <button 
+                                    onClick={() => executePurge('cascade')} 
+                                    className="w-full py-5 bg-rose-600 text-white rounded-full font-bold uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                                >
+                                    Delete items in category
+                                </button>
+                            </>
+                        ) : (
+                            <button 
+                                onClick={() => executePurge()} 
+                                className="w-full py-5 bg-rose-600 text-white rounded-full font-bold uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                            >
+                                Delete Permanently
+                            </button>
+                        )}
+                        <button 
+                            onClick={() => setEntryToDelete(null)} 
+                            className="w-full py-5 bg-slate-50 text-slate-400 rounded-full font-bold uppercase text-[11px] tracking-widest active:scale-95 transition-all"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -274,8 +350,8 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
       <style>{`
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
-        @keyframes scale { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .animate-scale { animation: scale 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
     </div>

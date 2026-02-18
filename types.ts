@@ -1,4 +1,3 @@
-
 export interface Category {
   id: number | string;
   name: string;
@@ -43,6 +42,7 @@ export interface MenuItem {
   cat_name: string;
   is_popular: boolean;
   is_available: boolean;
+  pay_as_you_order?: boolean;
   ingredients: any[];
   pax: string;
   serving_time: string;
@@ -55,7 +55,7 @@ export interface MenuItem {
 
 export type OrderMode = 'Dine-in' | 'Takeout' | 'Delivery';
 
-export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'create-menu' | 'payment' | 'qr-verify' | 'about' | 'test-supabase' | 'super-admin' | 'accept-invite' | 'ai-assistant' | 'admin-faq' | 'demo' | 'articles' | 'article';
+export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'create-menu' | 'payment' | 'qr-verify' | 'about' | 'test-supabase' | 'super-admin' | 'accept-invite' | 'ai-assistant' | 'admin-faq' | 'demo' | 'articles' | 'article' | 'verification-barcode';
 
 export interface CartItem extends MenuItem {
   quantity: number;
@@ -84,4 +84,6 @@ export interface SalesRecord {
   tableNumber?: string;
   paymentStatus: 'Paid' | 'Unpaid';
   orderStatus: 'Preparing' | 'Serving' | 'Served';
+  pay_as_you_order?: boolean;
+  verification_code?: string;
 }

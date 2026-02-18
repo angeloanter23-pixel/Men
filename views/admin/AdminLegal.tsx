@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import RichTextMenu from '../../components/admin/RichTextMenu';
@@ -9,6 +8,32 @@ interface AdminLegalProps {
   initialDocType?: 'terms' | 'privacy';
   onBack: () => void;
 }
+
+const DEFAULT_TERMS = `
+  <div>
+    <h3>1. Ordering Agreement</h3>
+    <p>By using this digital menu, you agree that all orders sent through your table QR code are considered binding. The restaurant will prepare these items immediately upon receipt.</p>
+    <h3>2. Pricing and Payments</h3>
+    <p>All prices listed include applicable taxes unless stated otherwise. Payments must be settled before leaving the premises, either via digital gateway or at the counter.</p>
+    <h3>3. Service Availability</h3>
+    <p>We strive to keep the menu updated in real-time. However, certain items may become unavailable due to kitchen demand. Staff will notify you if an item in your order is out of stock.</p>
+    <h3>4. User Conduct</h3>
+    <p>Please use the digital calling and messaging features respectfully. Harassment of staff via digital channels will result in the immediate termination of your digital session.</p>
+  </div>
+`;
+
+const DEFAULT_PRIVACY = `
+  <div>
+    <h3>1. Information Collection</h3>
+    <p>We collect minimal data required to fulfill your order, including your name, table number, and order history for the duration of your dining session.</p>
+    <h3>2. Use of Data</h3>
+    <p>Your data is used strictly for order fulfillment, staff assistance, and internal kitchen analytics. We do not sell your personal information to third parties.</p>
+    <h3>3. Data Retention</h3>
+    <p>Session data and chat history are stored securely. Personal identifiers are typically cleared once the restaurant closes your table session.</p>
+    <h3>4. Digital Security</h3>
+    <p>All communications between your device and our kitchen are encrypted. We utilize industry-standard protocols to ensure your digital experience is safe.</p>
+  </div>
+`;
 
 const AdminLegal: React.FC<AdminLegalProps> = ({ restaurantId, initialDocType = 'terms', onBack }) => {
   const [docType] = useState<'terms' | 'privacy'>(initialDocType);
@@ -68,8 +93,8 @@ const AdminLegal: React.FC<AdminLegalProps> = ({ restaurantId, initialDocType = 
         .single();
       if (error) throw error;
       setContent({ 
-        terms: data.terms_content || '<div><h3>1. Terms of Service</h3><p>Enter your rules here...</p></div>', 
-        privacy: data.privacy_content || '<div><h3>1. Privacy Policy</h3><p>Describe how you handle data...</p></div>' 
+        terms: data.terms_content || DEFAULT_TERMS, 
+        privacy: data.privacy_content || DEFAULT_PRIVACY 
       });
     } catch (e) {
       console.error("Legal fetch error", e);

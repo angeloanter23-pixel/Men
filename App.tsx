@@ -1,8 +1,6 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, ViewState, Feedback } from './types';
 import * as MenuService from './services/menuService';
-import { menuItems as mockupItems, categories as mockupCategories } from './data';
 
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
@@ -34,6 +32,7 @@ import MenuFAQ from './views/admin/menu/MenuFAQ';
 import LegalView from './views/LegalView';
 import ArticlesView from './views/ArticlesView';
 import ArticleViewer from './views/ArticleViewer';
+import VerificationBarcodeView from './views/VerificationBarcodeView';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('landing');
@@ -44,9 +43,10 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSupportHubOpen, setIsSupportHubOpen] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+  const [lastPayFirstOrders, setLastPayFirstOrders] = useState<any[]>([]);
   
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(mockupItems);
-  const [categories, setCategories] = useState<Category[]>(mockupCategories);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [isBooting, setIsBooting] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -74,12 +74,16 @@ export default function App() {
     }));
   };
 
-  const refreshFeedbacks = async (restaurantId: string) => {
+  const syncDatabaseData = async (restaurantId: string) => {
     try {
-      const data = await MenuService.getFeedbacks(restaurantId);
-      setFeedbacks(data);
+      const menu = await MenuService.getMenuByRestaurantId(restaurantId);
+      setMenuItems(menu.items || []);
+      setCategories(menu.categories || []);
+      
+      const fbs = await MenuService.getFeedbacks(restaurantId);
+      setFeedbacks(fbs || []);
     } catch (e) {
-      console.error("Feedback fetch error", e);
+      console.error("Critical Sync Error", e);
     }
   };
 
@@ -88,13 +92,7 @@ export default function App() {
     localStorage.setItem('foodie_active_session', JSON.stringify(session));
     if (session.theme) applyTheme(session.theme);
     
-    const menu = await MenuService.getMenuByRestaurantId(session.restaurant_id);
-    if (menu.items && menu.items.length > 0) {
-      setMenuItems(menu.items); 
-      setCategories(menu.categories);
-    }
-
-    refreshFeedbacks(session.restaurant_id);
+    await syncDatabaseData(session.restaurant_id);
     
     if (pendingSingleItem) {
         finalizeOrder(session, [pendingSingleItem]);
@@ -120,69 +118,16 @@ export default function App() {
         }
         setActiveSession(session);
         if (session.theme) applyTheme(session.theme);
-        const menu = await MenuService.getMenuByRestaurantId(session.restaurant_id);
-        if (menu.items && menu.items.length > 0) {
-            setMenuItems(menu.items);
-            setCategories(menu.categories);
-        }
-        refreshFeedbacks(session.restaurant_id);
+        await syncDatabaseData(session.restaurant_id);
         return true;
     } catch (e) { return false; }
   };
 
   const syncStateWithURL = async () => {
-    const path = window.location.pathname;
-    if (path !== '/' && path.length > 1) {
-      const token = path.substring(1); 
-      const reserved = ['menu', 'cart', 'orders', 'admin', 'landing', 'about', 'feedback', 'feedback-data', 'super-admin', 'test-supabase', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'privacy', 'terms', 'articles', 'article'];
-      if (!reserved.includes(token.toLowerCase())) {
-        try {
-            const details = await MenuService.getQRCodeByCode(token);
-            if (details) {
-                const existingSession = await MenuService.getActiveSessionByQR(details.id);
-                if (existingSession) {
-                    const fullSession = { 
-                      ...existingSession, 
-                      label: details.label, 
-                      restaurantName: details.restaurant_name, 
-                      theme: details.theme, 
-                      restaurant_id: details.restaurant_id,
-                      qr_token: details.code 
-                    };
-
-                    if (existingSession.pin_required === false) {
-                        setActiveSession(fullSession);
-                        localStorage.setItem('foodie_active_session', JSON.stringify(fullSession));
-                        
-                        const menu = await MenuService.getMenuByRestaurantId(details.restaurant_id);
-                        if (menu.items && menu.items.length > 0) {
-                          setMenuItems(menu.items);
-                          setCategories(menu.categories);
-                        }
-                        if (details.theme) applyTheme(details.theme);
-                        refreshFeedbacks(details.restaurant_id);
-                        
-                        window.history.replaceState({}, '', '/');
-                        navigateTo('menu');
-                        return;
-                    } else {
-                        setInitialTokenFromUrl(token);
-                        navigateTo('qr-verify');
-                        return;
-                    }
-                }
-            }
-        } catch (e) { console.error("Link sync error"); }
-      }
-    }
     const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
     const hashParts = hash.split('/');
     const route = (hashParts[0] || 'landing') as ViewState;
-    
-    if (route === 'article' && hashParts[1]) {
-      setSelectedArticleId(hashParts[1]);
-    }
-    
+    if (route === 'article' && hashParts[1]) setSelectedArticleId(hashParts[1]);
     setCurrentView(route);
   };
 
@@ -211,10 +156,13 @@ export default function App() {
     } else {
       window.location.hash = `/${view}`; 
     }
+  };
 
-    if (view === 'feedback-data' && activeSession?.restaurant_id) {
-      refreshFeedbacks(activeSession.restaurant_id);
-    }
+  const generateVerificationCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    return code;
   };
 
   const finalizeOrder = async (sessionOverride?: any, itemsOverride?: CartItem[]) => {
@@ -237,15 +185,31 @@ export default function App() {
         order_status: 'Pending',
         payment_status: 'Unpaid',
         instructions: item.customInstructions || '',
-        qr_code_token: session.session_token || session.id
+        qr_code_token: session.session_token || session.id,
+        pay_as_you_order: !!item.pay_as_you_order,
+        verification_code: item.pay_as_you_order ? generateVerificationCode() : null
       }));
-      await MenuService.insertOrders(dbOrders);
+      
+      const response = await MenuService.insertOrders(dbOrders);
+      
+      // TRACK LOCAL ORDERS
+      const localIds = JSON.parse(localStorage.getItem('foodie_my_order_ids') || '[]');
+      const newIds = response.map((o: any) => String(o.id));
+      localStorage.setItem('foodie_my_order_ids', JSON.stringify([...localIds, ...newIds]));
+
       if (itemsOverride || !pendingSingleItem) setCart([]);
       if (pendingSingleItem) setPendingSingleItem(null);
-      navigateTo('orders');
+
+      const payFirstOnes = response.filter((o: any) => o.pay_as_you_order);
+      if (payFirstOnes.length > 0) {
+        setLastPayFirstOrders(payFirstOnes);
+        navigateTo('verification-barcode');
+      } else {
+        navigateTo('orders');
+      }
     } catch (e: any) { 
       setLastError({ msg: "Your order could not be sent to the kitchen.", log: e.message || "" });
-    } finally { tragedy: setIsDispatching(false); }
+    } finally { setIsDispatching(false); }
   };
 
   const handleItemSelect = (item: MenuItem) => {
@@ -261,6 +225,7 @@ export default function App() {
       case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={() => navigateTo('menu')} />;
       case 'articles': return <ArticlesView onBack={() => navigateTo('landing')} />;
       case 'article': return <ArticleViewer id={selectedArticleId} onBack={() => navigateTo('articles')} />;
+      case 'verification-barcode': return <VerificationBarcodeView orders={lastPayFirstOrders} onDismiss={() => navigateTo('orders')} />;
       case 'menu': 
         if (appTheme.template === 'premium') return <PremiumMenuView categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
         if (appTheme.template === 'modern') return <ModernMenuView categories={categories} filteredItems={menuItems.filter(i => activeCategory === 'all' || i.cat_name === activeCategory)} activeCategory={activeCategory} searchQuery={searchQuery} onSearchChange={setSearchQuery} onCategorySelect={setActiveCategory} onItemSelect={handleItemSelect} />;
@@ -286,10 +251,10 @@ export default function App() {
   if (isBooting) return <div className="flex flex-col items-center justify-center min-h-screen bg-white"><div className="w-16 h-16 border-4 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
+    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
       <style>{`.menu-theme-container { --brand-primary: ${appTheme.primary_color}; --brand-secondary: ${appTheme.secondary_color}; font-family: '${appTheme.font_family}', sans-serif !important; }`}</style>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
-      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col ${appTheme.template === 'premium' || appTheme.template === 'modern' ? 'bg-[#F8F8F8]' : 'bg-[#FBFBFD]'}` : 'min-h-screen flex flex-col'}>
+      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col ${appTheme.template === 'premium' || appTheme.template === 'modern' ? 'bg-[#F8F8F8]' : 'bg-[#FBFBFD]'}` : 'min-h-screen flex flex-col'}>
         {appTheme.template === 'modern' ? (
            <ModernDetailPanel item={selectedItem} isOpen={!!selectedItem} isProcessing={isDispatching} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={(item) => activeSession ? finalizeOrder(activeSession, [item]) : (setPendingSingleItem(item), navigateTo('qr-verify'))} />
         ) : appTheme.template === 'premium' ? (
@@ -299,19 +264,19 @@ export default function App() {
         )}
         <VariationDrawer item={activeVariantSource} variants={menuItems.filter(i => i.parent_id === activeVariantSource?.id)} isOpen={!!activeVariantSource} onClose={() => setActiveVariantSource(null)} onSelect={(v) => { setActiveVariantSource(null); setSelectedItem(v); }} />
         <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} />
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) && (
+        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode'].includes(currentView) && (
           <Navbar logo={null} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.length} />
         )}
-        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) ? 'pb-24' : ''}`}>
+        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode'].includes(currentView) ? 'pb-24' : ''}`}>
           {renderView()}
         </main>
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article'].includes(currentView) && (
+        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode'].includes(currentView) && (
           <BottomNav currentView={currentView} onNavigate={navigateTo} onSupportClick={() => setIsSupportHubOpen(true)} isSupportOpen={isSupportHubOpen} cartCount={cart.length} />
         )}
       </div>
       {lastError && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-md font-jakarta">
-          <div className="bg-white w-full max-w-sm rounded-[3rem] p-10 shadow-2xl space-y-8 animate-fade-in border border-rose-100 text-center">
+          <div className="bg-white w-full max-sm rounded-[3rem] p-10 shadow-2xl space-y-8 animate-fade-in border border-rose-100 text-center">
              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center mx-auto text-3xl shadow-inner"><i className="fa-solid fa-triangle-exclamation"></i></div>
              <div className="space-y-4">
                 <h3 className="text-2xl font-black uppercase tracking-tighter">Dispatch Failure</h3>
