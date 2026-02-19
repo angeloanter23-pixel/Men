@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Reveal } from './Reveal';
 
@@ -12,9 +11,10 @@ const FLAG_IMAGES = [
 interface HeroSectionProps {
   onStart: () => void;
   onCreateMenu: () => void;
+  onAffiliateAuth: () => void;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onStart, onCreateMenu }) => (
+export const HeroSection: React.FC<HeroSectionProps> = ({ onStart, onCreateMenu, onAffiliateAuth }) => (
   <section className="relative pt-40 pb-20 md:pt-60 md:pb-40 text-center px-6">
     <div className="max-w-3xl mx-auto space-y-12">
       <Reveal>
@@ -31,13 +31,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onStart, onCreateMenu 
       </Reveal>
 
       <Reveal delay={200}>
-        <div className="flex flex-col items-center gap-6">
-          <button 
-            onClick={onStart}
-            className="w-full sm:w-auto px-12 py-5 bg-orange-500 text-white rounded-full font-bold text-[15px] shadow-2xl shadow-orange-200 transition-all hover:bg-orange-600 active:scale-95"
-          >
-            Experience Demo
-          </button>
+        <div className="flex flex-col items-center gap-8">
+          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+            <button 
+              onClick={onStart}
+              className="px-12 py-5 bg-orange-500 text-white rounded-full font-bold text-[15px] shadow-2xl shadow-orange-200 transition-all hover:bg-orange-600 active:scale-95"
+            >
+              Experience Demo
+            </button>
+          </div>
           
           <div className="flex flex-col items-center gap-12">
             <button 
@@ -48,7 +50,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onStart, onCreateMenu 
               <i className="fa-solid fa-chevron-right text-[11px] mt-0.5 transition-transform group-hover:translate-x-1"></i>
             </button>
 
-            {/* Flags Row - Placed directly under the link per user request */}
+            {/* Flags Row */}
             <div className="space-y-6">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Top country who use mymenu</p>
               <div className="flex justify-center gap-6">

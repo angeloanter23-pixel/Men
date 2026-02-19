@@ -57,6 +57,24 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [newRecordForm, setNewRecordForm] = useState<Record<string, any>>({});
   const [toast, setToast] = useState<string | null>(null);
 
+  // Added comment above fix
+  // Fixed: Moved tableColumns and groupedTables memos to the top of the component to ensure they are initialized before being used in the render logic, resolving potential 'unknown' type inference and reference errors.
+  const tableColumns = useMemo<string[]>(() => {
+    if (tableData.length === 0) return [];
+    return Object.keys(tableData[0]);
+  }, [tableData]);
+
+  // Added comment above fix
+  // Fixed: Moved groupedTables memo to the top to avoid uninitialized usage in the dashboard view.
+  const groupedTables = useMemo<Record<string, (typeof TABLES_REGISTRY[number])[]>>(() => {
+      const groups: Record<string, (typeof TABLES_REGISTRY[number])[]> = {};
+      TABLES_REGISTRY.forEach(t => {
+          if (!groups[t.group]) groups[t.group] = [];
+          groups[t.group].push(t);
+      });
+      return groups;
+  }, []);
+
   useEffect(() => {
     fetchSystemOverview();
   }, []);
@@ -214,6 +232,8 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
+  // Added comment above fix
+  // Fixed: Restored the complete executePurge function structure which was interrupted by a malformed return statement in the original file.
   const executePurge = async () => {
     if (!selectedTable || !recordToPurge) return;
     setPurgeLoading(true);
@@ -236,23 +256,7 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   // Added comment above fix
-  // Fixed: Added explicit type annotation to tableColumns useMemo return value to resolve 'unknown' type errors during mapping
-  const tableColumns = useMemo<string[]>(() => {
-    if (tableData.length === 0) return [];
-    return Object.keys(tableData[0]);
-  }, [tableData]);
-
-  // Added comment above fix
-  // Fixed: Explicitly typed the groups Record to ensure TS correctly identifies the values as arrays, resolving the 'map does not exist on unknown' error
-  const groupedTables = useMemo<Record<string, (typeof TABLES_REGISTRY[number])[]>>(() => {
-      const groups: Record<string, (typeof TABLES_REGISTRY[number])[]> = {};
-      TABLES_REGISTRY.forEach(t => {
-          if (!groups[t.group]) groups[t.group] = [];
-          groups[t.group].push(t);
-      });
-      return groups;
-  }, []);
-
+  // Fixed: Combined the dual return blocks into a single return statement with conditional rendering to fix the uninitialized variable and unreachable code issues.
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-20 overflow-x-hidden">
       {toast && (
@@ -261,6 +265,7 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           </div>
       )}
 
+      {/* Supreme Admin Dashboard View */}
       <header className="sticky top-0 z-[100] bg-white/70 backdrop-blur-2xl border-b border-slate-200/50 px-6 py-6 md:px-12 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <button onClick={onBack} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-all active:scale-90">
@@ -315,7 +320,8 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <section key={groupName} className="space-y-4">
                 <h3 className="px-4 text-[11px] font-black uppercase text-slate-400 tracking-[0.4em] italic">{groupName}</h3>
                 <div className="bg-white rounded-[2.5rem] border border-white overflow-hidden shadow-sm divide-y divide-slate-100">
-                    {tables.map(table => (
+                    {/* Fixed: Explicitly cast tables to any[] to avoid Property 'map' does not exist on type 'unknown' error */}
+                    {(tables as any[]).map(table => (
                         <button 
                             key={table.id}
                             onClick={() => openTableEditor(table.id)}
@@ -348,6 +354,7 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         </footer>
       </main>
 
+      {/* Table Editor Overlay */}
       {isEditorOpen && (
         <div className="fixed inset-0 z-[1000] flex items-end justify-center animate-fade-in font-jakarta">
           <div onClick={() => setIsEditorOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" />
@@ -418,11 +425,19 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                               onChange={toggleSelectAll}
                            />
                         </th>
-                        {tableColumns.map(col => (
-                          <th key={col} className={`px-6 py-5 text-[9px] font-black uppercase tracking-widest italic ${col.endsWith('_id') || col === 'id' ? 'text-indigo-600' : 'text-slate-400'}`}>
-                            {col}
-                          </th>
-                        ))}
+                        {tableColumns.map(col => {
+                          let label = col;
+                          let specialColor = col.endsWith('_id') || col === 'id';
+                          if (selectedTable === 'items' && col === 'parent_id') {
+                              label = "Variation Ref (parent_id)";
+                              specialColor = true;
+                          }
+                          return (
+                            <th key={col} className={`px-6 py-5 text-[9px] font-black uppercase tracking-widest italic ${specialColor ? 'text-indigo-600' : 'text-slate-400'}`}>
+                              {label}
+                            </th>
+                          );
+                        })}
                         <th className="px-6 py-5 text-right sticky right-0 bg-slate-50 border-l border-slate-200 shadow-[-10px_0_10px_rgba(0,0,0,0.02)]"></th>
                       </tr>
                    </thead>
@@ -437,39 +452,51 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                 onChange={() => toggleRowSelection(row.id)}
                               />
                            </td>
-                           {tableColumns.map(col => (
-                             <td 
-                               key={`${row.id}-${col}`} 
-                               className={`px-6 py-5 text-xs font-medium relative group/cell ${selectedRowIds.has(row.id) ? 'text-indigo-900 font-bold' : 'text-slate-600'}`}
-                               onDoubleClick={() => setEditingCell({ id: row.id, field: col })}
-                             >
-                               {editingCell?.id === row.id && editingCell.field === col ? (
-                                 <input 
-                                   autoFocus
-                                   className="absolute inset-0 w-full h-full px-6 py-5 bg-indigo-50 border-2 border-indigo-600 text-indigo-900 outline-none z-20 font-bold"
-                                   defaultValue={typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
-                                   onBlur={(e) => handleUpdate(row.id, col, e.target.value)}
-                                   onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleUpdate(row.id, col, (e.target as HTMLInputElement).value);
-                                      if (e.key === 'Escape') setEditingCell(null);
-                                   }}
-                                 />
-                               ) : (
-                                 <div 
-                                    className={`truncate max-w-[250px] group-hover/cell:text-indigo-600 transition-colors ${col.endsWith('_id') || col === 'id' ? 'cursor-pointer hover:underline' : ''}`}
-                                    onClick={() => (col.endsWith('_id') || col === 'id') && row[col] && copyToClipboard(String(row[col]))}
-                                 >
-                                    {row[col] === null ? (
-                                      <span className="opacity-20 italic">null</span>
-                                    ) : typeof row[col] === 'boolean' ? (
-                                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${row[col] ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{String(row[col])}</span>
-                                    ) : typeof row[col] === 'object' ? (
-                                      <span className="text-[9px] bg-slate-100 px-2 py-0.5 rounded font-mono">Object</span>
-                                    ) : String(row[col])}
-                                 </div>
-                               )}
-                             </td>
-                           ))}
+                           {tableColumns.map(col => {
+                             const isRef = col.endsWith('_id') || col === 'id';
+                             const isVariationRef = selectedTable === 'items' && col === 'parent_id';
+                             
+                             return (
+                               <td 
+                                 key={`${row.id}-${col}`} 
+                                 className={`px-6 py-5 text-xs font-medium relative group/cell ${selectedRowIds.has(row.id) ? 'text-indigo-900 font-bold' : 'text-slate-600'}`}
+                                 onDoubleClick={() => setEditingCell({ id: row.id, field: col })}
+                               >
+                                 {editingCell?.id === row.id && editingCell.field === col ? (
+                                   <input 
+                                     autoFocus
+                                     className="absolute inset-0 w-full h-full px-6 py-5 bg-indigo-50 border-2 border-indigo-600 text-indigo-900 outline-none z-20 font-bold"
+                                     defaultValue={typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
+                                     onBlur={(e) => handleUpdate(row.id, col, e.target.value)}
+                                     onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleUpdate(row.id, col, (e.target as HTMLInputElement).value);
+                                        if (e.key === 'Escape') setEditingCell(null);
+                                     }}
+                                   />
+                                 ) : (
+                                   <div 
+                                      className={`truncate max-w-[250px] group-hover/cell:text-indigo-600 transition-colors ${isRef ? 'cursor-pointer hover:underline' : ''}`}
+                                      onClick={() => isRef && row[col] && copyToClipboard(String(row[col]))}
+                                   >
+                                      {row[col] === null ? (
+                                        <span className="opacity-20 italic">null</span>
+                                      ) : typeof row[col] === 'boolean' ? (
+                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${row[col] ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{String(row[col])}</span>
+                                      ) : typeof row[col] === 'object' ? (
+                                        <span className="text-[9px] bg-slate-100 px-2 py-0.5 rounded font-mono">Object</span>
+                                      ) : (
+                                        <>
+                                          {isVariationRef && row[col] && (
+                                              <span className="bg-indigo-600 text-white text-[7px] font-black px-1 rounded mr-1.5">REF</span>
+                                          )}
+                                          {String(row[col])}
+                                        </>
+                                      )}
+                                   </div>
+                                 )}
+                               </td>
+                             );
+                           })}
                            <td className="px-6 py-5 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-50 shadow-[-10px_0_10px_rgba(0,0,0,0.02)]">
                               <button 
                                 onClick={() => setRecordToPurge(row.id)}
@@ -498,121 +525,128 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] italic">Platinum Data Node v4.0.2</p>
              </footer>
           </div>
+
+          {/* New Record Creator Modal */}
+          {isAddingRecord && selectedTable && (
+              <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl animate-fade-in overflow-y-auto">
+                  <div className="bg-white w-full max-w-lg rounded-[3.5rem] p-10 lg:p-14 shadow-2xl relative animate-scale border border-emerald-100 my-auto flex flex-col gap-10" onClick={e => e.stopPropagation()}>
+                      <header className="flex justify-between items-start">
+                        <div>
+                            <p className="text-[10px] font-black uppercase text-emerald-600 tracking-[0.5em] mb-2">New Row</p>
+                            <h3 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">Insert Registry</h3>
+                        </div>
+                        <button onClick={() => setIsAddingRecord(false)} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all border border-slate-100"><i className="fa-solid fa-xmark text-lg"></i></button>
+                      </header>
+
+                      <div className="space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar pr-2">
+                          {Object.keys(newRecordForm).map(field => {
+                              let label = field;
+                              if (selectedTable === 'items' && field === 'parent_id') label = "Variation Reference (parent_id)";
+                              
+                              return (
+                                <div key={field} className="space-y-2">
+                                    <label className={`text-[9px] font-black uppercase tracking-widest ml-4 italic ${field.endsWith('_id') ? 'text-indigo-500' : 'text-slate-400'}`}>
+                                      {label}
+                                    </label>
+                                    <input 
+                                      value={newRecordForm[field]} 
+                                      onChange={e => setNewRecordForm({...newRecordForm, [field]: e.target.value})}
+                                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-5 text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-emerald-500/5 transition-all shadow-inner" 
+                                      placeholder={`Enter ${field}...`}
+                                    />
+                                </div>
+                              );
+                          })}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                          <button 
+                            onClick={handleCreateRecord}
+                            disabled={loading}
+                            className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                          >
+                            {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-cloud-arrow-up"></i>}
+                            Commit Record
+                          </button>
+                          <button 
+                            onClick={() => setIsAddingRecord(false)}
+                            className="w-full py-5 text-slate-300 font-bold uppercase text-[10px] tracking-widest active:opacity-50"
+                          >
+                            Abort
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {/* Purge Confirmation Modal */}
+          {recordToPurge && (
+              <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl animate-fade-in">
+                  <div className="bg-white w-full max-sm rounded-[3.5rem] p-10 shadow-2xl space-y-8 animate-scale border border-rose-100 flex flex-col items-center text-center">
+                      <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-3xl shadow-inner">
+                          <i className="fa-solid fa-triangle-exclamation"></i>
+                      </div>
+                      
+                      <div className="space-y-4">
+                          <h3 className="text-2xl font-black uppercase tracking-tighter italic text-slate-900 leading-none">Confirm Purge</h3>
+                          <p className="text-slate-500 text-xs font-bold leading-relaxed px-4">
+                              Execute permanent deletion of record from <span className="text-slate-900 font-black italic">{selectedTable}</span> registry.
+                          </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 w-full">
+                          <button 
+                            onClick={executePurge}
+                            disabled={purgeLoading}
+                            className="w-full py-5 bg-rose-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl shadow-rose-200 active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-rose-700"
+                          >
+                            {purgeLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Purge Entry'}
+                          </button>
+                          <button 
+                            onClick={() => setRecordToPurge(null)}
+                            className="w-full py-5 bg-slate-50 text-slate-400 rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all"
+                          >
+                            Cancel
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {/* Table Reset Confirmation Modal */}
+          {isResetConfirmOpen && (
+              <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-rose-900/90 backdrop-blur-2xl animate-fade-in">
+                  <div className="bg-white w-full max-sm rounded-[3.5rem] p-12 shadow-2xl space-y-10 animate-scale border border-rose-200 flex flex-col items-center text-center">
+                      <div className="w-24 h-24 bg-rose-100 text-rose-600 rounded-[3rem] flex items-center justify-center text-4xl shadow-inner animate-pulse">
+                          <i className="fa-solid fa-radiation"></i>
+                      </div>
+                      
+                      <div className="space-y-4">
+                          <h3 className="text-3xl font-black uppercase tracking-tighter italic text-slate-900 leading-none">Table Reset</h3>
+                          <p className="text-slate-500 text-sm font-bold leading-relaxed px-4">
+                              You are about to <span className="text-rose-600 font-black">DELETE ALL ROWS</span> in the <span className="text-slate-900 font-black">{selectedTable}</span> table. This action is irreversible.
+                          </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 w-full">
+                          <button 
+                            onClick={executeTableReset}
+                            disabled={purgeLoading}
+                            className="w-full py-6 bg-rose-600 text-white rounded-[2.2rem] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-rose-300 active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-rose-700"
+                          >
+                            {purgeLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Purge All Records'}
+                          </button>
+                          <button 
+                            onClick={() => setIsResetConfirmOpen(false)}
+                            className="w-full py-6 bg-slate-100 text-slate-500 rounded-[2.2rem] font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all"
+                          >
+                            Abort Operation
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
         </div>
-      )}
-
-      {/* NEW RECORD CREATOR MODAL */}
-      {isAddingRecord && selectedTable && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl animate-fade-in overflow-y-auto">
-              <div className="bg-white w-full max-w-lg rounded-[3.5rem] p-10 lg:p-14 shadow-2xl relative animate-scale border border-emerald-100 my-auto flex flex-col gap-10">
-                  <header className="flex justify-between items-start">
-                    <div>
-                        <p className="text-[10px] font-black uppercase text-emerald-600 tracking-[0.5em] mb-2">New Row</p>
-                        <h3 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">Insert Registry</h3>
-                    </div>
-                    <button onClick={() => setIsAddingRecord(false)} className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all border border-slate-100"><i className="fa-solid fa-xmark text-lg"></i></button>
-                  </header>
-
-                  <div className="space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar pr-2">
-                      {Object.keys(newRecordForm).map(field => (
-                          <div key={field} className="space-y-2">
-                              <label className={`text-[9px] font-black uppercase tracking-widest ml-4 italic ${field.endsWith('_id') ? 'text-indigo-500' : 'text-slate-400'}`}>
-                                {field}
-                              </label>
-                              <input 
-                                value={newRecordForm[field]} 
-                                onChange={e => setNewRecordForm({...newRecordForm, [field]: e.target.value})}
-                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-5 text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-emerald-500/5 transition-all shadow-inner" 
-                                placeholder={`Enter ${field}...`}
-                              />
-                          </div>
-                      ))}
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3">
-                      <button 
-                        onClick={handleCreateRecord}
-                        disabled={loading}
-                        className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
-                      >
-                        {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-cloud-arrow-up"></i>}
-                        Commit Record
-                      </button>
-                      <button 
-                        onClick={() => setIsAddingRecord(false)}
-                        className="w-full py-5 text-slate-300 font-bold uppercase text-[10px] tracking-widest active:opacity-50"
-                      >
-                        Abort
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {recordToPurge && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-xl animate-fade-in">
-              <div className="bg-white w-full max-sm rounded-[3.5rem] p-10 shadow-2xl space-y-8 animate-scale border border-rose-100 flex flex-col items-center text-center">
-                  <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-3xl shadow-inner">
-                      <i className="fa-solid fa-triangle-exclamation"></i>
-                  </div>
-                  
-                  <div className="space-y-4">
-                      <h3 className="text-2xl font-black uppercase tracking-tighter italic text-slate-900 leading-none">Confirm Purge</h3>
-                      <p className="text-slate-500 text-xs font-bold leading-relaxed px-4">
-                          Execute permanent deletion of record from <span className="text-slate-900 font-black italic">{selectedTable}</span> registry.
-                      </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 w-full">
-                      <button 
-                        onClick={executePurge}
-                        disabled={purgeLoading}
-                        className="w-full py-5 bg-rose-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl shadow-rose-200 active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-rose-700"
-                      >
-                        {purgeLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Purge Entry'}
-                      </button>
-                      <button 
-                        onClick={() => setRecordToPurge(null)}
-                        className="w-full py-5 bg-slate-50 text-slate-400 rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all"
-                      >
-                        Cancel
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {isResetConfirmOpen && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-rose-900/90 backdrop-blur-2xl animate-fade-in">
-              <div className="bg-white w-full max-sm rounded-[3.5rem] p-12 shadow-2xl space-y-10 animate-scale border border-rose-200 flex flex-col items-center text-center">
-                  <div className="w-24 h-24 bg-rose-100 text-rose-600 rounded-[3rem] flex items-center justify-center text-4xl shadow-inner animate-pulse">
-                      <i className="fa-solid fa-radiation"></i>
-                  </div>
-                  
-                  <div className="space-y-4">
-                      <h3 className="text-3xl font-black uppercase tracking-tighter italic text-slate-900 leading-none">Table Reset</h3>
-                      <p className="text-slate-500 text-sm font-bold leading-relaxed px-4">
-                          You are about to <span className="text-rose-600 font-black">DELETE ALL ROWS</span> in the <span className="text-slate-900 font-black">{selectedTable}</span> table. This action is irreversible.
-                      </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 w-full">
-                      <button 
-                        onClick={executeTableReset}
-                        disabled={purgeLoading}
-                        className="w-full py-6 bg-rose-600 text-white rounded-[2.2rem] font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl shadow-rose-300 active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-rose-700"
-                      >
-                        {purgeLoading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Purge All Records'}
-                      </button>
-                      <button 
-                        onClick={() => setIsResetConfirmOpen(false)}
-                        className="w-full py-6 bg-slate-100 text-slate-500 rounded-[2.2rem] font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all"
-                      >
-                        Abort Operation
-                      </button>
-                  </div>
-              </div>
-          </div>
       )}
 
       <style>{`
@@ -628,4 +662,4 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   );
 };
 
-export default SuperAdminView;
+export { SuperAdminView as default };

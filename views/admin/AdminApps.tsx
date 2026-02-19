@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import BarcodeScanner from '../../src/components/BarcodeScanner';
 
 const Calculator: React.FC = () => {
     const [display, setDisplay] = useState('0');
@@ -97,62 +98,11 @@ const Calculator: React.FC = () => {
     );
 };
 
-const BarcodeScanner: React.FC = () => {
-    const [scanResult, setScanResult] = useState<string | null>(null);
-    const [isScanning, setIsScanning] = useState(false);
 
-    const toggleScan = () => {
-        setIsScanning(!isScanning);
-        setScanResult(null);
-    };
-
-    return (
-        <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 w-full animate-fade-in text-center space-y-8">
-            <header>
-                <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto text-2xl shadow-sm mb-4">
-                    <i className="fa-solid fa-barcode"></i>
-                </div>
-                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Barcode Registry</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Verify guest verification codes</p>
-            </header>
-
-            {isScanning ? (
-                <div className="relative aspect-square w-full max-w-[280px] mx-auto bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl border-4 border-slate-50 group">
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800/50">
-                        <i className="fa-solid fa-camera text-white/20 text-4xl animate-pulse"></i>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-48 h-48 border-2 border-white/20 rounded-[2.5rem] relative">
-                            <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-indigo-500 rounded-tl-2xl"></div>
-                            <div className="absolute inset-x-4 h-0.5 bg-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.5)] animate-scan"></div>
-                        </div>
-                    </div>
-                    <div className="absolute bottom-6 left-0 right-0 text-center">
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Searching for alpha-numeric...</p>
-                    </div>
-                </div>
-            ) : (
-                <div className="py-12 border-2 border-dashed border-slate-100 rounded-[2rem] bg-slate-50/50">
-                    <p className="text-slate-300 font-bold uppercase tracking-widest text-[11px]">Scanner Standby</p>
-                </div>
-            )}
-
-            <div className="space-y-3">
-                <button 
-                    onClick={toggleScan}
-                    className={`w-full py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isScanning ? 'bg-rose-500 text-white' : 'bg-slate-900 text-white'}`}
-                >
-                    <i className={`fa-solid ${isScanning ? 'fa-video-slash' : 'fa-camera'}`}></i>
-                    {isScanning ? 'Cancel Session' : 'Launch Scanner'}
-                </button>
-                <button className="w-full py-4 text-slate-300 font-bold uppercase text-[10px] tracking-widest">Manual Input</button>
-            </div>
-        </div>
-    );
-};
 
 const AdminApps: React.FC = () => {
   const [activeApp, setActiveApp] = useState<'calc' | 'scanner' | null>(null);
+  const [scanResult, setScanResult] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
@@ -176,7 +126,7 @@ const AdminApps: React.FC = () => {
                         </div>
                         <div className="text-center">
                             <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 leading-none mb-2">Barcode Scanner</h3>
-                            <p className="text-sm text-slate-400 font-medium">Verify orders with 6-char codes</p>
+                            <p className="text-sm text-slate-400 font-medium">Verify orders with Barcode or 6-char codes</p>
                         </div>
                     </button>
 
@@ -196,13 +146,34 @@ const AdminApps: React.FC = () => {
             ) : (
                 <div className="space-y-10 animate-fade-in">
                     <button 
-                        onClick={() => setActiveApp(null)}
+                        onClick={() => { setActiveApp(null); setScanResult(null); }}
                         className="flex items-center gap-2 text-indigo-600 font-black uppercase text-[11px] tracking-widest px-4 hover:opacity-70"
                     >
                         <i className="fa-solid fa-arrow-left"></i>
                         Back to Apps
                     </button>
-                    {activeApp === 'calc' ? <Calculator /> : <BarcodeScanner />}
+                    
+                    {activeApp === 'calc' ? (
+                        <Calculator />
+                    ) : scanResult ? (
+                        <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100 text-center space-y-8 animate-scale">
+                            <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-sm">
+                                <i className="fa-solid fa-check"></i>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Verification Successful</p>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{scanResult}</h3>
+                            </div>
+                            <button 
+                                onClick={() => setScanResult(null)}
+                                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all"
+                            >
+                                Scan Another
+                            </button>
+                        </div>
+                    ) : (
+                        <BarcodeScanner onDetected={(code) => setScanResult(code)} />
+                    )}
                 </div>
             )}
         </div>

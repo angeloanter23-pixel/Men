@@ -61,99 +61,116 @@ export async function getActiveSessionByQR(qrId: string) {
     return data && data.length > 0 ? data[0] : null;
 }
 
+// Helper for retrying failed fetch operations
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+  try {
+    return await fn();
+  } catch (err: any) {
+    if (retries > 0 && (err.message?.includes('fetch') || err.name === 'TypeError')) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return withRetry(fn, retries - 1, delay * 2);
+    }
+    throw err;
+  }
+}
+
 export async function getMenuByRestaurantId(restaurantId: string) {
   if (!restaurantId || restaurantId === "undefined") {
     return { items: [], categories: [], menu_id: null, error: "Invalid Restaurant ID" };
   }
 
   try {
-    // 1. Get or Create Menu Registry
-    let { data: menus, error: menuErr } = await supabase
-        .from('menus')
-        .select('id')
-        .eq('restaurant_id', restaurantId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-    
-    if (menuErr) throw menuErr;
-
-    let menu = menus && menus.length > 0 ? menus[0] : null;
-
-    if (!menu) {
-      const { data: newMenus, error: createErr } = await supabase
-        .from('menus')
-        .insert({ restaurant_id: restaurantId, name: 'Main Menu' })
-        .select('id');
-      if (createErr) throw createErr;
-      menu = newMenus && newMenus[0];
-    }
-
-    if (!menu) throw new Error("Could not initialize menu registry.");
-
-    // 2. Bulk Fetch Categories and Items
-    const [catRes, itemRes] = await Promise.all([
-      supabase.from('categories').select('*').eq('menu_id', menu.id).order('order_index'),
-      supabase.from('items').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false })
-    ]);
-
-    if (catRes.error) throw catRes.error;
-    if (itemRes.error) throw itemRes.error;
-
-    const categories = catRes.data || [];
-    const items = itemRes.data || [];
-    const itemIds = items.map(i => i.id);
-
-    // 3. Fetch Modifiers with explicit error capture
-    // This is the specific part that might fail due to ambiguous relationships or schema issues
-    const { data: allGroups, error: groupsErr } = await supabase
-      .from('item_option_groups')
-      .select('*, item_options(*)')
-      .in('item_id', itemIds);
-
-    if (groupsErr) {
-      console.error("[DATABASE DIAGNOSTIC] Failed to fetch item_option_groups join:", groupsErr);
-      // Store the error globally so the UI can retrieve it if needed for a "Log" view
-      (window as any)._last_db_error = groupsErr;
-    } else {
-      (window as any)._last_db_error = null;
-    }
-
-    // Assemble the relational data in memory
-    const itemsWithExtras = items.map((it: any) => {
-      const category = categories.find(c => String(c.id) === String(it.category_id));
+    return await withRetry(async () => {
+      // 1. Get or Create Menu Registry
+      let { data: menus, error: menuErr } = await supabase
+          .from('menus')
+          .select('id')
+          .eq('restaurant_id', restaurantId)
+          .order('created_at', { ascending: false })
+          .limit(1);
       
-      const itemGroups = (allGroups || [])
-        .filter(g => String(g.item_id) === String(it.id))
-        .map(g => {
-          // Supabase might return item_options as 'item_options' or just 'options' depending on foreign key names
-          const optionsArray = g.item_options || g.options || [];
-          
-          return {
-            ...g,
-            options: optionsArray.sort((a: any, b: any) => {
-               const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-               const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-               return timeA - timeB;
-            })
-          };
-        });
+      if (menuErr) throw menuErr;
+
+      let menu = menus && menus.length > 0 ? menus[0] : null;
+
+      if (!menu) {
+        const { data: newMenus, error: createErr } = await supabase
+          .from('menus')
+          .insert({ restaurant_id: restaurantId, name: 'Main Menu' })
+          .select('id');
+        if (createErr) throw createErr;
+        menu = newMenus && newMenus[0];
+      }
+
+      if (!menu) throw new Error("Could not initialize menu registry.");
+
+      // 2. Bulk Fetch Categories and Items
+      const [catRes, itemRes] = await Promise.all([
+        supabase.from('categories').select('*').eq('menu_id', menu.id).order('order_index'),
+        supabase.from('items').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false })
+      ]);
+
+      if (catRes.error) throw catRes.error;
+      if (itemRes.error) throw itemRes.error;
+
+      const categories = catRes.data || [];
+      const items = itemRes.data || [];
+      const itemIds = items.map(i => i.id);
+
+      // 3. Fetch Modifiers with explicit error capture
+      const { data: allGroups, error: groupsErr } = await supabase
+        .from('item_option_groups')
+        .select('*, item_options(*)')
+        .in('item_id', itemIds);
+
+      if (groupsErr) {
+        console.error("[DATABASE DIAGNOSTIC] Failed to fetch item_option_groups join:", groupsErr);
+        (window as any)._last_db_error = groupsErr;
+      } else {
+        (window as any)._last_db_error = null;
+      }
+
+      // Assemble the relational data in memory
+      const itemsWithExtras = items.map((it: any) => {
+        const category = categories.find(c => String(c.id) === String(it.category_id));
+        
+        const itemGroups = (allGroups || [])
+          .filter(g => String(g.item_id) === String(it.id))
+          .map(g => {
+            const optionsArray = g.item_options || g.options || [];
+            
+            return {
+              ...g,
+              options: optionsArray.sort((a: any, b: any) => {
+                 const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                 const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                 return timeA - timeB;
+              })
+            };
+          });
+
+        return { 
+          ...it, 
+          cat_name: category ? category.name : 'Uncategorized',
+          option_groups: itemGroups
+        };
+      });
 
       return { 
-        ...it, 
-        cat_name: category ? category.name : 'Uncategorized',
-        option_groups: itemGroups
+        menu_id: menu.id,
+        items: itemsWithExtras, 
+        categories: categories,
+        db_error: groupsErr 
       };
     });
-
-    return { 
-      menu_id: menu.id,
-      items: itemsWithExtras, 
-      categories: categories,
-      db_error: groupsErr 
-    };
   } catch (err: any) {
+    const isFetchError = err.message?.includes('fetch') || err.name === 'TypeError';
+    const friendlyMsg = isFetchError 
+      ? "Network error: Unable to connect to the database. Please check your internet connection or if the database is active."
+      : err.message;
+    
     console.error("[CRITICAL ERROR] Menu service failed:", err.message);
-    return { items: [], categories: [], menu_id: null, error: err.message };
+    return { items: [], categories: [], menu_id: null, error: friendlyMsg };
   }
 }
 
@@ -187,9 +204,11 @@ export async function insertOrders(orders: any[]) {
 }
 
 export async function getMerchantOrders(restaurantId: string) {
-    const { data, error } = await supabase.from('orders').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
+    return await withRetry(async () => {
+        const { data, error } = await supabase.from('orders').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    });
 }
 
 export async function updateOrder(id: string, updates: any) {
@@ -204,9 +223,11 @@ export async function deleteOrder(id: string) {
 }
 
 export async function getQRCodes(restaurantId: string) {
-  const { data, error } = await supabase.from('qr_codes').select('*').eq('restaurant_id', restaurantId).order('label');
-  if (error) throw error;
-  return data;
+  return await withRetry(async () => {
+    const { data, error } = await supabase.from('qr_codes').select('*').eq('restaurant_id', restaurantId).order('label');
+    if (error) throw error;
+    return data;
+  });
 }
 
 export async function getActiveSessionsForRestaurant(restaurantId: string) {
@@ -346,9 +367,11 @@ export async function deleteQRCode(id: string | number) {
 }
 
 export async function getFeedbacks(restaurantId: string) {
-  const { data, error } = await supabase.from('feedbacks').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  return await withRetry(async () => {
+    const { data, error } = await supabase.from('feedbacks').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  });
 }
 
 export async function upsertFeedback(feedback: any) {

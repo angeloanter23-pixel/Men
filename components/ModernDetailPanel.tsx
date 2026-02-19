@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MenuItem, CartItem } from '../types';
 
 interface ModernDetailPanelProps {
@@ -22,6 +22,9 @@ const ModernDetailPanel: React.FC<ModernDetailPanelProps> = ({
   const [instructions, setInstructions] = useState('');
   const [orderTo, setOrderTo] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
+  const [showFooter, setShowFooter] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -29,6 +32,7 @@ const ModernDetailPanel: React.FC<ModernDetailPanelProps> = ({
       setQuantity(1);
       setInstructions('');
       setOrderTo('');
+      setShowFooter(true);
       if (item?.option_groups) {
           const groupDefaults: Record<string, string[]> = {};
           item.option_groups.forEach(g => {
@@ -45,6 +49,17 @@ const ModernDetailPanel: React.FC<ModernDetailPanelProps> = ({
     }
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen, item]);
+
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const currentScrollY = scrollContainerRef.current.scrollTop;
+    if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+      setShowFooter(false);
+    } else {
+      setShowFooter(true);
+    }
+    lastScrollY.current = currentScrollY;
+  };
 
   const handleToggleOption = (groupName: string, optionName: string, maxChoices: number) => {
     const current = selectedOptions[groupName] || [];
@@ -103,7 +118,11 @@ const ModernDetailPanel: React.FC<ModernDetailPanelProps> = ({
          </div>
       </div>
 
-      <div className="relative z-10 bg-white rounded-t-[3.5rem] p-8 pb-32 flex flex-col gap-8 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] overflow-y-auto no-scrollbar max-h-[75vh]">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="relative z-10 bg-white rounded-t-[3.5rem] p-8 pb-40 flex flex-col gap-8 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] overflow-y-auto no-scrollbar max-h-[75vh]"
+      >
          <div className="flex justify-between items-start">
             <div className="w-2/3">
                <h2 className="text-2xl font-bold text-slate-800 leading-tight mb-1">{item.name}</h2>
@@ -142,7 +161,7 @@ const ModernDetailPanel: React.FC<ModernDetailPanelProps> = ({
               <div key={gIdx} className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-[11px] font-black uppercase text-slate-800 tracking-widest">{group.name}</h4>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase italic">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">
                         {group.required ? 'Required' : 'Optional'}
                     </span>
                   </div>
@@ -174,36 +193,46 @@ const ModernDetailPanel: React.FC<ModernDetailPanelProps> = ({
                   type="text" 
                   value={orderTo} 
                   onChange={e => setOrderTo(e.target.value)} 
-                  placeholder="Guest Name..." 
+                  placeholder="Order for..." 
                   className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xs font-bold outline-none"
                />
                <textarea 
                   value={instructions} 
                   onChange={e => setInstructions(e.target.value)} 
-                  placeholder="Special instructions..." 
+                  placeholder="Special Instructions..." 
                   className="w-full bg-slate-50 border-none rounded-2xl p-4 text-xs font-medium outline-none h-24 resize-none"
                />
             </div>
          </div>
 
-         <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-50 flex items-center gap-4 z-20">
-            <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-               <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 rounded-lg bg-[#D81B60]/10 text-[#D81B60] flex items-center justify-center"><i className="fa-solid fa-plus rotate-45 text-[10px]"></i></button>
-               <span className="w-10 text-center font-bold text-slate-800">{quantity}</span>
-               <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 rounded-lg bg-[#D81B60] text-white flex items-center justify-center"><i className="fa-solid fa-plus text-[10px]"></i></button>
+         <div className={`fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-50 flex flex-col gap-4 z-20 transition-transform duration-300 ${showFooter ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 rounded-lg bg-[#D81B60]/10 text-[#D81B60] flex items-center justify-center"><i className="fa-solid fa-plus rotate-45 text-[10px]"></i></button>
+                   <span className="w-10 text-center font-bold text-slate-800">{quantity}</span>
+                   <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 rounded-lg bg-[#D81B60] text-white flex items-center justify-center"><i className="fa-solid fa-plus text-[10px]"></i></button>
+                </div>
+                <div className="text-right">
+                   <p className="text-[8px] font-black uppercase text-slate-400 mb-0.5">Total</p>
+                   <span className="text-xl font-black text-[#D81B60]">₱{totalPrice.toLocaleString()}</span>
+                </div>
             </div>
             
-            <button 
-              onClick={() => { onAddToCart(getFinalItem()); onClose(); }}
-              disabled={isProcessing}
-              className="flex-1 h-16 bg-[#D81B60] text-white rounded-3xl font-bold flex items-center justify-between px-6 shadow-xl shadow-[#D81B60]/20 active:scale-95 transition-all"
-            >
-              <div className="flex flex-col items-start leading-none">
-                 <span className="text-[10px] opacity-70 mb-1">Add to selection</span>
-                 <span className="text-sm">₱{totalPrice.toLocaleString()}</span>
-              </div>
-              <i className="fa-solid fa-cart-shopping"></i>
-            </button>
+            <div className="flex flex-col gap-2">
+                <button 
+                  onClick={() => { onAddToCart(getFinalItem()); onClose(); }}
+                  disabled={isProcessing}
+                  className="w-full h-14 bg-[#D81B60] text-white rounded-2xl font-bold flex items-center justify-center shadow-xl shadow-[#D81B60]/20 active:scale-95 transition-all"
+                >
+                  Add to Cart
+                </button>
+                <button 
+                  onClick={() => { onSendToKitchen(getFinalItem()); onClose(); }}
+                  className="w-full text-center py-1 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#D81B60] transition-colors"
+                >
+                  Send to Kitchen
+                </button>
+            </div>
          </div>
       </div>
     </div>

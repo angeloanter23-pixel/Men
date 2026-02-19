@@ -21,27 +21,31 @@ const Navbar: React.FC<NavbarProps> = ({
   cartCount 
 }) => {
   return (
-    <nav className="sticky top-0 z-[60] bg-white/90 backdrop-blur-3xl px-6 py-4 flex justify-between items-center border-b border-gray-50 h-[72px]">
-      <button onClick={onMenuClick} className="p-2 hover:bg-gray-100 rounded-xl transition active:scale-90">
-        <i className="fa-solid fa-align-left text-xl text-slate-700"></i>
-      </button>
-      
-      <div className="cursor-pointer flex items-center h-full" onClick={onLogoClick}>
-        {logo ? (
-          <img src={logo} alt="Logo" className="h-8 w-auto object-contain max-w-[140px]" />
-        ) : (
-          <h1 className="font-black text-2xl tracking-tighter text-[#1D1D1F] uppercase">mymenu<span className="text-[#FF6B00]">.asia</span></h1>
-        )}
+    <nav className="sticky top-0 z-[60] bg-white/70 backdrop-blur-xl px-6 flex justify-between items-center h-[52px] border-b border-slate-100/50">
+      <div className="flex-1 flex justify-start">
+        <button onClick={onMenuClick} className="p-2 -ml-2 hover:bg-slate-100/50 rounded-full transition-all active:scale-90">
+          <i className="fa-solid fa-bars-staggered text-lg text-slate-800"></i>
+        </button>
       </div>
       
-      <div className="flex items-center gap-2">
+      <div className="flex-1 flex justify-center">
+        <div className="cursor-pointer flex items-center" onClick={onLogoClick}>
+          {logo ? (
+            <img src={logo} alt="Logo" className="h-6 w-auto object-contain" />
+          ) : (
+            <span className="font-black text-lg tracking-tighter text-slate-900">mymenu<span className="text-[#FF6B00]">.asia</span></span>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex-1 flex justify-end">
         <button 
           onClick={onCartClick} 
-          className={`relative p-2 transition-all active:scale-90 ${currentView === 'cart' ? 'text-[#FF6B00]' : 'text-slate-700'}`}
+          className={`relative p-2 -mr-2 transition-all active:scale-90 ${currentView === 'cart' ? 'text-[#FF6B00]' : 'text-slate-800'}`}
         >
-          <i className="fa-solid fa-cart-shopping text-xl"></i>
+          <i className="fa-solid fa-bag-shopping text-lg"></i>
           {cartCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#FF6B00] text-white text-[9px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-black animate-pulse">
+            <span className="absolute top-1 right-1 bg-[#FF6B00] text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black">
               {cartCount}
             </span>
           )}

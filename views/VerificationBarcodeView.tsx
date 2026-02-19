@@ -7,7 +7,7 @@ interface VerificationBarcodeViewProps {
 
 // Added comment above fix
 // Fixed: Moved BarcodeItem outside of the main component and used React.FC to properly define props and handle React-specific attributes like 'key' correctly
-const BarcodeItem: React.FC<{ code: string; itemName: string }> = ({ code, itemName }) => {
+const BarcodeItem: React.FC<{ code: string; itemName: string; orderId?: string }> = ({ code, itemName, orderId }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -26,11 +26,53 @@ const BarcodeItem: React.FC<{ code: string; itemName: string }> = ({ code, itemN
     }
   }, [code]);
 
+  const handleSaveAsPNG = () => {
+    if (svgRef.current) {
+      const svg = svgRef.current;
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement("canvas");
+      const svgSize = svg.getBBox();
+      
+      // Add padding
+      canvas.width = svgSize.width + 60;
+      canvas.height = svgSize.height + 100;
+      
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const img = new Image();
+      img.onload = () => {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw text info
+        ctx.fillStyle = "black";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(itemName, canvas.width / 2, 40);
+        if (orderId) {
+          ctx.font = "14px Arial";
+          ctx.fillText(`Order #${orderId}`, canvas.width / 2, 65);
+        }
+
+        ctx.drawImage(img, 30, 80);
+        
+        const pngUrl = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.href = pngUrl;
+        downloadLink.download = `Order_${orderId || code}.png`;
+        downloadLink.click();
+      };
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    }
+  };
+
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col items-center gap-6 animate-fade-in">
+    <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col items-center gap-6 animate-fade-in relative group">
       <div className="text-center space-y-1">
         <p className="text-[10px] font-black text-[#FF6B00] uppercase tracking-[0.3em]">Verification ID</p>
         <h4 className="text-[14px] font-bold text-slate-800 uppercase italic truncate max-w-full px-4">{itemName}</h4>
+        {orderId && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order #{orderId}</p>}
       </div>
       
       <div className="bg-white p-4 rounded-3xl border border-slate-50 shadow-inner flex flex-col items-center">
@@ -40,12 +82,20 @@ const BarcodeItem: React.FC<{ code: string; itemName: string }> = ({ code, itemN
         </div>
       </div>
 
+      <button 
+        onClick={handleSaveAsPNG}
+        className="absolute top-6 right-6 w-10 h-10 bg-slate-50 text-slate-300 hover:text-indigo-600 rounded-full flex items-center justify-center transition-all shadow-sm border border-slate-100 opacity-0 group-hover:opacity-100"
+        title="Save as PNG"
+      >
+        <i className="fa-solid fa-download text-xs"></i>
+      </button>
+
       <div className="bg-indigo-50 p-6 rounded-[2rem] border border-indigo-100 flex gap-4 w-full">
         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
           <i className="fa-solid fa-cash-register"></i>
         </div>
         <p className="text-[11px] text-indigo-900 font-bold leading-snug">
-          Show this 6-character barcode to our staff to verify your order and proceed with payment.
+          Show this barcode to our staff to verify your order and proceed with payment.
         </p>
       </div>
     </div>
@@ -55,8 +105,13 @@ const BarcodeItem: React.FC<{ code: string; itemName: string }> = ({ code, itemN
 const VerificationBarcodeView: React.FC<VerificationBarcodeViewProps> = ({ orders, onDismiss }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Group by verification code if multiple items placed together
-  const uniqueGroups = Array.from(new Set(orders.map(o => o.verification_code))).filter(Boolean);
+  // Group by verification code
+  const groups = orders.reduce((acc: Record<string, any[]>, order) => {
+    const code = order.verification_code || 'UNPAID';
+    if (!acc[code]) acc[code] = [];
+    acc[code].push(order);
+    return acc;
+  }, {} as Record<string, any[]>);
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta animate-fade-in flex flex-col items-center">
@@ -69,8 +124,27 @@ const VerificationBarcodeView: React.FC<VerificationBarcodeViewProps> = ({ order
       </header>
 
       <div ref={scrollRef} className="flex-1 w-full max-w-lg p-6 space-y-8 overflow-y-auto no-scrollbar pb-32">
-         {orders.map((order, idx) => (
-           <BarcodeItem key={idx} code={order.verification_code} itemName={order.item_name} />
+         {(Object.entries(groups) as [string, any[]][]).map(([code, items], gIdx) => (
+           <div key={gIdx} className="space-y-4">
+             <BarcodeItem 
+               code={code} 
+               itemName={items.length > 1 ? `${items.length} Items Ordered` : items[0].item_name} 
+               orderId={items[0].id}
+             />
+             {items.length > 1 && (
+               <div className="bg-white/50 rounded-2xl p-4 border border-slate-100">
+                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Items in this group</p>
+                 <div className="space-y-2">
+                   {items.map((it: any, iIdx: number) => (
+                     <div key={iIdx} className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-50">
+                       <span className="text-[11px] font-bold text-slate-700">{it.item_name}</span>
+                       <span className="text-[11px] font-black text-slate-900">x{it.quantity}</span>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+           </div>
          ))}
       </div>
 

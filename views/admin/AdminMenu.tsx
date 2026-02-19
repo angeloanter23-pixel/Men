@@ -122,7 +122,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     if (!entryToDelete || isDeleting) return;
     setIsDeleting(true);
     try {
-        if (entryToDelete.type === 'item') {
+        if (entryToDelete?.type === 'item') {
             await MenuService.deleteMenuItem(entryToDelete.id.toString());
         } else {
             if (mode === 'orphan') {
@@ -203,8 +203,8 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40 relative">
       {toast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[5000] animate-fade-in w-full max-w-sm px-6">
-           <div className={`p-4 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-2xl border ${toast.type === 'success' ? 'bg-slate-900/90 text-white border-white/10' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-              <p className="text-[10px] font-bold uppercase tracking-widest flex-1 text-center">{toast.message}</p>
+           <div className={`p-4 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-2xl border ${toast?.type === 'success' ? 'bg-slate-900/90 text-white border-white/10' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+              <p className="text-[10px] font-bold uppercase tracking-widest flex-1 text-center">{toast?.message}</p>
            </div>
         </div>
       )}
@@ -307,12 +307,12 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
                     <div className="space-y-3">
                       <h3 className="text-2xl font-bold uppercase tracking-tighter text-slate-900 leading-none">Confirm Deletion</h3>
                       <p className="text-slate-500 text-[14px] font-medium leading-relaxed px-4">
-                        Permanently remove "{entryToDelete.name}"?
+                        Permanently remove "{entryToDelete?.name}"?
                       </p>
                     </div>
 
                     <div className="w-full flex flex-col gap-3">
-                        {entryToDelete.type === 'category' ? (
+                        {entryToDelete?.type === 'category' ? (
                             <>
                                 <button 
                                     onClick={() => executePurge('orphan')} 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MenuItem, CartItem, OrderMode } from '../types';
 
 interface PremiumDetailPanelProps {
@@ -22,10 +22,17 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
   const [instructions, setInstructions] = useState('');
   const [orderTo, setOrderTo] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
+  const [showFooter, setShowFooter] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      setQuantity(1);
+      setInstructions('');
+      setOrderTo('');
+      setShowFooter(true);
       if (item?.option_groups) {
           const groupDefaults: Record<string, string[]> = {};
           item.option_groups.forEach(g => {
@@ -40,6 +47,17 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
     }
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen, item]);
+
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const currentScrollY = scrollContainerRef.current.scrollTop;
+    if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+      setShowFooter(false);
+    } else {
+      setShowFooter(true);
+    }
+    lastScrollY.current = currentScrollY;
+  };
 
   const handleToggleOption = (groupName: string, optionName: string, maxChoices: number) => {
     const current = selectedOptions[groupName] || [];
@@ -96,16 +114,20 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
 
           <div className="absolute bottom-8 left-8 pr-8">
               <p className="text-[11px] font-black uppercase tracking-[0.6em] text-indigo-400 mb-3">{item.cat_name}</p>
-              <h2 className="text-[44px] font-black tracking-tight leading-none italic uppercase">{item.name}</h2>
+              <h2 className="text-[44px] font-black tracking-tight leading-none uppercase">{item.name}</h2>
           </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar px-8 py-10 space-y-12 pb-48">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto no-scrollbar px-8 py-10 space-y-12 pb-60"
+      >
           <div className="max-w-2xl mx-auto space-y-10">
               
               <div className="p-8 bg-white/[0.03] border border-white/5 rounded-[2.5rem] relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full blur-[80px] group-hover:scale-150 transition-transform duration-700"></div>
-                  <p className="text-lg font-medium leading-relaxed text-white/60 italic">"{item.description}"</p>
+                  <p className="text-lg font-medium leading-relaxed text-white/60">{item.description}</p>
                   
                   <div className="flex items-center gap-4 mt-8">
                     <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-full flex items-center gap-2">
@@ -123,7 +145,7 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
               {item.ingredients && item.ingredients.length > 0 && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                     <h3 className="text-[12px] font-black uppercase tracking-[0.3em] text-indigo-400">Composition</h3>
+                     <h3 className="text-[12px] font-black uppercase tracking-[0.3em] text-indigo-400">Ingredients</h3>
                      <div className="h-px bg-white/5 flex-1"></div>
                   </div>
                   <div className="flex flex-wrap gap-2.5">
@@ -166,37 +188,47 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-10 border-t border-white/5">
                   <div className="space-y-3">
-                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30 ml-4">Reserved For</p>
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30 ml-4">Order for</p>
                     <input type="text" value={orderTo} onChange={e => setOrderTo(e.target.value)} className="w-full bg-white/5 border border-white/5 p-6 rounded-[2rem] text-sm font-bold outline-none focus:bg-white/10 transition-all" placeholder="Guest name..." />
                   </div>
                   <div className="space-y-3">
-                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30 ml-4">Special Requests</p>
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30 ml-4">Special Instructions</p>
                     <textarea value={instructions} onChange={e => setInstructions(e.target.value)} className="w-full bg-white/5 border border-white/5 p-6 rounded-[2rem] text-sm font-bold outline-none h-32 resize-none focus:bg-white/10 transition-all" placeholder="Preferences..." />
                   </div>
               </div>
           </div>
       </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 z-[1250] p-8 bg-[#0A0A0B]/90 backdrop-blur-3xl border-t border-white/5">
-          <div className="max-w-2xl mx-auto flex items-center justify-between gap-8">
-              <div className="flex flex-col">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Estate Total</p>
-                  <span className="text-[36px] font-black tracking-tighter text-indigo-500 leading-none">₱{totalPrice.toLocaleString()}</span>
+      <footer className={`fixed bottom-0 left-0 right-0 z-[1250] p-8 bg-[#0A0A0B]/90 backdrop-blur-3xl border-t border-white/5 transition-transform duration-300 ${showFooter ? 'translate-y-0' : 'translate-y-full'}`}>
+          <div className="max-w-2xl mx-auto flex flex-col gap-6">
+              <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Total</p>
+                      <span className="text-[36px] font-black tracking-tighter text-indigo-500 leading-none">₱{totalPrice.toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-2 rounded-3xl">
+                      <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center active:scale-90 transition-all"><i className="fa-solid fa-minus text-xs"></i></button>
+                      <span className="text-xl font-black w-8 text-center">{quantity}</span>
+                      <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center active:scale-90 transition-all"><i className="fa-solid fa-plus text-xs"></i></button>
+                  </div>
               </div>
 
-              <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-2 rounded-3xl">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center active:scale-90 transition-all"><i className="fa-solid fa-minus text-xs"></i></button>
-                  <span className="text-xl font-black w-8 text-center">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center active:scale-90 transition-all"><i className="fa-solid fa-plus text-xs"></i></button>
+              <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => { onAddToCart(getFinalItem()); onClose(); }}
+                    disabled={isProcessing}
+                    className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-[0_20px_50px_rgba(79,70,229,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    {isProcessing ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Add to Cart'}
+                  </button>
+                  <button 
+                    onClick={() => { onSendToKitchen(getFinalItem()); onClose(); }}
+                    className="w-full text-center py-1 text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-indigo-400 transition-colors"
+                  >
+                    Send to Kitchen
+                  </button>
               </div>
-
-              <button 
-                onClick={() => { onSendToKitchen(getFinalItem()); onClose(); }}
-                disabled={isProcessing}
-                className="flex-1 py-6 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-[0_20px_50px_rgba(79,70,229,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3"
-              >
-                {isProcessing ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Place Order'}
-              </button>
           </div>
       </footer>
     </div>

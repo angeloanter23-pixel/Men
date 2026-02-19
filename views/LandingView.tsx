@@ -21,9 +21,10 @@ interface LandingViewProps {
   onCreateMenu: () => void;
   onImportMenu: (config: any) => void;
   onMenuClick: () => void;
+  onAffiliateAuth: () => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
+const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffiliateAuth }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | 'investment' | null>(null);
@@ -44,7 +45,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
         onSelect={(id) => setActiveOverlay(id)}
       />
 
-      <HeroSection onStart={onStart} onCreateMenu={onCreateMenu} />
+      <HeroSection onStart={onStart} onCreateMenu={onCreateMenu} onAffiliateAuth={onAffiliateAuth} />
       
       <BlueprintStepper />
       
@@ -58,6 +59,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu }) => {
         onStart={onStart} 
         onCreateMenu={onCreateMenu} 
         onInvestmentClick={() => setActiveOverlay('investment')}
+        onCareerClick={() => window.location.hash = '#/careers'}
       />
 
       {/* Detail Overlays */}
