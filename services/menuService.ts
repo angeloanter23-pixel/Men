@@ -325,7 +325,12 @@ export async function upsertCategory(cat: any, restaurantId?: string) {
   let target_menu_id = cat.menu_id;
 
   if (!target_menu_id && restaurantId) {
-    const { data: menus } = await supabase.from('menus').select('id').eq('restaurant_id', restaurantId).limit(1);
+    const { data: menus } = await supabase.from('menus')
+      .select('id')
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
     if (menus && menus.length > 0) {
       target_menu_id = menus[0].id;
     } else {

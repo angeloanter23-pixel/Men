@@ -3,7 +3,7 @@ import { Category } from '../../../types';
 
 interface SectionsListProps {
   cats: Category[];
-  onAdd: (name: string) => void;
+  onAdd: (name: string, icon: string) => void;
   onDelete: (id: string | number) => void;
   onEdit?: (cat: Category) => void;
   loading: boolean;
@@ -13,6 +13,7 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('fa-tag');
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [actionSheetItem, setActionSheetItem] = useState<Category | null>(null);
   const [isPressing, setIsPressing] = useState<string | null>(null);
@@ -20,8 +21,9 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
 
   const handleAdd = () => {
     if (!newCatName.trim()) return;
-    onAdd(newCatName.trim());
+    onAdd(newCatName.trim(), newCatIcon.trim() || 'fa-tag');
     setNewCatName('');
+    setNewCatIcon('fa-tag');
     setIsAddModalOpen(false);
   };
 
@@ -120,6 +122,17 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
                             className="w-full bg-slate-50 border border-slate-100 p-5 rounded-2xl font-bold text-lg outline-none focus:bg-white focus:border-slate-300 transition-all shadow-inner" 
                             placeholder="e.g. Desserts"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-300 tracking-widest ml-4">Icon Class (FontAwesome)</label>
+                        <input 
+                            type="text" 
+                            value={newCatIcon} 
+                            onChange={e => setNewCatIcon(e.target.value)} 
+                            className="w-full bg-slate-50 border border-slate-100 p-5 rounded-2xl font-bold text-sm outline-none focus:bg-white focus:border-slate-300 transition-all shadow-inner" 
+                            placeholder="e.g. fa-tag"
+                        />
+                        <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-4">Ex: fa-utensils, fa-burger, fa-mug-saucer</p>
                       </div>
                   </div>
               </div>

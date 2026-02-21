@@ -16,7 +16,7 @@ import MenuView from './views/MenuView';
 import PremiumMenuView from './views/PremiumMenuView';
 import ModernMenuView from './views/ModernMenuView';
 import CartView from './views/CartView';
-import OrdersView from './views/OrdersView';
+import OrdersView from './views/orders/OrdersView';
 import QRVerifyView from './views/QRVerifyView';
 import AdminView from './views/AdminView';
 import LandingView from './views/LandingView';
@@ -37,6 +37,8 @@ import CareersView from './views/CareersView';
 import AffiliateAuth from './views/AffiliateAuth';
 import AffiliateDashboard from './views/AffiliateDashboard';
 
+import { defaultMenu } from './src/data/defaultMenu';
+
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('landing');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -48,8 +50,8 @@ export default function App() {
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [lastPayFirstOrders, setLastPayFirstOrders] = useState<any[]>([]);
   
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(defaultMenu.items as MenuItem[]);
+  const [categories, setCategories] = useState<Category[]>(defaultMenu.categories as Category[]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [isBooting, setIsBooting] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -110,20 +112,35 @@ export default function App() {
 
   const checkSessionValid = async () => {
     const saved = localStorage.getItem('foodie_active_session');
-    if (!saved) return false;
-    try {
-        const session = JSON.parse(saved);
-        const status = await MenuService.getSessionStatus(session.id);
-        if (!status || status.status === 'ended') {
-            localStorage.removeItem('foodie_active_session');
-            setActiveSession(null);
-            return false;
+    const merchantSaved = localStorage.getItem('foodie_supabase_session');
+    
+    if (saved) {
+      try {
+          const session = JSON.parse(saved);
+          const status = await MenuService.getSessionStatus(session.id);
+          if (status && status.status !== 'ended') {
+              setActiveSession(session);
+              if (session.theme) applyTheme(session.theme);
+              await syncDatabaseData(session.restaurant_id);
+              return true;
+          } else {
+              localStorage.removeItem('foodie_active_session');
+          }
+      } catch (e) {}
+    }
+
+    if (merchantSaved) {
+      try {
+        const session = JSON.parse(merchantSaved);
+        if (session.restaurant) {
+          if (session.restaurant.theme) applyTheme(session.restaurant.theme);
+          await syncDatabaseData(session.restaurant.id);
+          return true;
         }
-        setActiveSession(session);
-        if (session.theme) applyTheme(session.theme);
-        await syncDatabaseData(session.restaurant_id);
-        return true;
-    } catch (e) { return false; }
+      } catch (e) {}
+    }
+
+    return false;
   };
 
   const syncStateWithURL = async () => {
@@ -223,11 +240,25 @@ export default function App() {
     else setSelectedItem(item);
   };
 
+  const handleDemoSelect = async (demoId: string) => {
+    const dummySession = {
+        id: `demo-${demoId}`,
+        restaurant_id: demoId,
+        label: 'Demo Table',
+        status: 'active',
+        qr_token: 'demo-token',
+        session_token: 'demo-session'
+    };
+    setActiveSession(dummySession);
+    await syncDatabaseData(demoId);
+    navigateTo('menu');
+  };
+
   const renderView = () => {
     switch (currentView) {
       case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} />;
       case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={() => navigateTo('admin')} />;
-      case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={() => navigateTo('menu')} />;
+      case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={handleDemoSelect} />;
       case 'articles': return <ArticlesView onBack={() => navigateTo('landing')} />;
       case 'article': return <ArticleViewer id={selectedArticleId} onBack={() => navigateTo('articles')} />;
       case 'verification-barcode': return <VerificationBarcodeView orders={lastPayFirstOrders} onDismiss={() => navigateTo('orders')} />;
@@ -251,7 +282,7 @@ export default function App() {
       case 'careers': return <CareersView onBack={() => navigateTo('landing')} onAffiliateAuth={() => navigateTo('affiliate-auth')} />;
       case 'affiliate-auth': return <AffiliateAuth onBack={() => navigateTo('landing')} onLogin={() => navigateTo('affiliate-dashboard')} />;
       case 'affiliate-dashboard': return <AffiliateDashboard onLogout={() => navigateTo('landing')} />;
-      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={[]} setSalesHistory={() => {}} adminCreds={{}} setAdminCreds={() => {}} onExit={() => navigateTo('landing')} onLogoUpdate={() => {}} onThemeUpdate={applyTheme} appTheme={appTheme} onOpenFAQ={() => navigateTo('admin-faq')} />;
+      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={[]} setSalesHistory={() => {}} adminCreds={{}} setAdminCreds={() => {}} onExit={() => navigateTo('landing')} onLogoUpdate={() => {}} onThemeUpdate={applyTheme} appTheme={appTheme} onOpenFAQ={() => navigateTo('admin-faq')} onBackToMenu={() => navigateTo('menu')} />;
       default: return null;
     }
   };
@@ -262,7 +293,7 @@ export default function App() {
     <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
       <style>{`.menu-theme-container { --brand-primary: ${appTheme.primary_color}; --brand-secondary: ${appTheme.secondary_color}; font-family: '${appTheme.font_family}', sans-serif !important; }`}</style>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
-      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col ${appTheme.template === 'premium' || appTheme.template === 'modern' ? 'bg-[#F8F8F8]' : 'bg-[#FBFBFD]'}` : 'min-h-screen flex flex-col'}>
+      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col bg-[#F2F2F7]` : 'min-h-screen flex flex-col'}>
         {appTheme.template === 'modern' ? (
            <ModernDetailPanel item={selectedItem} isOpen={!!selectedItem} isProcessing={isDispatching} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={(item) => activeSession ? finalizeOrder(activeSession, [item]) : (setPendingSingleItem(item), navigateTo('qr-verify'))} />
         ) : appTheme.template === 'premium' ? (

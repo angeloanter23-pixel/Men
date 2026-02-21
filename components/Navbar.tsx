@@ -43,7 +43,7 @@ const Navbar: React.FC<NavbarProps> = ({
           onClick={onCartClick} 
           className={`relative p-2 -mr-2 transition-all active:scale-90 ${currentView === 'cart' ? 'text-[#FF6B00]' : 'text-slate-800'}`}
         >
-          <i className="fa-solid fa-bag-shopping text-lg"></i>
+          <i className="fa-solid fa-cart-shopping text-lg"></i>
           {cartCount > 0 && (
             <span className="absolute top-1 right-1 bg-[#FF6B00] text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-black">
               {cartCount}

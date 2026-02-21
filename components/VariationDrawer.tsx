@@ -37,7 +37,7 @@ const VariationDrawer: React.FC<VariationDrawerProps> = ({
 
         <header className="px-4 mb-8">
           <p className="text-[#FF6B00] text-[10px] font-black uppercase tracking-[0.3em] mb-2">Item Customization</p>
-          <h2 className="text-3xl font-black text-[#1D1D1F] tracking-tighter leading-none">{item.name} <span className="text-slate-400">Variations.</span></h2>
+          <h2 className="text-3xl font-black text-[#1D1D1F] tracking-tighter leading-none line-clamp-2">{item.name} <span className="text-slate-400">Variations.</span></h2>
         </header>
 
         <div className="space-y-3 max-w-xl mx-auto w-full overflow-y-auto no-scrollbar max-h-[50vh]">
@@ -45,34 +45,33 @@ const VariationDrawer: React.FC<VariationDrawerProps> = ({
             <button
               key={v.id}
               onClick={() => onSelect(v)}
-              className="w-full bg-white p-4 rounded-[2.2rem] flex items-center gap-5 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group active:scale-95 text-left border border-slate-100/50"
+              className="w-full bg-white p-4 rounded-[2.2rem] flex items-center gap-4 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group active:scale-95 text-left border border-slate-100/50"
             >
               {/* Asset Section */}
-              <div className="relative w-20 h-20 rounded-[1.6rem] overflow-hidden bg-[#E8E8ED] shrink-0 shadow-inner group-hover:rotate-2 transition-transform duration-500">
+              <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-[#E8E8ED] shrink-0 shadow-inner group-hover:rotate-2 transition-transform duration-500">
                 <img src={v.image_url} className="w-full h-full object-cover" alt="" />
                 {v.is_popular && (
                     <div className="absolute top-0 left-0 right-0 bg-[#FF6B00] py-0.5 text-center">
-                        <span className="text-[7px] font-black uppercase text-white tracking-widest">Popular</span>
+                        <span className="text-[6px] font-black uppercase text-white tracking-widest">Popular</span>
                     </div>
                 )}
               </div>
               
               {/* Identity Section */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-lg font-bold text-[#1D1D1F] tracking-tight">{v.name}</h4>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <h4 className="text-base font-bold text-[#1D1D1F] tracking-tight line-clamp-2">{v.name}</h4>
                 </div>
-                <p className="text-[11px] font-medium text-slate-400 leading-none line-clamp-1">{v.description}</p>
               </div>
 
               {/* Price & Selection Section */}
-              <div className="text-right pr-2">
+              <div className="text-right shrink-0">
                 <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest mb-0.5">Price</p>
-                <span className="text-[20px] font-black text-[#1D1D1F] tracking-tighter leading-none">₱{v.price.toLocaleString()}</span>
+                <span className="text-lg font-black text-[#1D1D1F] tracking-tighter leading-none">₱{v.price.toLocaleString()}</span>
               </div>
 
               {/* Action Circle */}
-              <div className="w-10 h-10 rounded-full bg-[#F2F2F7] text-slate-300 flex items-center justify-center group-hover:bg-[#FF6B00] group-hover:text-white transition-all shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-[#FF6B00] text-white flex items-center justify-center shadow-sm shrink-0">
                 <i className="fa-solid fa-plus text-[10px]"></i>
               </div>
             </button>

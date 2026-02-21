@@ -21,10 +21,11 @@ interface AdminViewProps {
   onThemeUpdate: (theme: any) => void;
   appTheme: any; 
   onOpenFAQ?: () => void;
+  onBackToMenu?: () => void;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ 
-  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ 
+  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu 
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('demo1@mymenu');
@@ -124,7 +125,15 @@ const AdminView: React.FC<AdminViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-jakarta selection:bg-orange-100">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-jakarta selection:bg-orange-100 relative">
+      {onBackToMenu && (
+        <button 
+          onClick={onBackToMenu}
+          className="absolute top-8 left-8 w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all active:scale-95"
+        >
+          <i className="fa-solid fa-arrow-left"></i>
+        </button>
+      )}
       <div className="w-full max-w-[400px] flex flex-col">
         
         <header className="mb-14 text-center">

@@ -26,8 +26,9 @@ const Filter: React.FC<FilterProps> = ({ categories, activeCategory, onCategoryS
               className={`shrink-0 py-2 text-[13px] font-bold tracking-tight whitespace-nowrap transition-all flex items-center gap-2 relative ${isActive ? 'text-[#FF6B00]' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <i className={`fa-solid ${catObj.icon || 'fa-tag'} text-[12px] ${isActive ? 'text-[#FF6B00]' : 'text-slate-200'}`}></i>
-              {cat === 'all' ? 'All' : cat}
-              {isActive && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#FF6B00] rounded-full animate-fade-in"></div>}
+              <span className={isActive ? 'border-b-2 border-[#FF6B00] pb-0.5' : ''}>
+                {cat === 'all' ? 'All' : cat}
+              </span>
             </button>
           );
         })}

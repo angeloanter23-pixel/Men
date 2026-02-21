@@ -15,6 +15,7 @@ import { PricingSection } from '../landing-page/PricingSection';
 import { ContactSection } from '../landing-page/ContactSection';
 import { TermsSection } from '../landing-page/TermsSection';
 import { InvestmentSection } from '../landing-page/InvestmentSection';
+import { ShopSection } from '../landing-page/ShopSection';
 
 interface LandingViewProps {
   onStart: () => void;
@@ -27,7 +28,7 @@ interface LandingViewProps {
 const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffiliateAuth }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | 'investment' | null>(null);
+  const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | 'investment' | 'shop' | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -60,6 +61,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
         onCreateMenu={onCreateMenu} 
         onInvestmentClick={() => setActiveOverlay('investment')}
         onCareerClick={() => window.location.hash = '#/careers'}
+        onShopClick={() => setActiveOverlay('shop')}
       />
 
       {/* Detail Overlays */}
@@ -68,6 +70,13 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
         onClose={() => setActiveOverlay(null)} 
       >
         <PricingSection />
+      </LandingOverlay>
+
+      <LandingOverlay 
+        isOpen={activeOverlay === 'shop'} 
+        onClose={() => setActiveOverlay(null)} 
+      >
+        <ShopSection />
       </LandingOverlay>
 
       <LandingOverlay 

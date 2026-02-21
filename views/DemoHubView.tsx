@@ -8,7 +8,7 @@ const DEMO_RESTAURANTS = [
     name: 'The Coffee House', 
     industry: 'Cafe & Bakery', 
     desc: 'Great for busy coffee shops. Customers can quickly add milk options or extra shots to their drinks.', 
-    code: 'CAFE01',
+    code: 'aeec6204-496e-46c4-adfb-ba154fa92153',
     table: 'Counter 02',
     accent: '#FF6B00',
     image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=800'

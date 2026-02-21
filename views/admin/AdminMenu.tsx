@@ -109,7 +109,14 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
         await MenuService.saveItemOptions(dbItem.id, formData.optionGroups);
       }
 
-      await handleDiagnosticRefresh();
+      // Update local state
+      const updatedItem = { ...dbItem, cat_name: formData.cat || 'Uncategorized', option_groups: formData.optionGroups };
+      if (editingItem) {
+        setItems(prev => prev.map(i => String(i.id) === String(editingItem.id) ? updatedItem : i));
+      } else {
+        setItems(prev => [updatedItem, ...prev]);
+      }
+
       setShowDishModal(false);
       setEditingItem(null);
       showToast("Menu saved", "success");
@@ -124,6 +131,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     try {
         if (entryToDelete?.type === 'item') {
             await MenuService.deleteMenuItem(entryToDelete.id.toString());
+            setItems(prev => prev.filter(i => String(i.id) !== String(entryToDelete.id)));
         } else {
             if (mode === 'orphan') {
                 const itemsToUpdate = items.filter(i => String(i.category_id) === String(entryToDelete.id));
@@ -131,15 +139,17 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
                     const { cat_name, option_groups, ...cleanItem } = item as any;
                     await MenuService.upsertMenuItem({ ...cleanItem, category_id: null });
                 }
+                setItems(prev => prev.map(i => String(i.category_id) === String(entryToDelete.id) ? { ...i, category_id: null, cat_name: 'Uncategorized' } : i));
             } else if (mode === 'cascade') {
                 const itemsToDelete = items.filter(i => String(i.category_id) === String(entryToDelete.id));
                 for (const item of itemsToDelete) {
                     await MenuService.deleteMenuItem(item.id.toString());
                 }
+                setItems(prev => prev.filter(i => String(i.category_id) !== String(entryToDelete.id)));
             }
             await MenuService.deleteCategory(entryToDelete.id);
+            setCats(prev => prev.filter(c => String(c.id) !== String(entryToDelete.id)));
         }
-        await handleDiagnosticRefresh();
         setEntryToDelete(null);
         showToast("Entry removed", "success");
     } catch (err: any) {
@@ -173,13 +183,22 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     if (!restaurantId) return;
     setLoading(true);
     try {
-      await MenuService.upsertCategory({ 
+      const res = await MenuService.upsertCategory({ 
         id: id || undefined, 
         name, 
         icon,
+        menu_id: menuId,
         order_index: id ? undefined : cats.length 
       }, restaurantId);
-      await handleDiagnosticRefresh();
+      
+      if (id) {
+        setCats(prev => prev.map(c => String(c.id) === String(id) ? res : c));
+        // Update items cat_name if changed
+        setItems(prev => prev.map(item => String(item.category_id) === String(id) ? { ...item, cat_name: name } : item));
+      } else {
+        setCats(prev => [...prev, res]);
+      }
+      
       showToast("Category updated", "success");
     } catch (e: any) { 
         showToast("Update failed", "error"); 
@@ -249,7 +268,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
         {activeTab === 'categories' && (
           <CategoryList 
             cats={cats} 
-            onAdd={(name) => handleSaveCategory(null, name, 'fa-tag')} 
+            onAdd={(name, icon) => handleSaveCategory(null, name, icon)} 
             onDelete={(id) => {
                 const cat = cats.find(c => c.id === id);
                 if (cat) setEntryToDelete({ id, name: cat.name, type: 'category' });

@@ -45,7 +45,7 @@ const MenuView: React.FC<MenuViewProps> = ({
   onSearchChange, onCategorySelect, onItemSelect 
 }) => {
   const [priceSort, setPriceSort] = useState<'asc' | 'desc' | 'none'>('none');
-  const [layout, setLayout] = useState<'default' | 'compact' | 'minimal'>('default');
+  const [layout, setLayout] = useState<'default' | 'compact' | 'minimal'>('minimal');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Load all items once for group price calculation
@@ -57,7 +57,7 @@ const MenuView: React.FC<MenuViewProps> = ({
     const variants = allItems.filter(i => i.parent_id === item.id);
     if (variants.length === 0) return `₱${item.price.toLocaleString()}`;
     const minPrice = Math.min(...variants.map(v => v.price));
-    return `Starts at ₱${minPrice.toLocaleString()}`;
+    return `₱${minPrice.toLocaleString()}`;
   };
 
   const availableItems = useMemo(() => filteredItems.filter(item => item.is_available !== false && !item.parent_id), [filteredItems]);
@@ -75,8 +75,15 @@ const MenuView: React.FC<MenuViewProps> = ({
     return list;
   }, [availableItems, searchQuery, priceSort]);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
   return (
-    <div className="animate-fade-in w-full min-h-screen pb-40 bg-white font-jakarta selection:bg-orange-100">
+    <div className="animate-fade-in w-full min-h-screen pb-40 bg-[#F2F2F7] font-jakarta selection:bg-orange-100">
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -85,8 +92,8 @@ const MenuView: React.FC<MenuViewProps> = ({
       {/* HEADER SECTION */}
       <header className="px-6 pt-16 pb-2 max-w-2xl mx-auto">
         <Reveal noWait>
-          <p className="text-[#FF6B00] text-[11px] font-black tracking-[0.4em] mb-3">Explore Catalog</p>
-          <h1 className="text-[42px] font-black tracking-tighter leading-[1] text-slate-900 mb-10">Discover our <br/>Menu</h1>
+          <p className="text-[#FF6B00] text-[11px] font-black tracking-[0.4em] mb-3">{getGreeting()}</p>
+          <h1 className="text-[42px] font-black tracking-tighter leading-[1] text-slate-900 mb-10">Discover our <br/><span className="text-slate-400">Menu</span></h1>
         </Reveal>
       </header>
 
@@ -104,6 +111,8 @@ const MenuView: React.FC<MenuViewProps> = ({
         value={searchQuery} 
         onChange={onSearchChange} 
         onFilterClick={() => setIsFilterOpen(true)}
+        suggestions={availableItems}
+        onSuggestionClick={onItemSelect}
       />
 
       {/* CATEGORIES SECTION (Under Search Bar) */}

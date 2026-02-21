@@ -19,7 +19,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, onSuppor
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-2xl border-t border-slate-100 px-6 pb-6 pt-3 md:pb-5">
+    <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white/60 backdrop-blur-xl border-t border-white/20 px-6 pb-6 pt-3 md:pb-5">
       <nav className="max-w-md mx-auto flex items-center justify-between">
         {tabs.map((tab) => {
           const isActive = tab.id === 'support' ? isSupportOpen : (currentView === tab.id && !isSupportOpen);

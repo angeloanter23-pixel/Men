@@ -50,24 +50,24 @@ const FilterModal: React.FC<FilterModalProps> = ({
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-4 mb-6" />
 
             {/* Top Nav Bar */}
-            <div className="flex px-8 mb-8 border-b border-slate-50">
-              <button 
-                onClick={() => setActiveTab('filter')}
-                className={`flex-1 py-4 text-[15px] font-bold transition-all relative ${activeTab === 'filter' ? 'text-slate-900' : 'text-slate-300'}`}
-              >
-                Filter
-                {activeTab === 'filter' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#FF6B00] rounded-t-full" />}
-              </button>
-              <button 
-                onClick={() => setActiveTab('layout')}
-                className={`flex-1 py-4 text-[15px] font-bold transition-all relative ${activeTab === 'layout' ? 'text-slate-900' : 'text-slate-300'}`}
-              >
-                Layout
-                {activeTab === 'layout' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#FF6B00] rounded-t-full" />}
-              </button>
+            <div className="px-8 mb-8">
+              <div className="bg-slate-100 p-1 rounded-xl flex">
+                <button 
+                  onClick={() => setActiveTab('filter')}
+                  className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all ${activeTab === 'filter' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Filter
+                </button>
+                <button 
+                  onClick={() => setActiveTab('layout')}
+                  className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all ${activeTab === 'layout' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Layout
+                </button>
+              </div>
             </div>
 
-            <div className="px-8 space-y-8">
+            <div className="px-8 space-y-8 min-h-[320px]">
               {activeTab === 'filter' ? (
                 <div className="space-y-6">
                   <header>
@@ -84,13 +84,15 @@ const FilterModal: React.FC<FilterModalProps> = ({
                       <button
                         key={opt.id}
                         onClick={() => setTempSort(opt.id as any)}
-                        className={`w-full p-5 rounded-2xl border flex items-center justify-between transition-all ${tempSort === opt.id ? 'bg-orange-50 border-orange-200 ring-4 ring-orange-500/5' : 'bg-slate-50 border-slate-100 text-slate-500'}`}
+                        className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${tempSort === opt.id ? 'bg-orange-50 border-orange-200 ring-4 ring-orange-500/5' : 'bg-slate-50 border-slate-100 text-slate-500'}`}
                       >
                         <div className="flex items-center gap-4">
-                          <i className={`fa-solid ${opt.icon} ${tempSort === opt.id ? 'text-[#FF6B00]' : 'text-slate-300'}`}></i>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tempSort === opt.id ? 'bg-[#FF6B00] text-white' : 'bg-white text-slate-300'}`}>
+                            <i className={`fa-solid ${opt.icon}`}></i>
+                          </div>
                           <span className={`text-sm font-bold ${tempSort === opt.id ? 'text-slate-900' : ''}`}>{opt.label}</span>
                         </div>
-                        {tempSort === opt.id && <i className="fa-solid fa-circle-check text-[#FF6B00]"></i>}
+                        {tempSort === opt.id && <i className="fa-solid fa-circle-check text-[#FF6B00] text-lg"></i>}
                       </button>
                     ))}
                   </div>
@@ -102,19 +104,27 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Choose your preferred view</p>
                   </header>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     {[
-                      { id: 'default', label: 'Default', icon: 'fa-grip' },
-                      { id: 'compact', label: 'Compact', icon: 'fa-table-cells' },
-                      { id: 'minimal', label: 'Minimal', icon: 'fa-list' }
+                      { id: 'default', label: 'Default View', icon: 'fa-grip', desc: 'Large cards with details' },
+                      { id: 'compact', label: 'Compact Grid', icon: 'fa-table-cells', desc: 'Smaller cards, more items' },
+                      { id: 'minimal', label: 'Minimal List', icon: 'fa-list', desc: 'Simple list view' }
                     ].map((opt) => (
                       <button
                         key={opt.id}
                         onClick={() => setTempLayout(opt.id as any)}
-                        className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${tempLayout === opt.id ? 'bg-orange-50 border-orange-200 ring-4 ring-orange-500/5' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
+                        className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${tempLayout === opt.id ? 'bg-orange-50 border-orange-200 ring-4 ring-orange-500/5' : 'bg-slate-50 border-slate-100 text-slate-500'}`}
                       >
-                        <i className={`fa-solid ${opt.icon} text-xl ${tempLayout === opt.id ? 'text-[#FF6B00]' : 'text-slate-200'}`}></i>
-                        <span className={`text-[10px] font-bold ${tempLayout === opt.id ? 'text-slate-900' : ''}`}>{opt.label}</span>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tempLayout === opt.id ? 'bg-[#FF6B00] text-white' : 'bg-white text-slate-300'}`}>
+                            <i className={`fa-solid ${opt.icon}`}></i>
+                          </div>
+                          <div className="text-left">
+                            <span className={`block text-sm font-bold ${tempLayout === opt.id ? 'text-slate-900' : ''}`}>{opt.label}</span>
+                            <span className="text-[10px] font-medium opacity-60">{opt.desc}</span>
+                          </div>
+                        </div>
+                        {tempLayout === opt.id && <i className="fa-solid fa-circle-check text-[#FF6B00] text-lg"></i>}
                       </button>
                     ))}
                   </div>

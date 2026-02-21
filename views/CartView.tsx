@@ -33,66 +33,42 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
           <h1 className="text-5xl md:text-7xl font-black text-slate-900 uppercase tracking-tighter leading-none">Your <span className="text-[#FF6B00]">Cart</span></h1>
         </header>
 
-        <div className="space-y-5 pb-48">
+        <div className="space-y-4 pb-48">
           {cart.map((item, idx) => (
-            <div key={idx} className="bg-white p-5 md:p-8 rounded-[2.5rem] border border-slate-100 flex flex-col sm:flex-row gap-8 shadow-sm group hover:shadow-md transition-all">
-               <div className="w-full sm:w-32 h-32 rounded-3xl overflow-hidden shrink-0 border border-slate-50 shadow-inner">
+            <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 flex gap-4 group transition-all shadow-sm hover:shadow-md">
+               <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
                  <img src={item.image_url} className="w-full h-full object-cover" alt={item.name} />
                </div>
                
-               <div className="flex-1 flex flex-col justify-center min-w-0">
-                 <div className="flex justify-between items-start mb-2">
-                   <div>
-                     <h4 className="font-black text-xl text-slate-800 uppercase tracking-tight mb-1">{item.name}</h4>
-                     <div className="flex items-center gap-4">
-                       <span className="text-[10px] font-black text-[#FF6B00] uppercase tracking-widest">For: {item.orderTo}</span>
-                       <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">• {item.orderMode}</span>
+               <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                 <div className="flex justify-between items-start gap-2">
+                   <div className="min-w-0">
+                     <h4 className="font-bold text-[15px] text-slate-900 leading-tight truncate">{item.name}</h4>
+                     <div className="flex items-center gap-2 mt-1">
+                       <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">{item.orderTo}</span>
+                       <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">• {item.orderMode}</span>
                      </div>
                    </div>
-                   <button onClick={() => onRemove(idx)} className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm">
-                     <i className="fa-solid fa-xmark text-lg"></i>
-                   </button>
+                   <div className="relative group/menu shrink-0">
+                      <button className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-slate-900 transition-colors">
+                        <i className="fa-solid fa-ellipsis-vertical text-sm"></i>
+                      </button>
+                      <div className="absolute right-0 top-full mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl py-2 px-3 hidden group-hover/menu:block z-10">
+                        <button onClick={() => onRemove(idx)} className="text-[10px] font-black text-rose-500 uppercase tracking-widest whitespace-nowrap">Remove Item</button>
+                      </div>
+                   </div>
                  </div>
                  
-                 {/* OPTIONS BREAKDOWN */}
-                 {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                   <div className="mt-4 space-y-1.5 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
-                      {Object.entries(item.selectedOptions).map(([groupName, options]) => (
-                        <div key={groupName} className="flex flex-col gap-0.5">
-                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{groupName}</span>
-                           <div className="flex flex-wrap gap-x-3 gap-y-1">
-                              {(options as string[]).map(optName => {
-                                // Find price for this option
-                                const group = item.option_groups?.find(g => g.name === groupName);
-                                const opt = group?.options.find(o => o.name === optName);
-                                return (
-                                  <span key={optName} className="text-[11px] font-bold text-slate-600">
-                                    {optName} {opt && opt.price > 0 && <span className="text-[#FF6B00] font-black text-[9px] ml-1">+₱{opt.price}</span>}
-                                  </span>
-                                );
-                              })}
-                           </div>
-                        </div>
-                      ))}
-                   </div>
-                 )}
-
-                 {item.customInstructions && (
-                   <div className="mt-3 text-[11px] text-slate-400 font-bold uppercase leading-relaxed">
-                     Note: {item.customInstructions}
-                   </div>
-                 )}
-
-                 <div className="flex justify-between items-end mt-6">
-                   <div className="flex flex-col">
-                     <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Unit Total</span>
-                     <span className="text-2xl font-black text-slate-900 tracking-tighter">₱{(item.price * item.quantity).toLocaleString()}</span>
-                   </div>
-                   <div className="flex items-center gap-5 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-                     <button onClick={() => onUpdateQuantity(idx, -1)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-[#FF6B00] transition-all"><i className="fa-solid fa-minus text-sm"></i></button>
-                     <span className="text-lg font-black text-slate-800 w-6 text-center tabular-nums">{item.quantity}</span>
-                     <button onClick={() => onUpdateQuantity(idx, 1)} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-[#FF6B00] transition-all"><i className="fa-solid fa-plus text-sm"></i></button>
-                   </div>
+                 <div className="flex items-end justify-between mt-auto">
+                    <div className="flex items-center gap-4 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                      <button onClick={() => onUpdateQuantity(idx, -1)} className="text-slate-400 hover:text-orange-600 transition-all p-1"><i className="fa-solid fa-minus text-[10px]"></i></button>
+                      <span className="text-sm font-black text-slate-900 w-4 text-center tabular-nums">{item.quantity}</span>
+                      <button onClick={() => onUpdateQuantity(idx, 1)} className="text-slate-400 hover:text-orange-600 transition-all p-1"><i className="fa-solid fa-plus text-[10px]"></i></button>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-0.5">Subtotal</p>
+                      <span className="text-lg font-black text-slate-900 tabular-nums leading-none">₱{(item.price * item.quantity).toLocaleString()}</span>
+                    </div>
                  </div>
                </div>
             </div>
@@ -104,7 +80,7 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
       <div className="fixed bottom-24 left-0 right-0 p-6 z-[45] flex justify-center">
         <button 
           onClick={onCheckout} 
-          className="w-full max-w-md bg-[#FF6B00] text-white py-6 px-10 rounded-[2.5rem] font-black text-[12px] uppercase tracking-[0.2em] shadow-[0_20px_50px_rgba(255,107,0,0.3)] active:scale-95 border-2 border-white/10 flex justify-between items-center group transition-all hover:bg-orange-600"
+          className="w-full max-w-md bg-slate-900 text-white py-5 px-10 rounded-2xl font-bold text-[12px] uppercase tracking-[0.2em] shadow-2xl active:scale-95 border border-white/10 flex justify-between items-center group transition-all"
         >
           <span>Order Everything</span>
           <div className="flex items-center gap-3">

@@ -5,9 +5,10 @@ interface LandingFooterProps {
   onCreateMenu: () => void;
   onInvestmentClick?: () => void;
   onCareerClick?: () => void;
+  onShopClick?: () => void;
 }
 
-export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateMenu, onInvestmentClick, onCareerClick }) => (
+export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateMenu, onInvestmentClick, onCareerClick, onShopClick }) => (
   <footer className="bg-slate-50 pt-24 pb-12 border-t border-slate-200/50 px-6 font-jakarta">
     <div className="max-w-[1100px] mx-auto">
        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 pb-20 border-b border-slate-200">
@@ -38,6 +39,7 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateM
               <li><button onClick={onCreateMenu} className="hover:text-orange-500 transition-colors border-none bg-transparent">Pricing</button></li>
               <li><button onClick={onInvestmentClick} className="hover:text-orange-500 transition-colors text-orange-600 font-bold border-none bg-transparent">Investment</button></li>
               <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Enterprise</button></li>
+              <li><button onClick={onShopClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Shop</button></li>
             </ul>
           </div>
 
