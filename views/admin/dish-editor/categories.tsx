@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Category } from '../../../types';
 
-interface SectionsListProps {
+interface CategoriesProps {
   cats: Category[];
   onAdd: (name: string, icon: string) => void;
   onDelete: (id: string | number) => void;
@@ -10,7 +10,7 @@ interface SectionsListProps {
   loading: boolean;
 }
 
-const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEdit, onDiagnosticRefresh, loading }) => {
+const Categories: React.FC<CategoriesProps> = ({ cats, onAdd, onDelete, onEdit, onDiagnosticRefresh, loading }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
@@ -60,7 +60,6 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
 
   return (
     <div className="space-y-6 animate-fade-in px-2 font-jakarta">
-      {/* HEADER MATCHING DISH GROUPS STYLE */}
       <div className="flex justify-between items-center px-4">
         <div className="flex items-center gap-3">
             <h3 className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em] leading-none">Categories ({cats.length})</h3>
@@ -108,7 +107,6 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
         )}
       </div>
 
-      {/* CREATE CATEGORY MODAL */}
       {isAddModalOpen && (
           <div className="fixed inset-0 z-[5000] flex items-end justify-center animate-fade-in p-0 font-jakarta">
               <div onClick={() => setIsAddModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
@@ -147,7 +145,6 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
           </div>
       )}
 
-      {/* CATEGORY EDITOR MODAL */}
       {isEditModalOpen && editingCat && (
           <div className="fixed inset-0 z-[5000] flex items-end justify-center animate-fade-in p-0 font-jakarta">
               <div onClick={() => setIsEditModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
@@ -184,7 +181,6 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
           </div>
       )}
 
-      {/* APPLE ACTION SHEET */}
       {actionSheetItem && (
           <div className="fixed inset-0 z-[5000] flex items-end justify-center animate-fade-in p-4">
               <div onClick={() => setActionSheetItem(null)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
@@ -224,4 +220,4 @@ const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEd
   );
 };
 
-export default SectionsList;
+export default Categories;

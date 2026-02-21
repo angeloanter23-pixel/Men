@@ -61,14 +61,15 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
         setItems(res.items || []);
         setCats(res.categories || []);
         
-        if ((res as any).db_error) {
-            const err = (res as any).db_error;
+        if ((res as any).db_error || (res as any).error) {
+            const err = (res as any).db_error || { message: (res as any).error };
             setDbFetchError(err);
             // Also store globally for modal access
             (window as any)._last_menu_db_error = err;
             showToast("Database Link Error", "error");
         } else {
             (window as any)._last_menu_db_error = null;
+            showToast("Data refreshed from database", "success");
         }
     } catch (e: any) {
         showToast("Synchronization failed", "error");
@@ -234,15 +235,14 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <i className="fa-solid fa-database text-rose-500"></i>
-                    <h4 className="font-black uppercase text-[10px] tracking-widest">Relational Sync Failure</h4>
+                    <h4 className="font-black uppercase text-[10px] tracking-widest">Database Sync Failure</h4>
                 </div>
                 <button onClick={() => setDbFetchError(null)} className="text-rose-300 hover:text-rose-500"><i className="fa-solid fa-xmark"></i></button>
              </div>
-             <p className="text-[12px] font-bold leading-relaxed">The server could not link your modifiers to your items. This usually means the 'item_options' table relationship is broken or named differently in Supabase.</p>
+             <p className="text-[12px] font-bold leading-relaxed">The server could not retrieve your menu data.</p>
              <div className="bg-white/50 p-4 rounded-xl font-mono text-[9px] break-all border border-rose-100 shadow-inner max-h-40 overflow-y-auto no-scrollbar">
-                <span className="text-rose-600 font-bold">RAW ERROR:</span> {JSON.stringify(dbFetchError)}
+                <span className="text-rose-600 font-bold">RAW ERROR:</span> {dbFetchError instanceof Error ? JSON.stringify({ message: dbFetchError.message, stack: dbFetchError.stack }, null, 2) : JSON.stringify(dbFetchError, Object.getOwnPropertyNames(dbFetchError), 2)}
              </div>
-             <p className="text-[10px] text-slate-400 font-medium italic">Hint: Ensure your foreign keys correctly point to item_option_groups(id).</p>
           </div>
         </div>
       )}
@@ -274,6 +274,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
                 if (cat) setEntryToDelete({ id, name: cat.name, type: 'category' });
             }} 
             onEdit={(cat) => handleSaveCategory(cat.id, cat.name, cat.icon || 'fa-tag')} 
+            onDiagnosticRefresh={handleDiagnosticRefresh}
             loading={loading} 
           />
         )}

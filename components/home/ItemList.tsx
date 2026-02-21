@@ -24,13 +24,13 @@ const ItemList: React.FC<ItemListProps> = ({ items, onItemSelect, getPriceDispla
               className={`w-full flex text-left group active:scale-[0.98] transition-all relative overflow-hidden ${
                 layout === 'default' ? 'flex-col p-0 rounded-3xl bg-white border border-slate-100 hover:shadow-2xl shadow-lg mb-6' : 
                 layout === 'compact' ? 'flex-col p-2 rounded-xl bg-white border border-slate-100 hover:shadow-2xl shadow-lg' : 
-                'flex-row py-5 border-b border-slate-100/80 gap-5 items-center bg-transparent'
+                'flex-row p-3 rounded-2xl bg-white border border-slate-100 hover:shadow-2xl shadow-lg mb-4 gap-4 items-stretch'
               }`}
             >
               <div className={`
                 ${layout === 'default' ? 'aspect-[16/9] w-full' : 
                   layout === 'compact' ? 'aspect-square w-full rounded-lg mb-2' : 
-                  'w-24 h-24 aspect-square rounded-2xl shrink-0'} 
+                  'w-32 sm:w-40 rounded-xl shrink-0'} 
                 overflow-hidden bg-slate-50 relative shadow-inner
               `}>
                 <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -42,7 +42,7 @@ const ItemList: React.FC<ItemListProps> = ({ items, onItemSelect, getPriceDispla
               </div>
               
               <div className={`
-                ${layout === 'minimal' ? 'flex-1 flex flex-col py-1' : 
+                ${layout === 'minimal' ? 'flex-1 flex flex-col py-1 pr-1' : 
                   layout === 'default' ? 'p-6' : 'px-1 pb-1'}
               `}>
                 <div className="flex justify-between items-start mb-1">
@@ -51,24 +51,27 @@ const ItemList: React.FC<ItemListProps> = ({ items, onItemSelect, getPriceDispla
                       <p className={`font-black tracking-widest text-orange-600 uppercase ${
                         layout === 'default' ? 'text-[10px] mb-2' : 
                         layout === 'compact' ? 'text-[7px] mb-1' : 
-                        'text-[8px] mb-0.5'
+                        'text-[8px] mb-1'
                       }`}>{item.cat_name}</p>
                     )}
                     <h4 className={`font-bold text-slate-900 leading-tight tracking-tight line-clamp-2 ${
                       layout === 'default' ? 'text-[22px] mb-2' : 
                       layout === 'compact' ? 'text-[13px] mb-1' : 
-                      'text-[18px]'
+                      'text-[16px] mb-1'
                     }`}>{item.name}</h4>
                   </div>
-                  {layout === 'minimal' && (
-                    <span className="text-[17px] font-black text-slate-900 tabular-nums ml-4 shrink-0">{getPriceDisplay(item)}</span>
-                  )}
                 </div>
                 
                 {layout !== 'compact' && (
                   <p className={`text-slate-400 font-medium line-clamp-2 leading-relaxed ${
-                    layout === 'default' ? 'text-[14px] mb-4' : 'text-[12px] mb-3'
+                    layout === 'default' ? 'text-[14px] mb-4' : 'text-[12px] mb-2'
                   }`}>{item.description}</p>
+                )}
+
+                {layout === 'minimal' && (
+                  <div className="text-[15px] font-black text-slate-900 tabular-nums mb-3">
+                    {getPriceDisplay(item)}
+                  </div>
                 )}
                 
                 {layout === 'default' && item.ingredients && (item.ingredients as any).length > 0 && (

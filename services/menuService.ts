@@ -89,7 +89,7 @@ export async function getMenuByRestaurantId(restaurantId: string) {
           .order('created_at', { ascending: false })
           .limit(1);
       
-      if (menuErr) throw menuErr;
+      if (menuErr) return { items: [], categories: [], menu_id: null, db_error: menuErr };
 
       let menu = menus && menus.length > 0 ? menus[0] : null;
 
@@ -98,7 +98,7 @@ export async function getMenuByRestaurantId(restaurantId: string) {
           .from('menus')
           .insert({ restaurant_id: restaurantId, name: 'Main Menu' })
           .select('id');
-        if (createErr) throw createErr;
+        if (createErr) return { items: [], categories: [], menu_id: null, db_error: createErr };
         menu = newMenus && newMenus[0];
       }
 
@@ -110,8 +110,9 @@ export async function getMenuByRestaurantId(restaurantId: string) {
         supabase.from('items').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false })
       ]);
 
-      if (catRes.error) throw catRes.error;
-      if (itemRes.error) throw itemRes.error;
+      let db_error = null;
+      if (catRes.error) db_error = catRes.error;
+      else if (itemRes.error) db_error = itemRes.error;
 
       const categories = catRes.data || [];
       const items = itemRes.data || [];
@@ -126,6 +127,7 @@ export async function getMenuByRestaurantId(restaurantId: string) {
       if (groupsErr) {
         console.error("[DATABASE DIAGNOSTIC] Failed to fetch item_option_groups join:", groupsErr);
         (window as any)._last_db_error = groupsErr;
+        db_error = db_error || groupsErr;
       } else {
         (window as any)._last_db_error = null;
       }
@@ -160,7 +162,7 @@ export async function getMenuByRestaurantId(restaurantId: string) {
         menu_id: menu.id,
         items: itemsWithExtras, 
         categories: categories,
-        db_error: groupsErr 
+        db_error: db_error 
       };
     });
   } catch (err: any) {
@@ -170,7 +172,7 @@ export async function getMenuByRestaurantId(restaurantId: string) {
       : err.message;
     
     console.error("[CRITICAL ERROR] Menu service failed:", err.message);
-    return { items: [], categories: [], menu_id: null, error: friendlyMsg };
+    return { items: [], categories: [], menu_id: null, error: friendlyMsg, db_error: err };
   }
 }
 

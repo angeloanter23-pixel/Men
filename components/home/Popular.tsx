@@ -10,22 +10,22 @@ interface PopularProps {
 const Popular: React.FC<PopularProps> = ({ items, onItemSelect, getPriceDisplay }) => {
   if (items.length === 0) return null;
 
-  // Limit to 4 items for 2x2 grid
-  const displayItems = items.slice(0, 4);
+  // Limit to 8 items for horizontal scroll
+  const displayItems = items.slice(0, 8);
 
   return (
     <section className="mb-10">
-      <div className="px-6 mb-5 max-w-2xl mx-auto flex justify-between items-end">
-        <h3 className="text-[20px] font-black text-slate-900 uppercase tracking-tighter">Popular Picks</h3>
-        <button className="text-[#FF6B00] text-[11px] font-black uppercase tracking-widest">See All</button>
+      <div className="px-6 mb-5 max-w-2xl mx-auto flex justify-between items-center">
+        <h3 className="text-[20px] font-black text-slate-900 tracking-tighter">Popular Picks</h3>
+        <button className="text-slate-900 text-[16px] active:scale-90 transition-transform"><i className="fa-solid fa-arrow-right"></i></button>
       </div>
-      <div className="px-6 max-w-2xl mx-auto">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="pl-6 pr-6 max-w-2xl mx-auto overflow-x-auto no-scrollbar pb-4 -mb-4">
+        <div className="flex gap-4 w-max">
           {displayItems.map((item) => (
             <button 
               key={item.id}
               onClick={() => onItemSelect(item)}
-              className="w-full bg-white rounded-2xl p-2 text-left group active:scale-[0.98] transition-all border border-slate-100 shadow-lg flex flex-col relative overflow-hidden"
+              className="w-40 bg-white rounded-2xl p-2 text-left group active:scale-[0.98] transition-all border border-slate-100 shadow-lg flex flex-col relative overflow-hidden shrink-0"
             >
               <div className="aspect-square w-full rounded-xl overflow-hidden mb-2 relative bg-slate-50 shrink-0">
                 <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
