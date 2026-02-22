@@ -65,7 +65,9 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
   const [isValueModalOpen, setIsValueModalOpen] = useState(false);
   const [editingValueIdx, setEditingValueIdx] = useState<number | null>(null);
   const [valueForm, setValueForm] = useState<AboutValue>({ icon: 'fa-heart', label: '', description: '' });
+  const [showDemoBlock, setShowDemoBlock] = useState(false);
 
+  const isDemoAccount = restaurantId === 'aeec6204-496e-46c4-adfb-ba154fa92153';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -92,6 +94,10 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
   };
 
   const handleSave = async (newData?: AboutData) => {
+    if (isDemoAccount) {
+        setShowDemoBlock(true);
+        return;
+    }
     setSaving(true);
     try {
       const payload = newData || data;
@@ -111,6 +117,10 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
 
   const commitField = () => {
     if (!editingField || !data) return;
+    if (isDemoAccount) {
+        setShowDemoBlock(true);
+        return;
+    }
     const nextData = { ...data, [editingField]: tempText };
     setData(nextData);
     setEditingField(null);
@@ -130,6 +140,10 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
 
   const saveValue = () => {
     if (!data) return;
+    if (isDemoAccount) {
+        setShowDemoBlock(true);
+        return;
+    }
     const nextValues = [...data.values];
     if (editingValueIdx !== null) nextValues[editingValueIdx] = valueForm;
     else nextValues.push(valueForm);
@@ -335,29 +349,56 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
         )}
       </div>
 
-      {/* BOTTOM SHEET EDITOR MODAL */}
+      {/* FULL PAGE EDITOR MODAL */}
       {editingField && (
-        <div className="fixed inset-0 z-[5000] flex items-end justify-center animate-fade-in">
-          <div onClick={() => setEditingField(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
-          <div className="relative bg-[#FBFBFD] w-full max-w-2xl rounded-t-[3rem] shadow-2xl flex flex-col p-10 space-y-8 animate-slide-up pb-16">
-             <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-2 shrink-0" />
-             <header className="flex justify-between items-start">
-               <div className="space-y-1">
-                 <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none">Edit Section.</h3>
-                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em]">{editingField.replace('_', ' ')}</p>
-               </div>
-               <button onClick={() => setEditingField(null)} className="w-11 h-11 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors shadow-sm"><i className="fa-solid fa-xmark text-lg"></i></button>
-             </header>
+        <div className="fixed inset-0 z-[5000] bg-white animate-fade-in flex flex-col">
+           {/* Header */}
+           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+              <button onClick={() => setEditingField(null)} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+              <p className="text-sm font-bold text-slate-900 uppercase tracking-widest">{editingField.replace('_', ' ')}</p>
+              <button onClick={commitField} className="px-6 py-2.5 bg-slate-900 text-white rounded-full font-bold text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                Update
+              </button>
+           </div>
+           
+           {/* Textarea */}
+           <div className="flex-1 relative">
              <textarea 
-                ref={textareaRef} autoFocus value={tempText} onChange={e => setTempText(e.target.value)}
-                className="w-full bg-white border border-slate-200 p-8 rounded-[2rem] font-medium text-lg text-slate-700 leading-relaxed outline-none h-64 resize-none no-scrollbar shadow-inner focus:ring-4 ring-orange-500/5 transition-all"
-                placeholder="Type here..."
+                ref={textareaRef} 
+                autoFocus 
+                value={tempText} 
+                onChange={e => setTempText(e.target.value)}
+                className="w-full h-full p-6 md:p-8 text-lg md:text-xl font-medium text-slate-800 leading-relaxed outline-none resize-none placeholder:text-slate-300"
+                placeholder="Start typing your content here..."
              />
-             <div className="flex gap-4 pt-4">
-                <button onClick={() => setEditingField(null)} className="flex-1 py-5 bg-slate-50 text-slate-400 rounded-full font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all">Cancel</button>
-                <button onClick={commitField} className="flex-[2] py-5 bg-slate-900 text-white rounded-full font-bold uppercase text-[10px] tracking-[0.4em] shadow-xl active:scale-95 transition-all">Apply Changes</button>
-             </div>
-          </div>
+           </div>
+        </div>
+      )}
+
+      {/* DEMO BLOCK MODAL */}
+      {showDemoBlock && (
+        <div className="fixed inset-0 z-[6000] flex items-end justify-center animate-fade-in" onClick={() => setShowDemoBlock(false)}>
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
+            <div className="relative bg-white w-full max-w-lg rounded-t-2xl shadow-2xl p-6 pb-10 animate-slide-up flex flex-col gap-6" onClick={e => e.stopPropagation()}>
+                <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto shrink-0" />
+                <div className="text-center space-y-4 py-4">
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-2xl">
+                        <i className="fa-solid fa-lock"></i>
+                    </div>
+                    <div className="space-y-2">
+                        <h4 className="text-lg font-bold text-slate-900">Action Restricted</h4>
+                        <p className="text-sm text-slate-500 font-medium px-4">This is a demo account. Content updates are disabled to preserve the experience for other users.</p>
+                    </div>
+                    <button 
+                        onClick={() => setShowDemoBlock(false)}
+                        className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all"
+                    >
+                        Understood
+                    </button>
+                </div>
+            </div>
         </div>
       )}
 

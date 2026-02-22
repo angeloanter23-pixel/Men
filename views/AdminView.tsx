@@ -38,6 +38,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [clientIp, setClientIp] = useState('0.0.0.0');
   const [isBlocked, setIsBlocked] = useState(false);
   const [countdown, setCountdown] = useState<number>(0);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   useEffect(() => {
     const savedSession = localStorage.getItem('foodie_supabase_session');
@@ -131,17 +132,12 @@ const AdminView: React.FC<AdminViewProps> = ({
           onClick={onBackToMenu}
           className="absolute top-8 left-8 w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all active:scale-95"
         >
-          <i className="fa-solid fa-arrow-left"></i>
+          <i className="fa-solid fa-long-arrow-alt-left"></i>
         </button>
       )}
       <div className="w-full max-w-[400px] flex flex-col">
         
         <header className="mb-14 text-center">
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
-              <span className="text-xl font-black">M</span>
-            </div>
-          </div>
           <h1 className="text-[32px] font-black text-slate-900 tracking-tight leading-none mb-4 uppercase">
             Merchant Login
           </h1>
@@ -165,7 +161,10 @@ const AdminView: React.FC<AdminViewProps> = ({
             </div>
             
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Password</label>
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Password</label>
+                <button type="button" onClick={() => setShowForgotModal(true)} className="text-[10px] font-bold text-indigo-600 hover:underline uppercase tracking-wider">Forgot?</button>
+              </div>
               <div className="relative">
                 <input 
                   required 
@@ -207,7 +206,7 @@ const AdminView: React.FC<AdminViewProps> = ({
           <button 
             type="submit" 
             disabled={loading || isBlocked || !agreedToTerms} 
-            className="w-full h-[64px] bg-slate-900 text-white rounded-full font-black text-[15px] shadow-2xl active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-[0.2em]"
+            className="w-full h-[64px] bg-slate-900 text-white rounded-2xl font-black text-[15px] shadow-2xl active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-[0.2em]"
           >
             {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : (isBlocked ? `Wait ${countdown}s` : 'Sign In')}
           </button>
@@ -219,6 +218,36 @@ const AdminView: React.FC<AdminViewProps> = ({
           </button>
         </div>
       </div>
+
+      {showForgotModal && (
+        <div className="fixed inset-0 z-[5000] flex items-end justify-center animate-fade-in" onClick={() => setShowForgotModal(false)}>
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
+            <div className="relative bg-white w-full max-w-lg rounded-t-2xl shadow-2xl p-6 pb-10 animate-slide-up flex flex-col gap-6" onClick={e => e.stopPropagation()}>
+                <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto shrink-0" />
+                <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">Reset Password</h3>
+                    <button onClick={() => setShowForgotModal(false)} className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center text-slate-400"><i className="fa-solid fa-xmark"></i></button>
+                </div>
+                <div className="space-y-4">
+                    <p className="text-sm text-slate-500 font-medium">Enter your email address to receive a password reset link.</p>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                        <input 
+                            type="email" 
+                            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner"
+                            placeholder="name@business.com"
+                        />
+                    </div>
+                    <button 
+                        onClick={() => { alert("Reset link sent!"); setShowForgotModal(false); }}
+                        className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all"
+                    >
+                        Send Reset Link
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
 
       <LandingOverlay 
         isOpen={isTermsOverlayOpen} 

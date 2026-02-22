@@ -143,6 +143,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 setAdminCreds={setAdminCreds} 
                 onThemeUpdate={onThemeUpdate} 
                 onSubTabChange={(sub) => setSettingsSubTab(sub as SettingsSubTab)}
+                setMenuItems={setMenuItems}
+                setCategories={setCategories}
               />
             )}
             {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} onBack={() => setSettingsSubTab('general')} />}

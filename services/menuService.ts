@@ -393,6 +393,44 @@ export async function updateRestaurantTheme(id: string, theme: any) {
   return data && data[0];
 }
 
+export async function uploadRestaurantLogo(restaurantId: string, file: File) {
+  const filePath = `${restaurantId}/logo/logo.png`;
+  const { error } = await supabase.storage
+    .from('Menu-images')
+    .upload(filePath, file, {
+      upsert: true,
+      contentType: 'image/png'
+    });
+
+  if (error) throw error;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('Menu-images')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+}
+
+export async function uploadMenuItemImage(restaurantId: string, file: File) {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+  const filePath = `${restaurantId}/dishes/${fileName}`;
+
+  const { error } = await supabase.storage
+    .from('Menu-images')
+    .upload(filePath, file, {
+      upsert: true
+    });
+
+  if (error) throw error;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('Menu-images')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+}
+
 export async function checkBusinessNameExists(name: string) {
   const { data } = await supabase.from('restaurants').select('id').eq('name', name).limit(1);
   return data && data.length > 0;
@@ -535,7 +573,10 @@ export async function authSignUp(email: string, pass: string) {
 }
 
 export async function endTableSession(sessionId: string) {
-  const { error } = await supabase.from('table_sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', sessionId);
+  const { error } = await supabase.from('table_sessions').update({ 
+    status: 'ended', 
+    session_ended_at: new Date().toISOString() 
+  }).eq('id', sessionId);
   if (error) throw error;
 }
 
@@ -546,7 +587,15 @@ export async function updateTableSession(sessionId: string, updates: any) {
 
 export async function createManualSession(qrId: string) {
   const pin = Math.floor(1000 + Math.random() * 9000).toString();
-  const { data, error } = await supabase.from('table_sessions').insert([{ qr_code_id: qrId, verification_code: pin, status: 'active', pin_required: true }]).select();
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const { data, error } = await supabase.from('table_sessions').insert([{ 
+    qr_code_id: qrId, 
+    verification_code: pin, 
+    session_token: token,
+    status: 'active', 
+    pin_required: true,
+    session_started_at: new Date().toISOString()
+  }]).select();
   if (error) throw error;
   return data && data[0];
 }

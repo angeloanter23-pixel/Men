@@ -25,6 +25,7 @@ const SettingRow: React.FC<{ icon: string; color: string; label: string; childre
   </div>
 );
 
+// Dish Management Modal Component
 const DishModal: React.FC<DishModalProps> = ({ 
   editingItem, formData, setFormData, cats, loading, onClose, onSave 
 }) => {
@@ -39,9 +40,18 @@ const DishModal: React.FC<DishModalProps> = ({
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
       const reader = new FileReader();
-      reader.onload = (loadEvent) => { if (loadEvent.target?.result) setFormData({ ...formData, image: loadEvent.target!.result as string }); };
-      reader.readAsDataURL(e.target.files[0]);
+      reader.onload = (loadEvent) => { 
+        if (loadEvent.target?.result) {
+          setFormData({ 
+            ...formData, 
+            image: loadEvent.target!.result as string,
+            imageFile: file 
+          }); 
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 

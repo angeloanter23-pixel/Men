@@ -119,22 +119,22 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
           </p>
         </div>
 
-        <div className="bg-[#E8E8ED] p-1 rounded-2xl flex border border-slate-200/50 shadow-inner max-w-sm mx-auto">
-          <button onClick={() => setActiveTab('generate')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'generate' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Add New</button>
-          <button onClick={() => setActiveTab('list')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all relative ${activeTab === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>My List {nodes.length > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white shadow-sm"></span>}</button>
+        <div className="bg-[#E8E8ED] p-1 rounded-xl flex border border-slate-200/50 shadow-inner max-w-sm mx-auto">
+          <button onClick={() => setActiveTab('generate')} className={`flex-1 py-3 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'generate' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Add New</button>
+          <button onClick={() => setActiveTab('list')} className={`flex-1 py-3 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all relative ${activeTab === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>My List {nodes.length > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white shadow-sm"></span>}</button>
         </div>
       </header>
 
       <main>
         {activeTab === 'generate' ? (
           <div className="space-y-10 animate-fade-in">
-            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200/60 space-y-8">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200/60 space-y-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4">Table Name</label>
-                <input type="text" value={tableLabel} onChange={e => setTableLabel(e.target.value)} className={`w-full bg-slate-50 border border-slate-100 p-6 rounded-[2rem] text-[17px] font-bold outline-none transition-all focus:bg-white focus:ring-4 ring-indigo-500/5 shadow-inner ${error ? 'border-rose-200' : ''}`} placeholder="e.g. Window Seat" />
+                <input type="text" value={tableLabel} onChange={e => setTableLabel(e.target.value)} className={`w-full bg-slate-50 border border-slate-100 p-6 rounded-2xl text-[17px] font-bold outline-none transition-all focus:bg-white focus:ring-4 ring-indigo-500/5 shadow-inner ${error ? 'border-rose-200' : ''}`} placeholder="e.g. Window Seat" />
                 {error && <p className="text-rose-500 text-[11px] font-bold ml-4 animate-fade-in">{error}</p>}
               </div>
-              <button onClick={handleAddNode} disabled={loading || !tableLabel.trim()} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[12px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all disabled:opacity-50">
+              <button onClick={handleAddNode} disabled={loading || !tableLabel.trim()} className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black uppercase text-[12px] tracking-[0.4em] shadow-2xl active:scale-95 transition-all disabled:opacity-50">
                 {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Create Table'}
               </button>
             </div>
@@ -143,24 +143,24 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
           <div className="space-y-6 animate-fade-in">
             <div className="grid grid-cols-1 gap-3">
               {nodes.length > 0 ? nodes.map((node, i) => (
-                <div key={i} onClick={() => setInspectingNode(node)} className="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-200/50 flex items-center justify-between group animate-fade-in cursor-pointer active:bg-slate-50 transition-colors">
+                <div key={i} onClick={() => setInspectingNode(node)} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/50 flex items-center justify-between group animate-fade-in cursor-pointer active:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-indigo-500 border border-slate-100 shadow-sm"><i className="fa-solid fa-qrcode"></i></div>
+                    <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-500 border border-slate-100 shadow-sm"><i className="fa-solid fa-qrcode"></i></div>
                     <div>
                       <h4 className="text-[15px] font-bold text-slate-800 uppercase tracking-tight leading-none mb-1.5">{node.label}</h4>
                       <p className="text-[9px] font-mono font-black text-slate-300 uppercase tracking-widest">ID: {node.code}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Active</span>
+                    <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest">Active</span>
                     <button onClick={(e) => { e.stopPropagation(); setNodes(nodes.filter((_, idx) => idx !== i)); }} className="w-10 h-10 rounded-full text-slate-200 hover:text-rose-500 transition-colors"><i className="fa-solid fa-circle-xmark"></i></button>
                   </div>
                 </div>
               )) : (
-                <div className="py-24 bg-white/50 border-4 border-dashed border-white rounded-[2rem] text-center flex flex-col items-center gap-6">
+                <div className="py-24 bg-white/50 border-4 border-dashed border-white rounded-3xl text-center flex flex-col items-center gap-6">
                   <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-slate-100 shadow-sm"><i className="fa-solid fa-chair text-3xl"></i></div>
                   <p className="text-[11px] font-black uppercase text-slate-300 tracking-[0.5em]">No tables added</p>
-                  <button onClick={() => setActiveTab('generate')} className="px-8 py-3 bg-indigo-600 text-white rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 active:scale-95 transition-all">Add First Table</button>
+                  <button onClick={() => setActiveTab('generate')} className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-indigo-100 active:scale-95 transition-all">Add First Table</button>
                 </div>
               )}
             </div>
@@ -171,14 +171,14 @@ const NodesStep: React.FC<NodesStepProps> = ({ nodes, setNodes }) => {
       {inspectingNode && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center animate-fade-in p-0">
           <div onClick={() => setInspectingNode(null)} className="absolute inset-0 bg-transparent backdrop-blur-xl" />
-          <div className="relative bg-[#F2F2F7] w-full max-w-sm rounded-t-[3rem] shadow-2xl flex flex-col p-0 animate-slide-up overflow-hidden">
+          <div className="relative bg-[#F2F2F7] w-full max-w-sm rounded-t-3xl shadow-2xl flex flex-col p-0 animate-slide-up overflow-hidden">
             <div className="w-12 h-1.5 bg-slate-300/50 rounded-full mx-auto my-5 shrink-0" />
             <header className="px-10 pb-6 shrink-0 text-center">
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">{inspectingNode.label}</h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Code: {inspectingNode.code}</p>
             </header>
             <div className="p-8 pt-0 space-y-8">
-              <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center">
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
                 <canvas ref={qrCanvasRef} className="w-48 h-48"></canvas>
               </div>
               <div className="grid grid-cols-1 gap-3">

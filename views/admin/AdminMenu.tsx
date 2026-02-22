@@ -37,6 +37,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
   const initialFormState = { 
     name: '', desc: '', ingredients: '', price: '', cat: '', 
     people: '1 Person', mins: '15', image: '', 
+    imageFile: null as File | null,
     isPopular: false, isAvailable: true, pay_as_you_order: false, parent_id: null as string | number | null,
     has_variations: false,
     optionGroups: [] as ItemOptionGroup[]
@@ -85,12 +86,18 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
     try {
       const targetCategory = cats.find(c => c.name === formData.cat);
       
+      let finalImageUrl = formData.image || 'https://picsum.photos/seed/dish/400/400';
+      
+      if (formData.imageFile) {
+        finalImageUrl = await MenuService.uploadMenuItemImage(restaurantId, formData.imageFile);
+      }
+
       const itemPayload: any = {
         name: formData.name.trim(), 
         price: Number(formData.price) || 0, 
         description: formData.desc,
         ingredients: formData.ingredients ? String(formData.ingredients).split(',').map((i: string) => ({ label: i.trim() })) : [], 
-        image_url: formData.image || 'https://picsum.photos/seed/dish/400/400',
+        image_url: finalImageUrl,
         category_id: targetCategory ? targetCategory.id : null, 
         pax: formData.has_variations ? 'Various' : formData.people, 
         serving_time: formData.has_variations ? 'Various' : formData.mins + " mins",
@@ -170,6 +177,7 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
       name: item.name, desc: item.description, ingredients: ingString, 
       price: item.price.toString(), cat: item.cat_name === 'Uncategorized' ? '' : item.cat_name, 
       people: item.pax || '1 Person', mins: (item.serving_time || '').replace(/\D/g, '') || '15', image: item.image_url, 
+      imageFile: null,
       isPopular: !!item.is_popular, 
       isAvailable: item.is_available !== undefined ? !!item.is_available : true,
       pay_as_you_order: !!item.pay_as_you_order, 

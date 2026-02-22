@@ -205,7 +205,7 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
                   </p>
                 </header>
 
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm flex flex-col gap-6">
+                <div className="bg-white p-8 rounded-3xl border border-slate-200/60 shadow-sm flex flex-col gap-6">
                     <div className="text-left space-y-1">
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Archive Summary</p>
                         <div className="flex flex-wrap gap-2">
@@ -213,7 +213,7 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
                             <span className="bg-slate-50 px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-600 border border-slate-100">{generatedQRs.length} Tables</span>
                         </div>
                     </div>
-                    <button onClick={downloadConfig} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] flex items-center justify-center gap-4 group hover:bg-black transition-all shadow-xl active:scale-95">
+                    <button onClick={downloadConfig} className="w-full py-5 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-4 group hover:bg-black transition-all shadow-lg active:scale-95">
                         <i className="fa-solid fa-file-export"></i>
                         <span className="text-[13px] font-black uppercase tracking-widest">Download Catalog</span>
                     </button>
@@ -239,7 +239,7 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
                   </p>
                 </header>
 
-                <div className="bg-[#0f172a] p-10 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group">
+                <div className="bg-[#0f172a] p-10 rounded-3xl text-white shadow-2xl relative overflow-hidden group">
                     <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-50/20 rounded-full blur-[80px]"></div>
                     <div className="relative z-10 space-y-10">
                         <div className="flex justify-between items-start">
@@ -273,10 +273,10 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
                     <div className="grid grid-cols-1 gap-3">
                         <button 
                             onClick={() => setPayMethod('gcash')}
-                            className={`p-6 rounded-[1.8rem] border-2 transition-all text-left flex items-center justify-between group ${payMethod === 'gcash' ? 'bg-white border-blue-500 shadow-xl' : 'bg-slate-100 border-transparent text-slate-400'}`}
+                            className={`p-6 rounded-2xl border-2 transition-all text-left flex items-center justify-between group ${payMethod === 'gcash' ? 'bg-white border-blue-500 shadow-xl' : 'bg-slate-100 border-transparent text-slate-400'}`}
                         >
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black ${payMethod === 'gcash' ? 'bg-[#007AFF] text-white shadow-lg shadow-blue-200' : 'bg-white text-slate-300'}`}>G</div>
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black ${payMethod === 'gcash' ? 'bg-[#007AFF] text-white shadow-lg shadow-blue-200' : 'bg-white text-slate-300'}`}>G</div>
                                 <div>
                                     <p className={`text-sm font-black uppercase ${payMethod === 'gcash' ? 'text-slate-900' : 'text-slate-400'}`}>GCash Wallet</p>
                                     <p className="text-[10px] font-bold opacity-60">Verified via Gmail</p>
@@ -287,10 +287,10 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
 
                         <button 
                             onClick={() => setPayMethod('maya')}
-                            className={`p-6 rounded-[1.8rem] border-2 transition-all text-left flex items-center justify-between group ${payMethod === 'maya' ? 'bg-white border-emerald-500 shadow-xl' : 'bg-slate-100 border-transparent text-slate-400'}`}
+                            className={`p-6 rounded-2xl border-2 transition-all text-left flex items-center justify-between group ${payMethod === 'maya' ? 'bg-white border-emerald-500 shadow-xl' : 'bg-slate-100 border-transparent text-slate-400'}`}
                         >
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black ${payMethod === 'maya' ? 'bg-[#00FF5E] text-slate-900 shadow-lg shadow-emerald-200' : 'bg-white text-slate-300'}`}>M</div>
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black ${payMethod === 'maya' ? 'bg-[#00FF5E] text-slate-900 shadow-lg shadow-emerald-200' : 'bg-white text-slate-300'}`}>M</div>
                                 <div>
                                     <p className={`text-sm font-black uppercase ${payMethod === 'maya' ? 'text-slate-900' : 'text-slate-400'}`}>Maya App</p>
                                     <p className="text-[10px] font-bold opacity-60">Verified via Gmail</p>
@@ -301,10 +301,10 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
 
                         <button 
                             onClick={() => setPayMethod('card')}
-                            className={`p-6 rounded-[1.8rem] border-2 transition-all text-left flex items-center justify-between group ${payMethod === 'card' ? 'bg-white border-indigo-600 shadow-xl' : 'bg-slate-100 border-transparent text-slate-400'}`}
+                            className={`p-6 rounded-2xl border-2 transition-all text-left flex items-center justify-between group ${payMethod === 'card' ? 'bg-white border-indigo-600 shadow-xl' : 'bg-slate-100 border-transparent text-slate-400'}`}
                         >
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg ${payMethod === 'card' ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'bg-white text-slate-300'}`}><i className="fa-solid fa-credit-card"></i></div>
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg ${payMethod === 'card' ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'bg-white text-slate-300'}`}><i className="fa-solid fa-credit-card"></i></div>
                                 <div>
                                     <p className={`text-sm font-black uppercase ${payMethod === 'card' ? 'text-slate-900' : 'text-slate-400'}`}>Credit / Debit</p>
                                     <p className="text-[10px] font-bold opacity-60">Manual Request</p>
@@ -315,7 +315,7 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
                     </div>
                 </div>
 
-                <div className="px-4 py-8 bg-white rounded-[1.8rem] border border-slate-200 flex items-start gap-4">
+                <div className="px-4 py-8 bg-white rounded-3xl border border-slate-200 flex items-start gap-4">
                     <div onClick={() => setAgreedToTerms(!agreedToTerms)} className={`w-6 h-6 rounded-lg border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-indigo-600 border-indigo-600 shadow-md' : 'bg-white border-slate-300'}`}>
                         {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
                     </div>
@@ -328,15 +328,15 @@ const CreateMenuView: React.FC<{ onCancel: () => void; onComplete: () => void }>
          )}
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 z-[110] bg-white/90 backdrop-blur-2xl border-t border-slate-200/50 p-6 md:p-8">
+      <footer className="sticky bottom-0 left-0 right-0 z-[110] bg-white/90 backdrop-blur-2xl border-t border-slate-200/50 p-6 md:p-8">
         <div className="max-w-xl mx-auto flex items-center gap-4">
           <button onClick={handleBack} className="px-6 py-4 text-[14px] font-bold text-slate-400 hover:text-slate-900 transition-colors">
             {(curStepIdx === 0 || showFaq) ? (showFaq ? 'Close' : 'Cancel') : 'Back'}
           </button>
           <button 
             onClick={step === 'payment' ? handlePaymentAction : handleNext} 
-            disabled={loading || (step === 'payment' && !agreedToTerms) || showFaq} 
-            className={`flex-1 py-5 rounded-full font-black uppercase tracking-widest text-[14px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-30 ${step === 'payment' ? 'bg-slate-900 text-white' : 'bg-[#007AFF] text-white'}`}
+            disabled={loading || (step === 'payment' && !agreedToTerms) || showFaq || (step === 'identity' && (!brand.name.trim() || !brand.email.trim()))} 
+            className={`flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-[13px] shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-30 disabled:cursor-not-allowed ${step === 'payment' ? 'bg-slate-900 text-white' : 'bg-[#007AFF] text-white'}`}
           >
             {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : <span>{step === 'payment' ? 'Request Activation' : 'Continue'}</span>}
           </button>

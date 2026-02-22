@@ -141,7 +141,7 @@ export default function AdminOrders() {
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] font-jakarta pb-40">
-      <div className="max-w-2xl mx-auto px-6 pt-12 space-y-10">
+      <div className="max-w-2xl mx-auto px-2 pt-12 space-y-10">
         <header className="px-2 text-center relative">
           <div className="space-y-3">
             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none uppercase">Live Orders</h1>
@@ -150,9 +150,6 @@ export default function AdminOrders() {
               <button onClick={() => setShowFaq(true)} className="ml-1.5 text-[#007AFF] font-bold hover:underline">FAQs</button>
             </p>
           </div>
-          <button onClick={fetchData} className="absolute top-0 right-0 w-11 h-11 bg-white rounded-2xl flex items-center justify-center text-slate-300 hover:text-indigo-600 shadow-sm border border-slate-200/60 active:rotate-180 transition-all">
-            <i className={`fa-solid fa-arrows-rotate ${isUpdating ? 'animate-spin text-indigo-600' : ''}`}></i>
-          </button>
         </header>
 
         <div className="bg-slate-200/50 p-1.5 rounded-2xl flex border border-slate-200 shadow-inner overflow-x-auto no-scrollbar gap-1" ref={tabListRef}>

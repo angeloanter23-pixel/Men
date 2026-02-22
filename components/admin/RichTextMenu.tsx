@@ -55,7 +55,7 @@ const RichTextMenu = forwardRef<HTMLDivElement, RichTextMenuProps>(({
   return (
     <div 
       ref={ref}
-      className="fixed left-0 right-0 z-[2500] flex flex-col items-center pointer-events-none px-4 transition-all duration-300 ease-out animate-fade-in"
+      className="fixed left-0 right-0 z-[5500] flex flex-col items-center pointer-events-none px-4 transition-all duration-300 ease-out animate-fade-in"
       style={{ bottom: `${keyboardOffset + 12}px` }}
     >
       <div 

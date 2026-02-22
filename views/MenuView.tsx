@@ -45,7 +45,7 @@ const MenuView: React.FC<MenuViewProps> = ({
   onSearchChange, onCategorySelect, onItemSelect 
 }) => {
   const [priceSort, setPriceSort] = useState<'asc' | 'desc' | 'none'>('none');
-  const [layout, setLayout] = useState<'default' | 'compact' | 'minimal'>('minimal');
+  const [layout, setLayout] = useState<'default' | 'compact' | 'minimal'>('compact');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Load all items once for group price calculation

@@ -108,16 +108,16 @@ const AboutView: React.FC = () => {
 
   return (
     <div className="animate-fade-in font-jakarta bg-white min-h-screen pb-40">
-      <div className="max-w-[800px] mx-auto px-10 py-24 md:py-32 space-y-20">
+      <div className="max-w-[800px] mx-auto px-6 py-16 md:py-24 space-y-16">
         
-        <header className="space-y-12">
+        <header className="space-y-8">
           <Reveal>
-            <div className="space-y-8">
+            <div className="space-y-6">
                <div className="flex items-center gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#FF6B00]"></div>
-                  <p className="text-[12px] font-bold text-[#86868B] uppercase tracking-[0.4em]">Our Story</p>
+                  <p className="text-[12px] font-bold text-[#86868B] tracking-[0.2em]">Our Story</p>
                </div>
-               <h1 className="text-[48px] md:text-[84px] font-black text-[#1D1D1F] tracking-tighter leading-[1] uppercase">
+               <h1 className="text-[42px] md:text-[72px] font-black text-[#1D1D1F] tracking-tighter leading-[1.1]">
                  {parseFormattedText(identity.title)}
                </h1>
                <div className="h-1 w-12 bg-[#FF6B00]"></div>
@@ -126,36 +126,36 @@ const AboutView: React.FC = () => {
         </header>
 
         <Reveal delay={100}>
-          <section className="space-y-8">
-            <p className="text-[22px] md:text-[28px] text-slate-800 font-bold leading-tight uppercase">
+          <section className="space-y-6">
+            <p className="text-[20px] md:text-[24px] text-slate-800 font-bold leading-tight">
               {parseFormattedText(identity.intro)}
             </p>
           </section>
         </Reveal>
 
         <Reveal delay={200}>
-          <section className="space-y-8">
-            <div className="text-[18px] text-slate-600 font-medium leading-relaxed">
+          <section className="space-y-6">
+            <div className="text-[17px] text-slate-600 font-medium leading-relaxed">
               {parseFormattedText(identity.story)}
             </div>
           </section>
         </Reveal>
 
         {identity.values?.length > 0 && (
-          <section className="space-y-12">
+          <section className="space-y-10">
              <Reveal>
-                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Core Values</h3>
+                <h3 className="text-[11px] font-bold text-slate-400 tracking-widest">Core Values</h3>
              </Reveal>
-             <div className="space-y-12">
+             <div className="space-y-8">
                 {identity.values.map((v: any, i: number) => (
                   <Reveal key={i} delay={i * 50}>
-                    <div className="flex gap-8 items-start">
+                    <div className="flex gap-6 items-start">
                        <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 shrink-0">
                           <i className={`fa-solid ${v.icon} text-lg`}></i>
                        </div>
-                       <div className="space-y-2">
-                          <h4 className="text-[17px] font-bold text-[#1D1D1F] uppercase tracking-tight leading-none">{v.label}</h4>
-                          <p className="text-[16px] text-slate-500 font-medium leading-relaxed">{v.description}</p>
+                       <div className="space-y-1">
+                          <h4 className="text-[17px] font-bold text-[#1D1D1F] tracking-tight leading-none">{v.label}</h4>
+                          <p className="text-[15px] text-slate-500 font-medium leading-relaxed">{v.description}</p>
                        </div>
                     </div>
                   </Reveal>
@@ -165,18 +165,18 @@ const AboutView: React.FC = () => {
         )}
 
         <Reveal>
-           <section className="space-y-8 pt-12 border-t border-slate-50">
-              <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">What makes us difference</h3>
-              <div className="text-[18px] text-slate-600 font-medium leading-relaxed">
+           <section className="space-y-6 pt-10 border-t border-slate-50">
+              <h3 className="text-[11px] font-bold text-slate-400 tracking-widest">What makes us different</h3>
+              <div className="text-[17px] text-slate-600 font-medium leading-relaxed">
                 {parseFormattedText(identity.different)}
               </div>
            </section>
         </Reveal>
 
         <Reveal delay={200}>
-           <div className="text-center pt-24 border-t border-slate-100">
-              <p className="text-[12px] font-bold text-slate-300 uppercase tracking-[0.8em]">{identity.thank_you}</p>
-              <div className="w-2 h-2 bg-[#FF6B00] rounded-full mx-auto mt-10 animate-pulse"></div>
+           <div className="text-center pt-16 border-t border-slate-100">
+              <p className="text-[12px] font-bold text-slate-300 tracking-[0.4em]">{identity.thank_you}</p>
+              <div className="w-2 h-2 bg-[#FF6B00] rounded-full mx-auto mt-8 animate-pulse"></div>
            </div>
         </Reveal>
       </div>

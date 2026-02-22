@@ -143,12 +143,12 @@ const InventoryStep: React.FC<InventoryStepProps> = ({ items, setItems, categori
           </p>
         </div>
         
-        <div className="bg-[#E8E8ED] p-1.5 rounded-2xl flex border border-slate-200/50 shadow-inner overflow-x-auto no-scrollbar gap-1 max-w-sm mx-auto">
+        <div className="bg-[#E8E8ED] p-1.5 rounded-xl flex border border-slate-200/50 shadow-inner overflow-x-auto no-scrollbar gap-1 max-w-sm mx-auto">
           {(['items', 'variations', 'categories'] as const).map(tab => (
             <button 
               key={tab} 
               onClick={() => setActiveTab(tab)} 
-              className={`flex-1 min-w-[110px] py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+              className={`flex-1 min-w-[110px] py-3.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
             >
               {tab === 'items' ? 'Single Food' : tab === 'variations' ? 'Dish Groups' : 'Categories'}
             </button>

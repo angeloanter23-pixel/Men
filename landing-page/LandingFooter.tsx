@@ -6,9 +6,31 @@ interface LandingFooterProps {
   onInvestmentClick?: () => void;
   onCareerClick?: () => void;
   onShopClick?: () => void;
+  onEnterpriseClick?: () => void;
+  onGuidesClick?: () => void;
+  onCaseStudiesClick?: () => void;
+  onHelpCenterClick?: () => void;
+  onPrivacyClick?: () => void;
+  onTermsClick?: () => void;
+  onNodeRegistryClick?: () => void;
+  onComplianceClick?: () => void;
 }
 
-export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateMenu, onInvestmentClick, onCareerClick, onShopClick }) => (
+export const LandingFooter: React.FC<LandingFooterProps> = ({ 
+  onStart, 
+  onCreateMenu, 
+  onInvestmentClick, 
+  onCareerClick, 
+  onShopClick,
+  onEnterpriseClick,
+  onGuidesClick,
+  onCaseStudiesClick,
+  onHelpCenterClick,
+  onPrivacyClick,
+  onTermsClick,
+  onNodeRegistryClick,
+  onComplianceClick
+}) => (
   <footer className="bg-slate-50 pt-24 pb-12 border-t border-slate-200/50 px-6 font-jakarta">
     <div className="max-w-[1100px] mx-auto">
        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 pb-20 border-b border-slate-200">
@@ -38,7 +60,7 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateM
               <li><button onClick={onStart} className="hover:text-orange-500 transition-colors border-none bg-transparent">Sandbox</button></li>
               <li><button onClick={onCreateMenu} className="hover:text-orange-500 transition-colors border-none bg-transparent">Pricing</button></li>
               <li><button onClick={onInvestmentClick} className="hover:text-orange-500 transition-colors text-orange-600 font-bold border-none bg-transparent">Investment</button></li>
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Enterprise</button></li>
+              <li><button onClick={onEnterpriseClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Enterprise</button></li>
               <li><button onClick={onShopClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Shop</button></li>
             </ul>
           </div>
@@ -48,9 +70,9 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateM
             <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-[0.3em]">Resources</h4>
             <ul className="space-y-3.5 text-[14px] font-bold text-slate-400">
               <li><button onClick={onCareerClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Careers</button></li>
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Guides</button></li>
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Case Studies</button></li>
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Help Center</button></li>
+              <li><button onClick={onGuidesClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Guides</button></li>
+              <li><button onClick={onCaseStudiesClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Case Studies</button></li>
+              <li><button onClick={onHelpCenterClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Help Center</button></li>
             </ul>
           </div>
 
@@ -58,10 +80,10 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onStart, onCreateM
           <div className="space-y-5">
             <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-[0.3em]">Corporate</h4>
             <ul className="space-y-3.5 text-[14px] font-bold text-slate-400">
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Privacy</button></li>
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Terms</button></li>
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Node Registry</button></li>
-              <li><button className="hover:text-orange-500 transition-colors border-none bg-transparent">Compliance</button></li>
+              <li><button onClick={onPrivacyClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Privacy</button></li>
+              <li><button onClick={onTermsClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Terms</button></li>
+              <li><button onClick={onNodeRegistryClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Node Registry</button></li>
+              <li><button onClick={onComplianceClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Compliance</button></li>
             </ul>
           </div>
 
