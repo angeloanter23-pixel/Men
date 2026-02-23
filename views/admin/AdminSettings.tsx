@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import * as MenuService from '../../services/menuService';
 import { encryptData, decryptData } from '../../src/utils/encryption';
 
 interface AdminSettingsProps {
@@ -51,6 +52,8 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeNameError, setStoreNameError] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState(0);
+  const [currentAction, setCurrentAction] = useState('');
   
   // Password Change State
   const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
@@ -309,19 +312,97 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
     reader.readAsText(file);
   };
 
-  const confirmImport = () => {
-    if (!importConfirmation) return;
+  const confirmImport = async () => {
+    if (!importConfirmation || !restaurantId) return;
     
     setLoading(true);
     setToast("Importing Configuration...");
+    setImportProgress(0);
     
-    if (setCategories) setCategories(importConfirmation.categories);
-    if (setMenuItems) setMenuItems(importConfirmation.items);
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    setImportConfirmation(null);
-    setLoading(false);
-    setToast("Configuration Loaded");
-    setTimeout(() => setToast(null), 3000);
+    try {
+        // 1. Get Menu ID (or create if missing)
+        setCurrentAction("Initializing...");
+        await delay(500);
+        let { data: menus } = await supabase.from('menus').select('id').eq('restaurant_id', restaurantId).limit(1);
+        let menuId = menus && menus[0]?.id;
+        
+        if (!menuId) {
+            const { data: newMenu, error: menuErr } = await supabase.from('menus').insert({ restaurant_id: restaurantId, name: 'Main Menu' }).select('id');
+            if (menuErr) throw new Error("Failed to create menu registry: " + menuErr.message);
+            menuId = newMenu && newMenu[0]?.id;
+        }
+
+        // 2. Insert Categories (Append)
+        setCurrentAction("Adding Categories...");
+        await delay(500);
+        
+        const categoriesToInsert = importConfirmation.categories.map(c => ({
+            id: c.id,
+            menu_id: menuId,
+            name: c.name,
+            icon: c.icon || 'fa-utensils',
+            order_index: 0 // You might want to preserve order if available
+        }));
+
+        const { error: insCatsErr } = await supabase.from('categories').insert(categoriesToInsert);
+        if (insCatsErr) throw new Error("Failed to insert categories: " + insCatsErr.message);
+
+        // 3. Insert Items (Append one by one to show progress)
+        const totalItems = importConfirmation.items.length;
+        
+        for (let i = 0; i < totalItems; i++) {
+            const item = importConfirmation.items[i];
+            setCurrentAction(`Adding ${item.name}...`);
+            
+            const { error: insItemErr } = await supabase.from('items').insert({
+                id: item.id,
+                restaurant_id: restaurantId,
+                category_id: item.category_id,
+                name: item.name,
+                price: item.price,
+                description: item.description,
+                image_url: item.image_url,
+                is_available: item.is_available,
+                is_popular: item.is_popular,
+                pax: item.pax,
+                serving_time: item.serving_time,
+                has_variations: item.has_variations,
+                pay_as_you_order: item.pay_as_you_order || false
+            });
+
+            if (insItemErr) throw new Error(`Failed to insert ${item.name}: ${insItemErr.message}`);
+
+            if (item.option_groups && item.option_groups.length > 0) {
+                await MenuService.saveItemOptions(item.id, item.option_groups);
+            }
+            
+            setImportProgress(Math.round(((i + 1) / totalItems) * 100));
+            // "Don't make too fast to see" - add delay per item
+            await delay(300); 
+        }
+
+        setCurrentAction("Finalizing...");
+        await delay(500);
+
+        // Update local state (append to existing)
+        if (setCategories) setCategories(prev => [...prev, ...importConfirmation.categories]);
+        if (setMenuItems) setMenuItems(prev => [...prev, ...importConfirmation.items]);
+
+        setImportConfirmation(null);
+        setToast("Configuration Loaded Successfully");
+        setTimeout(() => setToast(null), 3000);
+
+    } catch (err: any) {
+        console.error("Import Failed:", err);
+        alert("Import Failed: " + err.message);
+        setToast("Import Failed");
+    } finally {
+        setLoading(false);
+        setImportProgress(0);
+        setCurrentAction('');
+    }
   };
 
   return (
@@ -673,7 +754,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                 <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex gap-3">
                     <i className="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
                     <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                        This action will <strong>overwrite</strong> your current menu configuration. All existing categories and items will be replaced.
+                        This action will <strong>add</strong> to your current menu configuration. Existing items will be preserved.
                     </p>
                 </div>
 
@@ -693,6 +774,43 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                 </div>
             </div>
         </SettingsModal>
+      )}
+
+      {loading && importProgress > 0 && (
+        <div className="fixed inset-0 z-[6000] bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fade-in">
+            <div className="bg-white w-full rounded-t-2xl p-8 shadow-2xl flex flex-col items-center animate-slide-up pb-12">
+                <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4 relative">
+                    <i className="fa-solid fa-cloud-arrow-up text-indigo-600 text-2xl animate-bounce"></i>
+                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+                        <path
+                            className="text-indigo-100"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        />
+                        <path
+                            className="text-indigo-600 transition-all duration-500 ease-out"
+                            strokeDasharray={`${importProgress}, 100`}
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-1">Importing Data</h3>
+                <p className="text-slate-500 text-sm font-medium mb-6">{currentAction || "Please wait..."}</p>
+                
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden max-w-md">
+                    <div 
+                        className="bg-indigo-600 h-full rounded-full transition-all duration-500 ease-out" 
+                        style={{ width: `${importProgress}%` }}
+                    ></div>
+                </div>
+                <p className="text-xs font-bold text-slate-400 mt-2 text-right w-full max-w-md">{importProgress}%</p>
+            </div>
+        </div>
       )}
     </div>
   );

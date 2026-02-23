@@ -190,14 +190,6 @@ const DishModal: React.FC<DishModalProps> = ({
                     </div>
                   </SettingRow>
                 )}
-                
-                {!isGroupHeader && (
-                  <SettingRow icon="fa-credit-card" color="bg-blue-600" label="Payment Required" last>
-                    <div onClick={() => setFormData({...formData, pay_as_you_order: !formData.pay_as_you_order})} className={`w-10 h-5 rounded-full transition-all flex items-center p-1 cursor-pointer shadow-inner ${formData.pay_as_you_order ? 'bg-[#007AFF]' : 'bg-slate-300'}`}>
-                      <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-lg transform transition-all ${formData.pay_as_you_order ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                    </div>
-                  </SettingRow>
-                )}
               </div>
 
               <div className="space-y-3 pb-4">

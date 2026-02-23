@@ -10,6 +10,30 @@ interface DishesViewProps {
   filteredHistory: SalesRecord[];
 }
 
+const ListRow: React.FC<{ 
+  icon: string; 
+  color: string; 
+  label: string; 
+  value: string; 
+  subValue?: string;
+  isLast?: boolean 
+}> = ({ icon, color, label, value, subValue, isLast }) => (
+  <div className={`flex items-center justify-between py-4 px-6 ${!isLast ? 'border-b border-slate-100' : ''}`}>
+    <div className="flex items-center gap-4 min-w-0">
+      <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white shadow-sm shrink-0`}>
+        <i className={`fa-solid ${icon} text-[14px]`}></i>
+      </div>
+      <div className="flex flex-col min-w-0">
+        <span className="text-[15px] font-semibold text-slate-800 tracking-tight truncate">{label}</span>
+        {subValue && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{subValue}</span>}
+      </div>
+    </div>
+    <div className="flex items-center gap-3 shrink-0 ml-4">
+      <span className="text-[15px] font-black text-slate-900 tabular-nums">{value}</span>
+    </div>
+  </div>
+);
+
 const DishesView: React.FC<DishesViewProps> = ({ 
   menuItems, 
   selectedProductId, 
@@ -20,13 +44,15 @@ const DishesView: React.FC<DishesViewProps> = ({
   const selectedItemName = selectedProductId === 'global' ? 'Full Catalog' : menuItems.find(i => i.id === selectedProductId)?.name || 'Unknown Item';
 
   const topSellers = useMemo(() => {
-    const map: Record<string, { name: string; qty: number; rev: number }> = {};
+    const map: Record<string, { name: string; qty: number; rev: number; paidQty: number; servedQty: number }> = {};
     filteredHistory.forEach(r => {
-        if (!map[r.itemId]) map[r.itemId] = { name: r.itemName, qty: 0, rev: 0 };
+        if (!map[r.itemId]) map[r.itemId] = { name: r.itemName, qty: 0, rev: 0, paidQty: 0, servedQty: 0 };
         map[r.itemId].qty += r.quantity;
         map[r.itemId].rev += r.amount;
+        if (r.paymentStatus === 'Paid') map[r.itemId].paidQty += r.quantity;
+        if (r.orderStatus === 'Served') map[r.itemId].servedQty += r.quantity;
     });
-    return Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 5);
+    return Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 10);
   }, [filteredHistory]);
 
   return (
@@ -67,22 +93,17 @@ const DishesView: React.FC<DishesViewProps> = ({
       {selectedProductId === 'global' && topSellers.length > 0 && (
         <div className="space-y-4">
             <h3 className="px-6 text-[11px] font-black uppercase text-slate-400 tracking-widest">Top Sellers</h3>
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-50">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 {topSellers.map((item, idx) => (
-                    <div key={idx} className="px-6 py-5 flex items-center justify-between group hover:bg-slate-50/50 transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400">
-                                #{idx + 1}
-                            </div>
-                            <div>
-                                <p className="text-[14px] font-black text-slate-800 uppercase leading-none mb-1">{item.name}</p>
-                                <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">₱{item.rev.toLocaleString()}</p>
-                            </div>
-                        </div>
-                        <div className="bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
-                            <span className="text-[10px] font-black text-indigo-600 uppercase">{item.qty} sold</span>
-                        </div>
-                    </div>
+                    <ListRow 
+                        key={idx}
+                        icon="fa-utensils"
+                        color={idx === 0 ? "bg-amber-400" : idx === 1 ? "bg-slate-400" : idx === 2 ? "bg-orange-700" : "bg-indigo-500"}
+                        label={item.name}
+                        value={`${item.qty} orders`}
+                        subValue={`₱${item.rev.toLocaleString()}`}
+                        isLast={idx === topSellers.length - 1}
+                    />
                 ))}
             </div>
         </div>

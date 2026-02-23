@@ -59,19 +59,19 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
   }
 
   const OrderItem: React.FC<{ order: any; showLabel?: boolean }> = ({ order, showLabel }) => (
-    <div onClick={() => setSelectedOrder(order)} className="bg-slate-50 p-4 flex items-center justify-between cursor-pointer active:bg-slate-100 transition-colors border-b border-slate-100 last:border-0">
+    <div onClick={() => setSelectedOrder(order)} className="bg-white p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 hover:bg-slate-50 group">
         <div className="flex items-center gap-4 min-w-0">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-slate-600 text-xs shrink-0 border border-slate-100">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border transition-colors ${order.order_status === 'Served' ? 'bg-slate-50 text-slate-400 border-slate-200' : 'bg-orange-50 text-orange-600 border-orange-100 group-hover:bg-orange-100'}`}>
             {order.quantity}x
             </div>
             <div className="min-w-0">
-            <h4 className="font-bold text-slate-900 text-sm leading-tight truncate">{order.item_name}</h4>
-            {showLabel && <p className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1"><i className="fa-solid fa-user text-[8px]"></i> {order.customer_name || 'Guest'}</p>}
+            <h4 className="font-bold text-slate-900 text-[15px] leading-tight truncate">{order.item_name}</h4>
+            {showLabel && <p className="text-[10px] text-slate-400 font-medium mt-1 flex items-center gap-1.5"><i className="fa-solid fa-user text-[9px]"></i> {order.customer_name || 'Guest'}</p>}
             </div>
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${order.order_status === 'Served' ? 'text-emerald-500' : 'text-orange-500'}`}>{order.order_status}</span>
-            <span className="font-bold text-slate-900 text-xs">₱{order.amount.toLocaleString()}</span>
+        <div className="flex flex-col items-end gap-1.5 shrink-0 ml-4">
+            <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${order.order_status === 'Served' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>{order.order_status}</span>
+            <span className="font-black text-slate-900 text-sm tracking-tight">₱{order.amount.toLocaleString()}</span>
         </div>
     </div>
   );
@@ -95,25 +95,17 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
   }, [lastScrollY]);
 
   return (
-    <div className="animate-fade-in bg-white min-h-screen pb-64 font-jakarta relative">
+    <div className="animate-fade-in bg-slate-50 min-h-screen pb-64 font-jakarta relative">
       <div className="max-w-[800px] mx-auto">
         
         {/* HEADER */}
-        <header className="px-6 pt-16 pb-10 text-center relative border-b border-slate-100">
+        <header className="px-6 pt-16 pb-10 text-center relative border-b border-slate-200/60 bg-white">
           <h1 className="text-[32px] font-black text-slate-900 tracking-tight leading-none mb-4 uppercase">
             Live Activity
           </h1>
           <p className="text-slate-400 text-[15px] font-medium leading-relaxed px-10">
             Real-time updates from the kitchen
           </p>
-
-          <button 
-            onClick={() => setShowStatusModal(true)}
-            className="absolute right-6 top-6 flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full shadow-sm border border-orange-100 active:scale-95 transition-all"
-          >
-            <i className="fa-solid fa-fire-burner text-orange-500 text-[10px]"></i>
-            <span className="text-[10px] font-bold text-orange-500 uppercase tracking-wide">Status</span>
-          </button>
         </header>
 
         <div className="px-6 py-10 space-y-12">
@@ -121,10 +113,10 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
           <section>
             <div className="mb-4 px-2 flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">My Orders</h2>
-              <button onClick={() => setShowStatusModal(true)} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">status &gt;</button>
+              <button onClick={() => setShowStatusModal(true)} className="text-[10px] font-bold text-orange-500 uppercase tracking-wider flex items-center gap-1">status <i className="fa-solid fa-chevron-right text-[8px]"></i></button>
             </div>
             
-            <div className="bg-slate-50 rounded-2xl shadow-sm overflow-hidden border border-slate-100">
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200/60">
               {myOrders.length > 0 ? (
                 myOrders.map(order => <OrderItem key={order.id} order={order} />)
               ) : (
@@ -140,7 +132,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Group Orders</span>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl shadow-sm overflow-hidden border border-slate-100">
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200/60">
               {groupOrders.length > 0 ? (
                 groupOrders.map(order => <OrderItem key={order.id} order={order} showLabel={true} />)
               ) : (

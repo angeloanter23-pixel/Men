@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import * as MenuService from '../../services/menuService';
 
 interface LiveOrdersConsoleProps {
@@ -19,6 +19,12 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [now, setNow] = useState(Date.now());
   
+  // Selection Mode State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string | number>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  
   // Local state for pending changes
   const [localNote, setLocalNote] = useState('');
   const [localStatus, setLocalStatus] = useState('');
@@ -30,6 +36,53 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Reset selection mode when orders change or filter changes
+  useEffect(() => {
+      if (orders.length === 0) {
+          setIsSelectionMode(false);
+          setSelectedOrderIds(new Set());
+      }
+  }, [orders]);
+
+  const handleOrderInteraction = (order: any, type: 'click' | 'press') => {
+      if (isSelectionMode) {
+          toggleSelection(order.id);
+      } else {
+          if (type === 'click') {
+              handleOrderClick(order);
+          } else if (type === 'press') {
+              setIsSelectionMode(true);
+              toggleSelection(order.id);
+          }
+      }
+  };
+
+  const handleTouchStart = (orderId: string | number) => {
+      if (!isSelectionMode) {
+          longPressTimer.current = setTimeout(() => {
+              handleOrderInteraction({ id: orderId }, 'press');
+          }, 500);
+      }
+  };
+
+  const handleTouchEnd = () => {
+      if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+      }
+  };
+
+  const toggleSelection = (id: string | number) => {
+      setSelectedOrderIds(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(id)) newSet.delete(id);
+          else newSet.add(id);
+          
+          if (newSet.size === 0) setIsSelectionMode(false);
+          return newSet;
+      });
+  };
 
   const handleOrderClick = (order: any) => {
     setSelectedOrder(order);
@@ -87,6 +140,23 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleBulkDelete = async () => {
+      setIsSaving(true);
+      try {
+          for (const id of Array.from(selectedOrderIds)) {
+              await MenuService.deleteOrder(id);
+          }
+          onRefresh();
+          setShowBulkDeleteConfirm(false);
+          setIsSelectionMode(false);
+          setSelectedOrderIds(new Set());
+      } catch (e) {
+          console.error("Bulk delete failed", e);
+      } finally {
+          setIsSaving(false);
+      }
   };
 
   const getFormattedTime = (ts: string) => {
@@ -148,42 +218,63 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
     <div className="space-y-6 animate-fade-in font-jakarta">
       <div className="flex items-center justify-between px-4">
         <p className="text-[11px] font-bold text-slate-400 tracking-tight">
-          {processedOrders.length} {processedOrders.length === 1 ? 'order' : 'orders'} total
+          {isSelectionMode ? `${selectedOrderIds.size} selected` : `${processedOrders.length} ${processedOrders.length === 1 ? 'order' : 'orders'} total`}
         </p>
         
         <div className="bg-slate-200/50 p-1 rounded-xl flex border border-slate-200/60 shadow-inner">
-          <button 
-            onClick={onRefresh}
-            className="w-9 h-9 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-indigo-600 active:rotate-180 duration-500"
-          >
-            <i className="fa-solid fa-rotate text-xs"></i>
-          </button>
-          <div className="w-px h-4 bg-slate-300 mx-1 self-center opacity-40"></div>
-          <button 
-            onClick={() => setSortMode('time')}
-            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${sortMode === 'time' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            <i className="fa-solid fa-clock-rotate-left text-xs"></i>
-          </button>
-          <button 
-            onClick={() => setSortMode('table')}
-            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${sortMode === 'table' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            <i className="fa-solid fa-chair text-xs"></i>
-          </button>
-          <div className="w-px h-4 bg-slate-300 mx-1 self-center opacity-40"></div>
-          <button 
-            onClick={() => setShowStatusModal(true)}
-            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${statusFilter !== 'All' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            <i className="fa-solid fa-filter text-xs"></i>
-          </button>
-          <button 
-            onClick={() => setShowFinished(!showFinished)}
-            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${showFinished ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            <i className={`fa-solid ${showFinished ? 'fa-circle-check' : 'fa-eye-slash'} text-xs`}></i>
-          </button>
+          {isSelectionMode ? (
+              <>
+                <button 
+                    onClick={() => { setIsSelectionMode(false); setSelectedOrderIds(new Set()); }}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-slate-600"
+                >
+                    <i className="fa-solid fa-xmark text-xs"></i>
+                </button>
+                <div className="w-px h-4 bg-slate-300 mx-1 self-center opacity-40"></div>
+                <button 
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    disabled={selectedOrderIds.size === 0}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center transition-all bg-rose-500 text-white shadow-sm disabled:opacity-50 disabled:bg-slate-300"
+                >
+                    <i className="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </>
+          ) : (
+              <>
+                <button 
+                    onClick={onRefresh}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-indigo-600 active:rotate-180 duration-500"
+                >
+                    <i className="fa-solid fa-rotate text-xs"></i>
+                </button>
+                <div className="w-px h-4 bg-slate-300 mx-1 self-center opacity-40"></div>
+                <button 
+                    onClick={() => setSortMode('time')}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${sortMode === 'time' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <i className="fa-solid fa-clock-rotate-left text-xs"></i>
+                </button>
+                <button 
+                    onClick={() => setSortMode('table')}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${sortMode === 'table' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <i className="fa-solid fa-chair text-xs"></i>
+                </button>
+                <div className="w-px h-4 bg-slate-300 mx-1 self-center opacity-40"></div>
+                <button 
+                    onClick={() => setShowStatusModal(true)}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${statusFilter !== 'All' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <i className="fa-solid fa-filter text-xs"></i>
+                </button>
+                <button 
+                    onClick={() => setShowFinished(!showFinished)}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${showFinished ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <i className={`fa-solid ${showFinished ? 'fa-circle-check' : 'fa-eye-slash'} text-xs`}></i>
+                </button>
+              </>
+          )}
         </div>
       </div>
 
@@ -201,13 +292,26 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
               {group.orders.map(order => {
                 const isServed = order.order_status === 'Served';
                 const isPending = order.order_status === 'Pending' || !order.order_status;
+                const isSelected = selectedOrderIds.has(order.id);
+                
                 return (
-                  <button 
+                  <div 
                     key={order.id} 
-                    onClick={() => handleOrderClick(order)}
-                    className={`w-full px-3 py-3.5 flex items-center justify-between active:bg-slate-50 transition-colors text-left relative group ${isServed ? 'opacity-40 grayscale-[0.5]' : ''}`}
+                    className={`w-full px-3 py-3.5 flex items-center justify-between active:bg-slate-50 transition-colors text-left relative group select-none ${isServed ? 'opacity-40 grayscale-[0.5]' : ''} ${isSelected ? 'bg-indigo-50/50' : ''}`}
+                    onClick={() => handleOrderInteraction(order, 'click')}
+                    onTouchStart={() => handleTouchStart(order.id)}
+                    onTouchEnd={handleTouchEnd}
+                    onMouseDown={() => handleTouchStart(order.id)}
+                    onMouseUp={handleTouchEnd}
+                    onMouseLeave={handleTouchEnd}
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
+                      {isSelectionMode && (
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'}`}>
+                              {isSelected && <i className="fa-solid fa-check text-white text-[10px]"></i>}
+                          </div>
+                      )}
+                      
                       <div className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border transition-all ${isServed ? 'bg-slate-50 border-slate-200 text-slate-400' : isPending ? 'bg-rose-50 border-rose-100 text-rose-500 shadow-lg shadow-rose-100/50' : 'bg-indigo-50 border-indigo-100 text-indigo-600'}`}>
                         <span className="text-[13px] font-bold leading-none">x{order.quantity}</span>
                       </div>
@@ -239,7 +343,7 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
                           </span>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -425,6 +529,36 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
                     </button>
                     <button 
                         onClick={() => setShowDeleteConfirm(false)}
+                        className="w-full py-4 bg-slate-100 text-slate-500 rounded-xl font-bold text-[12px] tracking-widest active:scale-95 transition-all"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center animate-fade-in font-jakarta">
+            <div onClick={() => setShowBulkDeleteConfirm(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+            <div className="relative bg-white w-full max-w-lg rounded-t-2xl p-6 pb-10 shadow-2xl animate-slide-up space-y-6">
+                <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center mx-auto text-xl">
+                    <i className="fa-solid fa-trash-can"></i>
+                </div>
+                <div className="text-center space-y-1">
+                    <h3 className="text-xl font-bold tracking-tight">Delete live orders?</h3>
+                    <p className="text-slate-500 text-sm font-medium leading-relaxed px-4">This will permanently delete {selectedOrderIds.size} selected orders.</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <button 
+                        onClick={handleBulkDelete}
+                        disabled={isSaving}
+                        className="w-full py-4 bg-rose-600 text-white rounded-xl font-bold text-[12px] tracking-widest shadow-xl shadow-rose-200 active:scale-95 transition-all"
+                    >
+                        {isSaving ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Confirm delete'}
+                    </button>
+                    <button 
+                        onClick={() => setShowBulkDeleteConfirm(false)}
                         className="w-full py-4 bg-slate-100 text-slate-500 rounded-xl font-bold text-[12px] tracking-widest active:scale-95 transition-all"
                     >
                         Cancel

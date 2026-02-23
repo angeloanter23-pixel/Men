@@ -54,8 +54,7 @@ export default function AdminAnalytics({
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('restaurant_id', restaurantId)
-        .eq('payment_status', 'Paid');
+        .eq('restaurant_id', restaurantId);
 
       if (error) throw error;
 
@@ -67,7 +66,7 @@ export default function AdminAnalytics({
           itemName: o.item_name,
           categoryName: o.category_name || 'Uncategorized',
           quantity: o.quantity,
-          paymentStatus: 'Paid',
+          paymentStatus: o.payment_status || 'Unpaid',
           orderStatus: o.order_status
         }));
         setDbSales(mappedSales);
@@ -104,16 +103,20 @@ export default function AdminAnalytics({
     });
   }, [dbSales, salesHistory, dateFilter]);
 
-  const dailyTotal = useMemo(() => {
-    return filteredHistory.reduce((s, r) => s + r.amount, 0);
+  const paidHistory = useMemo(() => {
+    return filteredHistory.filter(r => r.paymentStatus === 'Paid');
   }, [filteredHistory]);
+
+  const dailyTotal = useMemo(() => {
+    return paidHistory.reduce((s, r) => s + r.amount, 0);
+  }, [paidHistory]);
 
   const handleTabClick = (tab: AnalyticsTab, e: React.MouseEvent<HTMLButtonElement>) => {
     setActiveTab(tab);
     e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   };
 
-  const getHourlyData = (productId: number | 'global') => {
+  const getHourlyData = (productId: number | 'global', sourceData: SalesRecord[]) => {
     const labels = [];
     const results = [];
     
@@ -125,7 +128,7 @@ export default function AdminAnalytics({
         results.push(0);
     }
 
-    filteredHistory.forEach(record => {
+    sourceData.forEach(record => {
       if (productId === 'global' || record.itemId === productId) {
         const recordDate = new Date(record.timestamp);
         const hour = recordDate.getHours();
@@ -181,7 +184,7 @@ export default function AdminAnalytics({
 
     if (activeTab === 'Revenue' && chartRefs.revenue.current) {
       if (chartInstances.current.revenue) chartInstances.current.revenue.destroy();
-      const { results, labels } = getHourlyData('global');
+      const { results, labels } = getHourlyData('global', paidHistory);
       const ctx = chartRefs.revenue.current.getContext('2d');
       if (ctx) {
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
@@ -212,7 +215,7 @@ export default function AdminAnalytics({
 
     if (activeTab === 'Dishes' && chartRefs.product.current) {
       if (chartInstances.current.product) chartInstances.current.product.destroy();
-      const { results, labels } = getHourlyData(selectedProductId);
+      const { results, labels } = getHourlyData(selectedProductId, filteredHistory);
       const ctx = chartRefs.product.current.getContext('2d');
       if (ctx) {
         chartInstances.current.product = new Chart(ctx, {
@@ -234,7 +237,7 @@ export default function AdminAnalytics({
     if (activeTab === 'Sections' && chartRefs.pie.current) {
       if (chartInstances.current.pie) chartInstances.current.pie.destroy();
       const catMap: Record<string, number> = {};
-      filteredHistory.forEach(r => catMap[r.categoryName] = (catMap[r.categoryName] || 0) + r.amount);
+      paidHistory.forEach(r => catMap[r.categoryName] = (catMap[r.categoryName] || 0) + r.amount);
       const ctx = chartRefs.pie.current.getContext('2d');
       if (ctx) {
         chartInstances.current.pie = new Chart(ctx, {
@@ -290,7 +293,7 @@ export default function AdminAnalytics({
         });
       }
     }
-  }, [activeTab, selectedProductId, dateFilter, dbSales, salesHistory, filteredHistory, feedbacks, appTheme]);
+  }, [activeTab, selectedProductId, dateFilter, dbSales, salesHistory, filteredHistory, paidHistory, feedbacks, appTheme]);
 
   const formattedDate = useMemo(() => {
     const d = new Date(dateFilter);
@@ -372,7 +375,7 @@ export default function AdminAnalytics({
       </header>
 
       <div className="max-w-lg mx-auto px-4">
-        {activeTab === 'Revenue' && <RevenueView filteredHistory={filteredHistory} chartRef={chartRefs.revenue} />}
+        {activeTab === 'Revenue' && <RevenueView filteredHistory={paidHistory} chartRef={chartRefs.revenue} />}
 
         {activeTab === 'Dishes' && (
           <DishesView 
@@ -385,7 +388,7 @@ export default function AdminAnalytics({
         )}
 
         {activeTab === 'Sections' && ( 
-          <SectionsView filteredHistory={filteredHistory} chartRef={chartRefs.pie} />
+          <SectionsView filteredHistory={paidHistory} chartRef={chartRefs.pie} />
         )}
 
         {activeTab === 'Feedbacks' && (
