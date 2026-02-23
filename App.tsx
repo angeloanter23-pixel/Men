@@ -147,6 +147,16 @@ export default function App() {
     const hashParts = hash.split('/');
     const route = (hashParts[0] || 'landing') as ViewState;
     if (route === 'article' && hashParts[1]) setSelectedArticleId(hashParts[1]);
+    
+    // Check for token in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token && !activeSession) {
+        setInitialTokenFromUrl(token);
+        setCurrentView('qr-verify');
+        return;
+    }
+
     setCurrentView(route);
   };
 

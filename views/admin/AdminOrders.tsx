@@ -100,7 +100,7 @@ export default function AdminOrders() {
     const threads: Record<string, boolean> = {};
     messages.forEach(m => {
         if (m.sender === 'waiter') return;
-        const key = m.session_id || m.table_number || 'guest-unidentified';
+        const key = m.device_id || m.session_id || m.table_number || 'guest-unidentified';
         if (m.sender === 'guest' && m.is_read === false) {
             threads[key] = true;
         }

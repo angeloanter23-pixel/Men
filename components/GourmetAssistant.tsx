@@ -27,24 +27,34 @@ const GourmetAssistantComponent: React.FC<SupportHubProps> = ({ isOpen, onClose,
     }
   }, [messages]);
 
+  const getDeviceId = () => {
+      let id = localStorage.getItem('foodie_device_id');
+      if (!id) {
+          id = `dev_${Math.random().toString(36).substring(2, 15)}_${Date.now().toString(36)}`;
+          localStorage.setItem('foodie_device_id', id);
+      }
+      return id;
+  };
+
   useEffect(() => {
     if (!restaurantId || mode !== 'staff') return;
+    const deviceId = getDeviceId();
     
     const channel = MenuService.supabase.channel('guest-chat-live-old')
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
         table: 'messages', 
-        filter: `restaurant_id=eq.${restaurantId}` 
+        filter: `device_id=eq.${deviceId}` 
       }, (payload) => {
-        if (payload.new.table_number === tableNumber && payload.new.sender !== 'guest') {
+        if (payload.new.sender !== 'guest') {
             setMessages(prev => [...prev, { role: payload.new.sender as any, text: payload.new.text }]);
         }
       })
       .subscribe();
 
     return () => { MenuService.supabase.removeChannel(channel); };
-  }, [restaurantId, mode, tableNumber]);
+  }, [restaurantId, mode]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -60,7 +70,8 @@ const GourmetAssistantComponent: React.FC<SupportHubProps> = ({ isOpen, onClose,
                 table_number: tableNumber,
                 customer_name: 'Guest',
                 text: userMsg,
-                sender: 'guest'
+                sender: 'guest',
+                device_id: getDeviceId()
             });
         } catch (e) {
             console.error("Message delivery failed");

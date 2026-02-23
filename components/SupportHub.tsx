@@ -66,7 +66,7 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
             const { data, error } = await MenuService.supabase
                 .from('messages')
                 .select('*')
-                .eq('session_id', sessionId)
+                .eq('device_id', getDeviceId())
                 .order('created_at', { ascending: true });
             
             if (error) throw error;
@@ -96,8 +96,9 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
 
   useEffect(() => {
     if (!restaurantId || !isOpen || !sessionId) return;
-    const channel = MenuService.supabase.channel(`guest-hub-${sessionId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `session_id=eq.${sessionId}` }, (payload) => {
+    const deviceId = getDeviceId();
+    const channel = MenuService.supabase.channel(`guest-hub-${deviceId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `device_id=eq.${deviceId}` }, (payload) => {
         const msg = payload.new;
         const decodedText = MenuService.decodeMessage(msg.text);
         

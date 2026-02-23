@@ -22,10 +22,15 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
   const requestRef = useRef<number>(null);
 
   useEffect(() => {
-    if (mode === 'scan') startCamera();
-    else stopCamera();
+    if (initialToken && !detectedToken) {
+        handleTokenDetected(initialToken);
+    } else if (mode === 'scan') {
+        startCamera();
+    } else {
+        stopCamera();
+    }
     return () => stopCamera();
-  }, [mode]);
+  }, [mode, initialToken, detectedToken]);
 
   const stopCamera = () => {
     if (requestRef.current) cancelAnimationFrame(requestRef.current);

@@ -37,12 +37,12 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const updateMessageReadStatus = async (sessionId: string, status: boolean) => {
+  const updateMessageReadStatus = async (deviceId: string, status: boolean) => {
     try {
         await supabase
             .from('messages')
             .update({ is_read: status })
-            .eq('session_id', sessionId)
+            .eq('device_id', deviceId)
             .eq('sender', 'guest');
         onRefresh();
     } catch (e) {
@@ -53,7 +53,7 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
   const handleSelectThread = (thread: any) => {
       setSelectedChatThread(thread);
       if (thread.unread) {
-          updateMessageReadStatus(thread.session_id, true);
+          updateMessageReadStatus(thread.device_id, true);
       }
   };
 
@@ -73,7 +73,7 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
             sender: 'admin', 
             session_id: selectedChatThread.session_id,
             qr_token: selectedChatThread.qr_token || '',
-            device_id: 'admin-console',
+            device_id: selectedChatThread.device_id,
             is_read: true
         });
         onRefresh();
@@ -84,9 +84,9 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
     }
   };
 
-  const handleDeleteConversation = async (sessionId: string) => {
+  const handleDeleteConversation = async (deviceId: string) => {
     try {
-        await MenuService.deleteConversation(sessionId);
+        await supabase.from('messages').delete().eq('device_id', deviceId);
         setThreadToDelete(null);
         onRefresh();
     } catch (e) {
@@ -98,9 +98,9 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
     const threads: Record<string, any> = {};
     messages.forEach(m => {
         if (m.sender === 'waiter') return;
-        const key = m.session_id || m.table_number || 'guest-unidentified';
+        const key = m.device_id || m.session_id || m.table_number || 'guest-unidentified';
         if (!threads[key]) {
-            threads[key] = { id: key, table: m.table_number, latest: m, count: 0, session_id: m.session_id, unread: false };
+            threads[key] = { id: key, table: m.table_number, latest: m, count: 0, session_id: m.session_id, device_id: m.device_id, unread: false };
         }
         threads[key].count++;
         if (new Date(m.created_at) >= new Date(threads[key].latest.created_at)) {
@@ -172,7 +172,7 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
                       <div className="w-16" />
                   </header>
                   <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-8 space-y-4 no-scrollbar">
-                      {messages.filter(m => m.session_id === selectedChatThread.session_id && (m.sender === 'guest' || m.sender === 'admin')).map((m, i) => (
+                      {messages.filter(m => m.device_id === selectedChatThread.device_id && (m.sender === 'guest' || m.sender === 'admin')).map((m, i) => (
                           <div key={m.id || i} className={`flex ${m.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[75%] px-5 py-3 rounded-[2rem] text-[15px] shadow-sm ${m.sender === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
                                   <p>{m.text}</p>
@@ -203,7 +203,7 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
                             <h4 className="text-sm font-bold text-slate-900">Manage {threadActionTarget.table}</h4>
                         </div>
                         <button 
-                            onClick={() => { updateMessageReadStatus(threadActionTarget.session_id, !threadActionTarget.unread); setThreadActionTarget(null); }} 
+                            onClick={() => { updateMessageReadStatus(threadActionTarget.device_id, !threadActionTarget.unread); setThreadActionTarget(null); }} 
                             className="w-full py-5 text-[#007AFF] font-bold text-[18px] active:bg-slate-100 transition-colors"
                         >
                             Mark as {threadActionTarget.unread ? 'Read' : 'Unread'}
@@ -239,7 +239,7 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
                         </div>
                         <div className="p-4 border-t border-slate-100 flex flex-col gap-2">
                             <button 
-                                onClick={() => handleDeleteConversation(threadToDelete.session_id)} 
+                                onClick={() => handleDeleteConversation(threadToDelete.device_id)} 
                                 className="w-full py-5 bg-rose-600 text-white rounded-2xl font-black text-[14px] uppercase tracking-[0.2em] shadow-xl shadow-rose-100 active:scale-95 transition-all"
                             >
                                 Permanently Purge
