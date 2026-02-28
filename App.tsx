@@ -11,6 +11,7 @@ import SupportHub from './components/SupportHub';
 import BottomNav from './components/BottomNav';
 import VariationDrawer from './components/VariationDrawer';
 import FeedbackForm from './components/FeedbackForm';
+import WelcomeModal from './components/WelcomeModal';
 
 import MenuView from './views/MenuView';
 import PremiumMenuView from './views/PremiumMenuView';
@@ -60,6 +61,7 @@ export default function App() {
   const [activeSession, setActiveSession] = useState<any>(null);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [initialTokenFromUrl, setInitialTokenFromUrl] = useState<string | undefined>(undefined);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const [appTheme, setAppTheme] = useState<any>({ 
     primary_color: '#FF6B00', 
@@ -143,17 +145,42 @@ export default function App() {
   };
 
   const syncStateWithURL = async () => {
+    const path = window.location.pathname.replace(/^\//, '');
     const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
     const hashParts = hash.split('/');
     const route = (hashParts[0] || 'landing') as ViewState;
     if (route === 'article' && hashParts[1]) setSelectedArticleId(hashParts[1]);
     
-    // Check for token in URL parameters
+    // Check for token in URL parameters or path
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if (token && !activeSession) {
+    const token = urlParams.get('token') || (path.length === 6 ? path : null);
+    const restaurantId = urlParams.get('restaurant');
+    
+    const hasSession = !!localStorage.getItem('foodie_active_session');
+    
+    if (token && !hasSession) {
         setInitialTokenFromUrl(token);
         setCurrentView('qr-verify');
+        window.history.replaceState(null, '', '/');
+        return;
+    }
+
+    if (restaurantId && !hasSession) {
+        const dummySession = {
+            id: `walkin-${Date.now()}`,
+            restaurant_id: restaurantId,
+            label: 'Walk-in',
+            restaurantName: 'Our Restaurant',
+            status: 'active',
+            qr_token: '',
+            session_token: `walkin-${Date.now()}`
+        };
+        setActiveSession(dummySession);
+        localStorage.setItem('foodie_active_session', JSON.stringify(dummySession));
+        await syncDatabaseData(restaurantId);
+        setShowWelcomeModal(true);
+        setCurrentView('menu');
+        window.history.replaceState(null, '', '/');
         return;
     }
 
@@ -250,16 +277,26 @@ export default function App() {
   };
 
   const handleDemoSelect = async (demoId: string) => {
+    let name = 'Demo Restaurant';
+    let table = 'Demo Table';
+
+    if (demoId === 'aeec6204-496e-46c4-adfb-ba154fa92153') {
+        name = 'The Coffee House';
+        table = 'Counter 02';
+    }
+
     const dummySession = {
         id: `demo-${demoId}`,
         restaurant_id: demoId,
-        label: 'Demo Table',
+        label: table,
+        restaurantName: name,
         status: 'active',
         qr_token: 'demo-token',
         session_token: 'demo-session'
     };
     setActiveSession(dummySession);
     await syncDatabaseData(demoId);
+    setShowWelcomeModal(true);
     navigateTo('menu');
   };
 
@@ -298,10 +335,28 @@ export default function App() {
   if (isBooting) return <div className="flex flex-col items-center justify-center min-h-screen bg-white"><div className="w-16 h-16 border-4 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'max-w-xl mx-auto shadow-2xl bg-white'}`}>
+    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'md:max-w-none md:mx-0 md:shadow-none max-w-xl mx-auto shadow-2xl bg-white'}`}>
       <style>{`.menu-theme-container { --brand-primary: ${appTheme.primary_color}; --brand-secondary: ${appTheme.secondary_color}; font-family: '${appTheme.font_family}', sans-serif !important; }`}</style>
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} />
-      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col bg-[#F2F2F7]` : 'min-h-screen flex flex-col'}>
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} isDemo={activeSession?.id?.startsWith('demo-')} />
+      <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col bg-[#F8FAFC] relative overflow-hidden` : 'min-h-screen flex flex-col'}>
+        {!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+            {/* Top - Left - Orange */}
+            <div className="absolute top-[-10%] left-[-20%] w-[500px] h-[500px] md:w-[700px] md:h-[700px] bg-orange-200/20 rounded-full blur-2xl"></div>
+            
+            {/* Top Middle - Right - Blue - Hidden on mobile */}
+            <div className="hidden md:block absolute top-[25%] right-[-10%] w-[300px] h-[300px] bg-blue-200/20 rounded-full blur-2xl"></div>
+            
+            {/* Middle - Left - Orange - Hidden on mobile */}
+            <div className="hidden md:block absolute top-[50%] left-[-5%] w-[300px] h-[300px] bg-orange-200/20 rounded-full blur-2xl"></div>
+            
+            {/* Middle Bottom - Right - Blue - Hidden on mobile */}
+            <div className="hidden md:block absolute top-[75%] right-[-5%] w-[300px] h-[300px] bg-blue-200/20 rounded-full blur-2xl"></div>
+            
+            {/* Bottom - Right - Blue */}
+            <div className="absolute bottom-[-10%] right-[-20%] w-[500px] h-[500px] md:w-[700px] md:h-[700px] bg-blue-200/20 rounded-full blur-2xl"></div>
+          </div>
+        )}
         {appTheme.template === 'modern' ? (
            <ModernDetailPanel item={selectedItem} isOpen={!!selectedItem} isProcessing={isDispatching} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={(item) => activeSession ? finalizeOrder(activeSession, [item]) : (setPendingSingleItem(item), navigateTo('qr-verify'))} />
         ) : appTheme.template === 'premium' ? (
@@ -333,6 +388,13 @@ export default function App() {
           </div>
         </div>
       )}
+      
+      <WelcomeModal 
+        isOpen={showWelcomeModal} 
+        onClose={() => setShowWelcomeModal(false)} 
+        restaurantName={activeSession?.restaurantName || 'Our Restaurant'} 
+        tableName={activeSession?.label || 'Table'} 
+      />
     </div>
   );
 }

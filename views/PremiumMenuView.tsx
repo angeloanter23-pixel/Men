@@ -83,13 +83,13 @@ const PremiumMenuView: React.FC<PremiumMenuViewProps> = ({
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-8 mt-12">
+      <div className="max-w-7xl mx-auto px-8 mt-12">
         <Reveal delay={200}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
             {searchResults.map((item) => (
               <button key={item.id} onClick={() => onItemSelect(item)} className="w-full group text-left relative">
                 <div className="relative aspect-[4/5] w-full rounded-[3.5rem] overflow-hidden bg-white/5 border border-white/5 shadow-2xl transition-all duration-700 group-hover:scale-[0.98] group-hover:border-indigo-500/30">
-                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-110 opacity-70 group-hover:opacity-100" />
+                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-110 opacity-70 group-hover:opacity-100" referrerPolicy="no-referrer" />
                   <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black via-black/60 to-transparent">
                      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-400 mb-2">{item.cat_name}</p>
                      <h4 className="text-3xl font-black tracking-tight leading-none italic uppercase mb-2">{item.name}</h4>

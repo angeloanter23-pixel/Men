@@ -117,6 +117,7 @@ export const LibrarySection: React.FC = () => {
                   <div 
                     onClick={() => {
                       if (activeTab === 'article') window.location.hash = `#/article/${item.id}`;
+                      else alert("Coming Soon");
                     }}
                     className="flex-shrink-0 w-[260px] md:w-[320px] aspect-[3/4] rounded-[2.5rem] overflow-hidden shadow-2xl relative group cursor-pointer hover:-translate-y-2 transition-all duration-500 border border-slate-100 snap-center"
                   >

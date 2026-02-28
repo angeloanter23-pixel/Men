@@ -18,6 +18,8 @@ interface SupportMessagesProps {
   hasInteracted: boolean;
   faqs: { q: string; a: string }[];
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  needsScan?: boolean;
+  onScanQR?: () => void;
 }
 
 const SupportMessages: React.FC<SupportMessagesProps> = ({
@@ -29,7 +31,9 @@ const SupportMessages: React.FC<SupportMessagesProps> = ({
   loading,
   hasInteracted,
   faqs,
-  scrollRef
+  scrollRef,
+  needsScan,
+  onScanQR
 }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -93,6 +97,18 @@ const SupportMessages: React.FC<SupportMessagesProps> = ({
         )}
       </div>
       
+      {needsScan && (
+        <div className="p-4 bg-orange-50 border-t border-orange-100 flex flex-col items-center justify-center gap-3 shrink-0">
+            <p className="text-[11px] font-bold text-slate-600 text-center">Scan a table QR code to link your orders and messages to your table.</p>
+            <button 
+                onClick={onScanQR}
+                className="px-6 py-3 bg-[#FF6B00] text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-md active:scale-95 transition-all flex items-center gap-2"
+            >
+                <i className="fa-solid fa-qrcode"></i> Scan QR Now
+            </button>
+        </div>
+      )}
+
       <div className="p-6 md:p-8 bg-white border-t border-slate-50 flex gap-3 items-center shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
         <input 
           type="text" 

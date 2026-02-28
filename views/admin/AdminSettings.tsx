@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import * as MenuService from '../../services/menuService';
-import { encryptData, decryptData } from '../../src/utils/encryption';
+
+
 
 interface AdminSettingsProps {
   onLogout: () => void;
   adminCreds: any;
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
-  onImportClick?: () => void;
   onThemeUpdate: (theme: any) => void;
   onSubTabChange?: (sub: string) => void;
-  setMenuItems?: React.Dispatch<React.SetStateAction<MenuItem[]>>;
-  setCategories?: React.Dispatch<React.SetStateAction<Category[]>>;
-  menuItems?: MenuItem[];
-  categories?: Category[];
 }
 
 const SettingRow: React.FC<{ icon: string; color: string; label: string; sub?: string; last?: boolean; onClick?: () => void; isDestructive?: boolean }> = ({ icon, color, label, sub, last, onClick, isDestructive }) => (
@@ -45,15 +41,13 @@ const SettingsModal: React.FC<{ title: string; onClose: () => void; children: Re
   </div>
 );
 
-const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, setAdminCreds, onThemeUpdate, onSubTabChange, setMenuItems, setCategories, menuItems, categories }) => {
+const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, setAdminCreds, onThemeUpdate, onSubTabChange }) => {
   const [merchantData, setMerchantData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeNameError, setStoreNameError] = useState<string | null>(null);
-  const [importProgress, setImportProgress] = useState(0);
-  const [currentAction, setCurrentAction] = useState('');
   
   // Password Change State
   const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
@@ -188,223 +182,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
     }
   };
 
-  const [importConfirmation, setImportConfirmation] = useState<{
-    categories: Category[];
-    items: MenuItem[];
-  } | null>(null);
-
-  const handleExportConfig = () => {
-    if (!menuItems || !categories) {
-        setToast("No data to export");
-        setTimeout(() => setToast(null), 2000);
-        return;
-    }
-
-    const exportData = {
-        menu_sections: categories.map(c => ({ name: c.name })),
-        menu_catalog: menuItems.map(i => ({
-            display_name: i.name,
-            base_price: i.price,
-            description_text: i.description,
-            image_source: i.image_url,
-            section_label: i.cat_name,
-            trending_pick: i.is_popular,
-            in_stock: i.is_available,
-            serving_capacity: i.pax,
-            wait_estimate: i.serving_time,
-            is_variant_group: i.has_variations,
-            custom_choices: i.option_groups
-        }))
-    };
-
-    const encrypted = encryptData(exportData);
-    const blob = new Blob([encrypted], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `foodie_config_${new Date().toISOString().split('T')[0]}.fde`;
-    link.click();
-  };
-
-  const handleLoadConfig = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    const file = e.target.files[0];
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      try {
-        const content = event.target?.result as string;
-        let json;
-        
-        try {
-            // Try decrypting first
-            json = decryptData(content);
-        } catch (e) {
-            // Fallback to plain JSON if decryption fails (for backward compatibility or plain json files)
-            try {
-                json = JSON.parse(content);
-            } catch (jsonErr) {
-                throw new Error("Invalid file format");
-            }
-        }
-        
-        // Basic validation
-        if (!json.menu_catalog || !json.menu_sections) {
-          setToast("Invalid Configuration File");
-          setTimeout(() => setToast(null), 3000);
-          return;
-        }
-
-        const generateId = () => {
-          if (window.crypto && window.crypto.randomUUID) {
-            return window.crypto.randomUUID();
-          }
-          return Date.now().toString(36) + Math.random().toString(36).substr(2);
-        };
-
-        // 1. Import Categories
-        const categoryMap = new Map<string, string>();
-        const newCategories: Category[] = json.menu_sections.map((c: any) => {
-            const id = generateId();
-            categoryMap.set(c.name, id);
-            return {
-                id,
-                name: c.name,
-                icon: 'fa-utensils'
-            };
-        });
-
-        // 2. Import Items
-        const newItems: MenuItem[] = json.menu_catalog.map((i: any) => {
-            const catId = categoryMap.get(i.section_label) || null;
-            return {
-                id: generateId(),
-                name: i.display_name,
-                price: i.base_price,
-                description: i.description_text,
-                image_url: i.image_source || 'https://picsum.photos/seed/dish/400/400',
-                category_id: catId,
-                cat_name: i.section_label || 'Uncategorized',
-                is_popular: i.trending_pick,
-                is_available: i.in_stock,
-                pax: i.serving_capacity,
-                serving_time: i.wait_estimate,
-                has_variations: i.is_variant_group,
-                option_groups: i.custom_choices,
-                ingredients: [], 
-                pay_as_you_order: false
-            };
-        });
-        
-        setImportConfirmation({ categories: newCategories, items: newItems });
-
-      } catch (err) {
-        console.error(err);
-        setToast("Failed to parse file");
-        setTimeout(() => setToast(null), 3000);
-      } finally {
-        // Reset file input
-        e.target.value = '';
-      }
-    };
-
-    reader.readAsText(file);
-  };
-
-  const confirmImport = async () => {
-    if (!importConfirmation || !restaurantId) return;
-    
-    setLoading(true);
-    setToast("Importing Configuration...");
-    setImportProgress(0);
-    
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-    try {
-        // 1. Get Menu ID (or create if missing)
-        setCurrentAction("Initializing...");
-        await delay(500);
-        let { data: menus } = await supabase.from('menus').select('id').eq('restaurant_id', restaurantId).limit(1);
-        let menuId = menus && menus[0]?.id;
-        
-        if (!menuId) {
-            const { data: newMenu, error: menuErr } = await supabase.from('menus').insert({ restaurant_id: restaurantId, name: 'Main Menu' }).select('id');
-            if (menuErr) throw new Error("Failed to create menu registry: " + menuErr.message);
-            menuId = newMenu && newMenu[0]?.id;
-        }
-
-        // 2. Insert Categories (Append)
-        setCurrentAction("Adding Categories...");
-        await delay(500);
-        
-        const categoriesToInsert = importConfirmation.categories.map(c => ({
-            id: c.id,
-            menu_id: menuId,
-            name: c.name,
-            icon: c.icon || 'fa-utensils',
-            order_index: 0 // You might want to preserve order if available
-        }));
-
-        const { error: insCatsErr } = await supabase.from('categories').insert(categoriesToInsert);
-        if (insCatsErr) throw new Error("Failed to insert categories: " + insCatsErr.message);
-
-        // 3. Insert Items (Append one by one to show progress)
-        const totalItems = importConfirmation.items.length;
-        
-        for (let i = 0; i < totalItems; i++) {
-            const item = importConfirmation.items[i];
-            setCurrentAction(`Adding ${item.name}...`);
-            
-            const { error: insItemErr } = await supabase.from('items').insert({
-                id: item.id,
-                restaurant_id: restaurantId,
-                category_id: item.category_id,
-                name: item.name,
-                price: item.price,
-                description: item.description,
-                image_url: item.image_url,
-                is_available: item.is_available,
-                is_popular: item.is_popular,
-                pax: item.pax,
-                serving_time: item.serving_time,
-                has_variations: item.has_variations,
-                pay_as_you_order: item.pay_as_you_order || false
-            });
-
-            if (insItemErr) throw new Error(`Failed to insert ${item.name}: ${insItemErr.message}`);
-
-            if (item.option_groups && item.option_groups.length > 0) {
-                await MenuService.saveItemOptions(item.id, item.option_groups);
-            }
-            
-            setImportProgress(Math.round(((i + 1) / totalItems) * 100));
-            // "Don't make too fast to see" - add delay per item
-            await delay(300); 
-        }
-
-        setCurrentAction("Finalizing...");
-        await delay(500);
-
-        // Update local state (append to existing)
-        if (setCategories) setCategories(prev => [...prev, ...importConfirmation.categories]);
-        if (setMenuItems) setMenuItems(prev => [...prev, ...importConfirmation.items]);
-
-        setImportConfirmation(null);
-        setToast("Configuration Loaded Successfully");
-        setTimeout(() => setToast(null), 3000);
-
-    } catch (err: any) {
-        console.error("Import Failed:", err);
-        alert("Import Failed: " + err.message);
-        setToast("Import Failed");
-    } finally {
-        setLoading(false);
-        setImportProgress(0);
-        setCurrentAction('');
-    }
-  };
-
   return (
     <div className="min-h-screen font-jakarta pb-60 px-4 md:px-0 bg-[#F2F2F7]">
       {toast && (
@@ -446,42 +223,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
           </div>
         </section>
 
-        {/* INFRASTRUCTURE (DATABASE) */}
-        <section className="space-y-3">
-          <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Infrastructure</h3>
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
-            <SettingRow icon="fa-database" color="bg-emerald-600" label="Database explorer" sub="Manage raw server records" last onClick={() => { window.location.hash = '#/super-admin'; }} />
-          </div>
-        </section>
 
-        {/* DATA MANAGEMENT */}
-        <section className="space-y-3">
-          <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Data Management</h3>
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
-            <input 
-                type="file" 
-                accept=".json,.fde"
-                onChange={handleLoadConfig}
-                className="hidden" 
-                id="config-upload"
-            />
-            <SettingRow 
-                icon="fa-file-import" 
-                color="bg-indigo-500" 
-                label="Load Config" 
-                sub="Import menu from backup file" 
-                onClick={() => document.getElementById('config-upload')?.click()} 
-            />
-            <SettingRow 
-                icon="fa-file-export" 
-                color="bg-emerald-500" 
-                label="Export Config" 
-                sub="Download encrypted backup" 
-                last 
-                onClick={handleExportConfig} 
-            />
-          </div>
-        </section>
 
         {/* CONTENT MANAGEMENT */}
         <section className="space-y-3">
@@ -725,92 +467,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                 Copy ID
             </button>
         </SettingsModal>
-      )}
-      {importConfirmation && (
-        <SettingsModal title="Confirm Import" onClose={() => setImportConfirmation(null)}>
-            <div className="space-y-4">
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
-                            <i className="fa-solid fa-file-import"></i>
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-slate-900">Configuration File</h4>
-                            <p className="text-xs text-slate-500">Ready to import</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white p-3 rounded-lg border border-slate-100 text-center">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Categories</p>
-                            <p className="text-2xl font-black text-slate-900">{importConfirmation.categories.length}</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100 text-center">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Items</p>
-                            <p className="text-2xl font-black text-slate-900">{importConfirmation.items.length}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex gap-3">
-                    <i className="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
-                    <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                        This action will <strong>add</strong> to your current menu configuration. Existing items will be preserved.
-                    </p>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                    <button 
-                        onClick={() => setImportConfirmation(null)}
-                        className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        onClick={confirmImport}
-                        className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all"
-                    >
-                        Confirm Import
-                    </button>
-                </div>
-            </div>
-        </SettingsModal>
-      )}
-
-      {loading && importProgress > 0 && (
-        <div className="fixed inset-0 z-[6000] bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fade-in">
-            <div className="bg-white w-full rounded-t-2xl p-8 shadow-2xl flex flex-col items-center animate-slide-up pb-12">
-                <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4 relative">
-                    <i className="fa-solid fa-cloud-arrow-up text-indigo-600 text-2xl animate-bounce"></i>
-                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
-                        <path
-                            className="text-indigo-100"
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                        />
-                        <path
-                            className="text-indigo-600 transition-all duration-500 ease-out"
-                            strokeDasharray={`${importProgress}, 100`}
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                        />
-                    </svg>
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-1">Importing Data</h3>
-                <p className="text-slate-500 text-sm font-medium mb-6">{currentAction || "Please wait..."}</p>
-                
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden max-w-md">
-                    <div 
-                        className="bg-indigo-600 h-full rounded-full transition-all duration-500 ease-out" 
-                        style={{ width: `${importProgress}%` }}
-                    ></div>
-                </div>
-                <p className="text-xs font-bold text-slate-400 mt-2 text-right w-full max-w-md">{importProgress}%</p>
-            </div>
-        </div>
       )}
     </div>
   );

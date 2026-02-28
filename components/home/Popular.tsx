@@ -15,11 +15,11 @@ const Popular: React.FC<PopularProps> = ({ items, onItemSelect, getPriceDisplay 
 
   return (
     <section className="mb-10">
-      <div className="px-6 mb-5 max-w-2xl mx-auto flex justify-between items-center">
+      <div className="px-6 mb-5 flex justify-between items-center">
         <h3 className="text-[20px] font-black text-slate-900 tracking-tighter">Popular Picks</h3>
         <button className="text-slate-900 text-[16px] active:scale-90 transition-transform"><i className="fa-solid fa-arrow-right"></i></button>
       </div>
-      <div className="pl-6 pr-6 max-w-2xl mx-auto overflow-x-auto no-scrollbar pb-4 -mb-4">
+      <div className="pl-6 pr-6 overflow-x-auto no-scrollbar pb-4 -mb-4">
         <div className="flex gap-4 w-max">
           {displayItems.map((item) => (
             <button 

@@ -5,13 +5,38 @@ interface WaiterRequestProps {
   waiterStatus: 'idle' | 'calling' | 'done';
   onCallWaiter: () => void;
   tableNumber: string;
+  needsScan?: boolean;
+  onScanQR?: () => void;
 }
 
 const WaiterRequest: React.FC<WaiterRequestProps> = ({
   waiterStatus,
   onCallWaiter,
-  tableNumber
+  tableNumber,
+  needsScan,
+  onScanQR
 }) => {
+  if (needsScan) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-10 text-center animate-fade-in min-h-full font-jakarta">
+        <div className="w-24 h-24 rounded-[2rem] flex items-center justify-center text-4xl shadow-2xl bg-slate-100 text-slate-400 mb-8">
+            <i className="fa-solid fa-qrcode"></i>
+        </div>
+        <h3 className="text-2xl font-black uppercase tracking-tight text-slate-900 mb-3">Scan Required</h3>
+        <p className="text-slate-500 text-[15px] font-medium mb-12 max-w-xs leading-relaxed">
+            You need to scan a table QR code to request staff assistance.
+        </p>
+        <button 
+            onClick={onScanQR}
+            className="w-full py-6 bg-[#FF6B00] text-white rounded-2xl font-black uppercase text-[12px] tracking-widest shadow-xl shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+        >
+            <i className="fa-solid fa-qrcode text-[10px]"></i>
+            <span>Scan QR Now</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar font-jakarta">
       <div className="flex flex-col items-center justify-center p-10 text-center animate-fade-in min-h-full">

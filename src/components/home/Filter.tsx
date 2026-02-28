@@ -12,7 +12,7 @@ const Filter: React.FC<FilterProps> = ({ categories, activeCategory, onCategoryS
 
   return (
     <section className="sticky top-[72px] z-40 bg-white/95 backdrop-blur-xl border-b border-slate-50 mb-12 pt-2">
-      <div className="max-w-2xl mx-auto px-6">
+      <div className="w-full px-6">
         <div className="flex overflow-x-auto no-scrollbar gap-8 scroll-smooth pb-0">
           {categoryList.map((catObj) => {
             const cat = catObj.name;

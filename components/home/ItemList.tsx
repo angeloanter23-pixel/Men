@@ -14,11 +14,11 @@ interface ItemListProps {
 
 const ItemList: React.FC<ItemListProps> = ({ items, onItemSelect, getPriceDisplay, Reveal, layout = 'default' }) => {
   return (
-    <div className="max-w-2xl mx-auto px-3">
+    <div className="w-full px-3 lg:px-6">
       <div className={
-        layout === 'default' ? "flex flex-col gap-6" : 
-        layout === 'compact' ? "grid grid-cols-2 gap-3" : 
-        "flex flex-col gap-4"
+        layout === 'default' ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" : 
+        layout === 'compact' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-6" : 
+        "grid grid-cols-1 md:grid-cols-2 gap-4"
       }>
         {items.map((item, idx) => (
           <Reveal key={item.id} noWait={idx < 4}>

@@ -109,10 +109,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'settings', icon: 'fa-gears', label: 'Site Settings' }
   ];
 
+  const isDemoUser = session?.user?.email === 'demo1@mymenu';
+
   const renderNavButton = (config: any) => (
     <button 
       key={config.id}
-      onClick={() => { setActiveTab(config.id); setSettingsSubTab('general'); setIsSidebarOpen(false); }}
+      onClick={() => { 
+        if (config.id === 'exit-demo') {
+            onLogout();
+            window.location.hash = '#/landing';
+            return;
+        }
+        setActiveTab(config.id); 
+        setSettingsSubTab('general'); 
+        setIsSidebarOpen(false); 
+      }}
       className={`w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all group mb-1 text-left ${activeTab === config.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
     >
       <i className={`fa-solid ${config.icon} text-base transition-colors ${activeTab === config.id ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`}></i> 
@@ -124,6 +135,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
     </button>
   );
+
+  if (isDemoUser) {
+    if (!settingsNav.find(n => n.id === 'exit-demo' as any)) {
+        settingsNav.push({ id: 'exit-demo' as any, icon: 'fa-door-open', label: 'Exit Demo' });
+    }
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -143,8 +160,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 setAdminCreds={setAdminCreds} 
                 onThemeUpdate={onThemeUpdate} 
                 onSubTabChange={(sub) => setSettingsSubTab(sub as SettingsSubTab)}
-                setMenuItems={setMenuItems}
-                setCategories={setCategories}
               />
             )}
             {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} onBack={() => setSettingsSubTab('general')} />}

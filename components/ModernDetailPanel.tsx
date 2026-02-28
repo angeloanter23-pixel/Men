@@ -114,7 +114,7 @@ const ModernDetailPanel: React.FC<ModernDetailPanelProps> = ({
 
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 min-h-0">
          <div className="w-full max-w-[240px] aspect-square rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white/10 rotate-3 shrink-0">
-            <img src={item.image_url} className="w-full h-full object-cover" alt={item.name} />
+            <img src={item.image_url} className="w-full h-full object-cover" alt={item.name} referrerPolicy="no-referrer" />
          </div>
       </div>
 

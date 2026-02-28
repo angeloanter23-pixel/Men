@@ -89,47 +89,83 @@ const MenuView: React.FC<MenuViewProps> = ({
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* HEADER SECTION */}
-      <header className="px-6 pt-16 pb-2 max-w-2xl mx-auto">
-        <Reveal noWait>
-          <p className="text-[#FF6B00] text-[11px] font-black tracking-[0.4em] mb-3">{getGreeting()}</p>
-          <h1 className="text-[42px] font-black tracking-tighter leading-[1] text-slate-900 mb-10">Discover our <br/><span className="text-slate-400">Menu</span></h1>
-        </Reveal>
-      </header>
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
+        {/* DESKTOP SIDEBAR */}
+        <aside className="hidden lg:block w-64 shrink-0 pt-16 sticky top-0 h-screen overflow-y-auto no-scrollbar px-6">
+          <Reveal noWait>
+            <p className="text-[#FF6B00] text-[11px] font-black tracking-[0.4em] mb-3">{getGreeting()}</p>
+            <h1 className="text-[32px] font-black tracking-tighter leading-[1] text-slate-900 mb-10">Our <br/><span className="text-slate-400">Menu</span></h1>
+          </Reveal>
 
-      {/* TRENDING PICKS (Moved Above Search) */}
-      {!searchQuery && (
-        <Popular 
-          items={popularItems} 
-          onItemSelect={onItemSelect} 
-          getPriceDisplay={getPriceDisplay} 
-        />
-      )}
+          <div className="space-y-2">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Categories</h3>
+            {[{ id: 'all', name: 'all', icon: 'fa-layer-group' }, ...categories.filter(c => c.name.toLowerCase() !== 'uncategorized')].map((catObj) => {
+              const cat = catObj.name;
+              const isActive = activeCategory === cat;
+              return (
+                <button 
+                  key={cat} 
+                  onClick={() => onCategorySelect(cat)} 
+                  className={`w-full px-4 py-3 rounded-xl text-left transition-all flex items-center gap-3 group ${
+                    isActive 
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
+                      : 'text-slate-500 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  <i className={`fa-solid ${catObj.icon || 'fa-tag'} ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-900'}`}></i>
+                  <span className="text-sm font-bold capitalize">{cat === 'all' ? 'All Items' : cat}</span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
 
-      {/* SEARCH BAR */}
-      <SearchBar 
-        value={searchQuery} 
-        onChange={onSearchChange} 
-        onFilterClick={() => setIsFilterOpen(true)}
-        suggestions={availableItems}
-        onSuggestionClick={onItemSelect}
-      />
+        <div className="flex-1">
+          {/* MOBILE HEADER SECTION */}
+          <header className="px-6 pt-16 pb-2 lg:hidden">
+            <Reveal noWait>
+              <p className="text-[#FF6B00] text-[11px] font-black tracking-[0.4em] mb-3">{getGreeting()}</p>
+              <h1 className="text-[42px] font-black tracking-tighter leading-[1] text-slate-900 mb-10">Discover our <br/><span className="text-slate-400">Menu</span></h1>
+            </Reveal>
+          </header>
 
-      {/* CATEGORIES SECTION (Under Search Bar) */}
-      <Filter 
-        categories={categories} 
-        activeCategory={activeCategory} 
-        onCategorySelect={onCategorySelect} 
-      />
+          {/* TRENDING PICKS */}
+          {!searchQuery && (
+            <Popular 
+              items={popularItems} 
+              onItemSelect={onItemSelect} 
+              getPriceDisplay={getPriceDisplay} 
+            />
+          )}
 
-      {/* MAIN GRID */}
-      <ItemList 
-        items={searchResults} 
-        onItemSelect={onItemSelect} 
-        getPriceDisplay={getPriceDisplay} 
-        Reveal={Reveal}
-        layout={layout}
-      />
+          {/* SEARCH BAR */}
+          <SearchBar 
+            value={searchQuery} 
+            onChange={onSearchChange} 
+            onFilterClick={() => setIsFilterOpen(true)}
+            suggestions={availableItems}
+            onSuggestionClick={onItemSelect}
+          />
+
+          {/* MOBILE CATEGORIES SECTION */}
+          <div className="lg:hidden">
+            <Filter 
+              categories={categories} 
+              activeCategory={activeCategory} 
+              onCategorySelect={onCategorySelect} 
+            />
+          </div>
+
+          {/* MAIN GRID */}
+          <ItemList 
+            items={searchResults} 
+            onItemSelect={onItemSelect} 
+            getPriceDisplay={getPriceDisplay} 
+            Reveal={Reveal}
+            layout={layout}
+          />
+        </div>
+      </div>
 
       <FilterModal 
         isOpen={isFilterOpen}

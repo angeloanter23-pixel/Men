@@ -4,6 +4,7 @@ import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 import * as MenuService from '../services/menuService';
 import { LandingOverlay } from '../landing-page/LandingOverlay';
 import { TermsSection } from '../landing-page/TermsSection';
+import { PrivacySection } from '../landing-page/PrivacySection';
 
 interface AdminViewProps {
   menuItems: MenuItem[];
@@ -35,10 +36,12 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
+  const [isPrivacyOverlayOpen, setIsPrivacyOverlayOpen] = useState(false);
   const [clientIp, setClientIp] = useState('0.0.0.0');
   const [isBlocked, setIsBlocked] = useState(false);
   const [countdown, setCountdown] = useState<number>(0);
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
 
   useEffect(() => {
     const savedSession = localStorage.getItem('foodie_supabase_session');
@@ -108,6 +111,19 @@ const AdminView: React.FC<AdminViewProps> = ({
     setError('');
   };
 
+  const handleForgotPassword = () => {
+    const targetEmail = forgotEmail || email;
+    if (!targetEmail) {
+        alert("Please enter your email address.");
+        return;
+    }
+    
+    const subject = encodeURIComponent("Password Reset Request");
+    const body = encodeURIComponent(`Hello Support,\n\nI would like to request a password reset for my account associated with email: ${targetEmail}.\n\nThank you.`);
+    window.location.href = `mailto:support@mymenu.asia?subject=${subject}&body=${body}`;
+    setShowForgotModal(false);
+  };
+
   if (isAuthenticated) {
     return (
       <AdminDashboard 
@@ -126,127 +142,162 @@ const AdminView: React.FC<AdminViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-jakarta selection:bg-orange-100 relative">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 font-jakarta selection:bg-orange-100 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-orange-200/20 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-200/20 rounded-full blur-2xl"></div>
+      </div>
+
       {onBackToMenu && (
         <button 
           onClick={onBackToMenu}
-          className="absolute top-8 left-8 w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all active:scale-95"
+          className="absolute top-8 left-8 flex items-center gap-3 text-slate-500 hover:text-slate-900 transition-colors group z-20"
         >
-          <i className="fa-solid fa-long-arrow-alt-left"></i>
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+            <i className="fa-solid fa-arrow-left text-sm"></i>
+          </div>
+          <span className="text-sm font-bold uppercase tracking-widest">Back to Menu</span>
         </button>
       )}
-      <div className="w-full max-w-[400px] flex flex-col">
-        
-        <header className="mb-14 text-center">
-          <h1 className="text-[32px] font-black text-slate-900 tracking-tight leading-none mb-4 uppercase">
-            Merchant Login
-          </h1>
-          <p className="text-slate-400 text-[15px] font-medium leading-relaxed px-4">
-            Enter your email and password to access your restaurant dashboard.
-          </p>
-        </header>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Email Address</label>
-              <input 
-                required 
-                type="email" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[15px] font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 ring-slate-900/5 focus:border-slate-300 transition-all shadow-inner" 
-                placeholder="name@business.com" 
-              />
-            </div>
-            
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-1">Password</label>
-                <button type="button" onClick={() => setShowForgotModal(true)} className="text-[10px] font-bold text-indigo-600 hover:underline uppercase tracking-wider">Forgot?</button>
-              </div>
-              <div className="relative">
-                <input 
-                  required 
-                  type={showPassword ? "text" : "password"} 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[15px] font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 ring-slate-900/5 focus:border-slate-300 transition-all shadow-inner" 
-                  placeholder="Enter your password" 
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)} 
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors"
-                >
-                  <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 px-1 pt-2">
-            <div 
-              onClick={() => setAgreedToTerms(!agreedToTerms)}
-              className={`mt-0.5 w-6 h-6 rounded-lg border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-100 hover:border-slate-300'}`}
-            >
-              {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
-            </div>
-            <p className="text-[14px] font-medium text-slate-400 leading-tight">
-              I agree to the <button type="button" onClick={() => setIsTermsOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Terms of Service</button>
+      <div className="w-full max-w-[420px] relative z-10 mt-[-40px] md:mt-0">
+        <div className="p-4">
+            <header className="mb-8 md:mb-12 text-center">
+            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter mb-2 md:mb-3">
+                Welcome Back
+            </h1>
+            <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed">
+                Enter your credentials to access the console.
             </p>
-          </div>
+            </header>
 
-          {error && (
-            <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl animate-fade-in">
-              <p className="text-rose-600 text-[12px] font-black text-center uppercase tracking-tight">{error}</p>
+            <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
+            <div className="space-y-4 md:space-y-5">
+                <div className="space-y-2">
+                <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                        <i className="fa-solid fa-envelope text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
+                    </div>
+                    <input 
+                        required 
+                        type="email" 
+                        value={email} 
+                        onChange={e => setEmail(e.target.value)} 
+                        className="w-full pl-14 pr-6 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
+                        placeholder="name@business.com" 
+                    />
+                </div>
+                </div>
+                
+                <div className="space-y-2">
+                <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest">Password</label>
+                    <button 
+                        type="button" 
+                        onClick={() => { setForgotEmail(email); setShowForgotModal(true); }} 
+                        className="text-[10px] md:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline uppercase tracking-wider"
+                    >
+                        Forgot Password?
+                    </button>
+                </div>
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                        <i className="fa-solid fa-lock text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
+                    </div>
+                    <input 
+                    required 
+                    type={showPassword ? "text" : "password"} 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    className="w-full pl-14 pr-14 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
+                    placeholder="Enter your password" 
+                    />
+                    <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors p-2"
+                    >
+                    <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-lg`}></i>
+                    </button>
+                </div>
+                </div>
             </div>
-          )}
-          
-          <button 
-            type="submit" 
-            disabled={loading || isBlocked || !agreedToTerms} 
-            className="w-full h-[64px] bg-slate-900 text-white rounded-2xl font-black text-[15px] shadow-2xl active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-[0.2em]"
-          >
-            {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : (isBlocked ? `Wait ${countdown}s` : 'Sign In')}
-          </button>
-        </form>
 
-        <div className="mt-16 text-center">
-          <button onClick={onExit} className="text-slate-300 text-[10px] font-black hover:text-slate-900 transition-colors uppercase tracking-[0.4em]">
-            Exit to Landing Page
-          </button>
+            <div className="flex items-start gap-3 px-2 pt-1 md:pt-2">
+                <div 
+                onClick={() => setAgreedToTerms(!agreedToTerms)}
+                className={`mt-0.5 w-6 h-6 rounded-xl border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                >
+                {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
+                </div>
+                <p className="text-[12px] md:text-[13px] font-medium text-slate-500 leading-snug">
+                I agree to the <button type="button" onClick={() => setIsTermsOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Terms</button> and <button type="button" onClick={() => setIsPrivacyOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Privacy Policy</button>
+                </p>
+            </div>
+
+            {error && (
+                <div className="bg-rose-50 border border-rose-100 p-4 md:p-5 rounded-3xl animate-fade-in flex items-center gap-4">
+                <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center shrink-0 text-rose-500">
+                    <i className="fa-solid fa-circle-exclamation"></i>
+                </div>
+                <p className="text-rose-600 text-[12px] md:text-[13px] font-bold leading-tight">{error}</p>
+                </div>
+            )}
+            
+            <button 
+                type="submit" 
+                disabled={loading || isBlocked || !agreedToTerms} 
+                className="w-full h-[64px] md:h-[72px] bg-slate-900 text-white rounded-3xl font-black text-[14px] md:text-[15px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em] hover:bg-black hover:shadow-2xl mt-4"
+            >
+                {loading ? <i className="fa-solid fa-spinner animate-spin text-xl"></i> : (isBlocked ? `Wait ${countdown}s` : 'Sign In')}
+            </button>
+            </form>
         </div>
       </div>
 
       {showForgotModal && (
-        <div className="fixed inset-0 z-[5000] flex items-end justify-center animate-fade-in" onClick={() => setShowForgotModal(false)}>
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
-            <div className="relative bg-white w-full max-w-lg rounded-t-2xl shadow-2xl p-6 pb-10 animate-slide-up flex flex-col gap-6" onClick={e => e.stopPropagation()}>
-                <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto shrink-0" />
-                <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">Reset Password</h3>
-                    <button onClick={() => setShowForgotModal(false)} className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center text-slate-400"><i className="fa-solid fa-xmark"></i></button>
-                </div>
-                <div className="space-y-4">
-                    <p className="text-sm text-slate-500 font-medium">Enter your email address to receive a password reset link.</p>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
-                        <input 
-                            type="email" 
-                            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner"
-                            placeholder="name@business.com"
-                        />
+        <>
+            <div className="fixed inset-0 z-[5000] bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowForgotModal(false)} />
+            <div className="fixed inset-x-0 bottom-0 z-[5001] bg-white rounded-t-[2.5rem] p-8 md:p-12 shadow-[0_-20px_40px_rgba(0,0,0,0.2)] animate-slide-up font-jakarta">
+                <div className="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
+                <div className="max-w-md mx-auto space-y-8">
+                    <div className="text-center space-y-3">
+                        <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl mx-auto mb-4">
+                            <i className="fa-solid fa-key"></i>
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Reset Password</h3>
+                        <p className="text-slate-500 font-medium leading-relaxed">Enter your email address to generate a pre-filled support request.</p>
                     </div>
-                    <button 
-                        onClick={() => { alert("Reset link sent!"); setShowForgotModal(false); }}
-                        className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all"
-                    >
-                        Send Reset Link
-                    </button>
+                    
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                            <input 
+                                type="email" 
+                                value={forgotEmail}
+                                onChange={(e) => setForgotEmail(e.target.value)}
+                                className="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all"
+                                placeholder="name@business.com"
+                            />
+                        </div>
+                        <button 
+                            onClick={handleForgotPassword}
+                            className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 active:scale-95 transition-all hover:bg-indigo-700 uppercase tracking-widest"
+                        >
+                            Draft Reset Email
+                        </button>
+                        <button 
+                            onClick={() => setShowForgotModal(false)}
+                            className="w-full py-4 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-900 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
       )}
 
       <LandingOverlay 
@@ -255,6 +306,18 @@ const AdminView: React.FC<AdminViewProps> = ({
       >
         <TermsSection />
       </LandingOverlay>
+
+      <LandingOverlay 
+        isOpen={isPrivacyOverlayOpen} 
+        onClose={() => setIsPrivacyOverlayOpen(false)} 
+      >
+        <PrivacySection />
+      </LandingOverlay>
+
+      <style>{`
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+      `}</style>
     </div>
   );
 };

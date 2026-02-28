@@ -55,16 +55,16 @@ const ModernMenuView: React.FC<ModernMenuViewProps> = ({
       </header>
 
       {/* Grid */}
-      <div className="px-6 mb-8">
+      <div className="max-w-7xl mx-auto px-6 mb-8">
         <div className="flex justify-between items-center mb-6">
           <h4 className="text-sm font-bold text-slate-800">Featured Choices</h4>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {searchResults.map((item) => (
             <button key={item.id} onClick={() => onItemSelect(item)} className="bg-white p-4 rounded-[2rem] border border-slate-50 shadow-sm text-left group flex gap-4">
               <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 relative bg-slate-50 shadow-inner">
-                 <img src={item.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+                 <img src={item.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" referrerPolicy="no-referrer" />
               </div>
               <div className="flex-1 flex flex-col justify-center min-w-0">
                 <div className="flex justify-between items-start mb-1">

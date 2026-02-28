@@ -120,17 +120,18 @@ const QRVerifyView: React.FC<QRVerifyViewProps> = ({ initialToken, onVerify, onC
       if (details) {
         setDetectedToken(token);
         const session = await MenuService.getActiveSessionByQR(details.id);
-        if (session && session.pin_required === false) {
+        
+        if (session && session.pin_required) {
+            setMode('pin');
+        } else {
             onVerify({ 
-              ...session, 
+              ...(session || { id: `auto-${Date.now()}`, session_token: `auto-${Date.now()}` }), 
               label: details.label, 
               restaurantName: details.restaurant_name, 
               theme: details.theme, 
               restaurant_id: details.restaurant_id,
               qr_token: details.code 
             });
-        } else {
-            setMode('pin');
         }
       } else { 
         setError("QR not found. Please scan an active table code."); 

@@ -98,7 +98,7 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
     const threads: Record<string, any> = {};
     messages.forEach(m => {
         if (m.sender === 'waiter') return;
-        const key = m.device_id || m.session_id || m.table_number || 'guest-unidentified';
+        const key = m.device_id || m.session_id || 'guest-unidentified';
         if (!threads[key]) {
             threads[key] = { id: key, table: m.table_number, latest: m, count: 0, session_id: m.session_id, device_id: m.device_id, unread: false };
         }
@@ -172,7 +172,10 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
                       <div className="w-16" />
                   </header>
                   <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-8 space-y-4 no-scrollbar">
-                      {messages.filter(m => m.device_id === selectedChatThread.device_id && (m.sender === 'guest' || m.sender === 'admin')).map((m, i) => (
+                      {messages.filter(m => {
+                          const key = m.device_id || m.session_id || 'guest-unidentified';
+                          return key === selectedChatThread.id && (m.sender === 'guest' || m.sender === 'admin');
+                      }).map((m, i) => (
                           <div key={m.id || i} className={`flex ${m.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[75%] px-5 py-3 rounded-[2rem] text-[15px] shadow-sm ${m.sender === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
                                   <p>{m.text}</p>

@@ -31,7 +31,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, onFilterClick, s
     : [];
 
   return (
-    <div ref={wrapperRef} className="px-6 mb-8 max-w-2xl mx-auto relative z-50">
+    <div ref={wrapperRef} className="px-6 mb-8 relative z-50">
       <div className="flex gap-4 relative items-center">
         <div className="relative flex-1 group">
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">

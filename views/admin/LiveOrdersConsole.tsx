@@ -146,7 +146,7 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
       setIsSaving(true);
       try {
           for (const id of Array.from(selectedOrderIds)) {
-              await MenuService.deleteOrder(id);
+              await MenuService.deleteOrder(id.toString());
           }
           onRefresh();
           setShowBulkDeleteConfirm(false);

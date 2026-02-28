@@ -8,7 +8,7 @@ interface SearchBarProps {
 
 const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, onFilterClick }) => {
   return (
-    <div className="px-6 mb-8 max-w-2xl mx-auto">
+    <div className="px-6 mb-8 w-full">
       <div className="relative group">
         <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
           <i className="fa-solid fa-magnifying-glass text-slate-300 group-focus-within:text-[#FF6B00] transition-colors"></i>

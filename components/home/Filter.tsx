@@ -15,7 +15,7 @@ const Filter: React.FC<FilterProps> = ({ categories, activeCategory, onCategoryS
   ];
 
   return (
-    <div className="max-w-2xl mx-auto px-6 mb-8">
+    <div className="px-6 mb-8">
       <div className="flex overflow-x-auto no-scrollbar gap-3 scroll-smooth pb-2">
         {categoryList.map((catObj) => {
           const cat = catObj.name;

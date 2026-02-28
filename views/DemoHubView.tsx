@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 const DEMO_RESTAURANTS = [
   { 
     id: "01",
-    label: "Demo 1",
+    label: "Demo",
     name: 'The Coffee House', 
     industry: 'Cafe & Bakery', 
     desc: 'Great for busy coffee shops. Customers can quickly add milk options or extra shots to their drinks.', 
@@ -12,28 +12,6 @@ const DEMO_RESTAURANTS = [
     table: 'Counter 02',
     accent: '#FF6B00',
     image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: "02",
-    label: "Demo 2",
-    name: 'Steak & Wine', 
-    industry: 'Fine Dining', 
-    desc: 'Perfect for fancy restaurants. Show your best food with big photos and wine pairing tips.', 
-    code: 'FINE02',
-    table: 'Table 04',
-    accent: '#0f172a',
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: "03",
-    label: "Demo 3",
-    name: 'Burger Joint', 
-    industry: 'Fast Food', 
-    desc: 'Built for groups. Let a group of friends add food to one shared cart at the same time.', 
-    code: 'BISTRO03',
-    table: 'Table 12',
-    accent: '#10b981',
-    image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&q=80&w=800'
   }
 ];
 
@@ -66,6 +44,16 @@ const QRComponent: React.FC<{ code: string }> = ({ code }) => {
 };
 
 const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) => void }> = ({ onBack, onSelectDemo }) => {
+  const [loadingDemo, setLoadingDemo] = React.useState<string | null>(null);
+
+  const handleDemoClick = (code: string) => {
+    setLoadingDemo(code);
+    // Simulate a short delay for visual feedback if needed, but keep it fast
+    setTimeout(() => {
+        onSelectDemo(code);
+    }, 500);
+  };
+
   return (
     <div className="min-h-screen bg-white font-jakarta pb-40">
       <header className="bg-white/90 backdrop-blur-2xl sticky top-0 z-[100] border-b border-slate-100 px-6 h-[72px] flex items-center justify-between">
@@ -88,10 +76,10 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
         <section className="text-center space-y-6 max-w-3xl mx-auto">
            <div className="inline-flex px-5 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-600 text-[10px] font-black uppercase tracking-[0.4em] shadow-sm">Try our Demo</div>
            <h2 className="text-[42px] md:text-[64px] font-black text-slate-900 tracking-tight leading-[1.1] uppercase">
-             Pick a Demo Menu
+             Try the Demo
            </h2>
            <p className="text-slate-500 text-[18px] md:text-[21px] font-medium leading-relaxed">
-             Select a restaurant below to test our menu. These are mockup stores that show you how fast ordering works for your guests.
+             Select the restaurant below to test our menu. This is a mockup store that shows you how fast ordering works for your guests.
            </p>
         </section>
 
@@ -121,11 +109,21 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
                   </p>
 
                   <button 
-                    onClick={() => onSelectDemo(demo.code)}
-                    className="w-full md:w-auto px-12 py-6 bg-slate-900 text-white rounded-full font-black uppercase text-[12px] tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 group-hover:bg-orange-500"
+                    onClick={() => handleDemoClick(demo.code)}
+                    disabled={loadingDemo !== null}
+                    className="w-full md:w-auto px-12 py-6 bg-slate-900 text-white rounded-full font-black uppercase text-[12px] tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 group-hover:bg-orange-500 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    Open Demo Menu
-                    <i className="fa-solid fa-arrow-right text-[10px] transition-transform group-hover:translate-x-1"></i>
+                    {loadingDemo === demo.code ? (
+                        <>
+                            <i className="fa-solid fa-spinner animate-spin text-sm"></i>
+                            Loading...
+                        </>
+                    ) : (
+                        <>
+                            Open Demo Menu
+                            <i className="fa-solid fa-arrow-right text-[10px] transition-transform group-hover:translate-x-1"></i>
+                        </>
+                    )}
                   </button>
                 </div>
 

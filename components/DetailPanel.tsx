@@ -140,7 +140,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
             <i className="fa-solid fa-chevron-left text-base"></i>
           </button>
           <div className="w-full aspect-[4/3] overflow-hidden">
-            <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+            <img src={item.image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
         </div>
 

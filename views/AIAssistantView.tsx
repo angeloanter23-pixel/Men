@@ -77,7 +77,7 @@ const AIAssistantView: React.FC<AIAssistantViewProps> = ({ menuItems, onItemSele
                     className="flex items-center gap-2 px-4 py-2 bg-slate-900/5 hover:bg-[#FF6B00]/10 border border-slate-200 rounded-full transition-all group"
                 >
                     <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-white">
-                        <img src={item.image_url} className="w-full h-full object-cover" />
+                        <img src={item.image_url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 group-hover:text-[#FF6B00]">View {item.name}</span>
                     <i className="fa-solid fa-arrow-right text-[8px] text-slate-300 group-hover:text-[#FF6B00]"></i>

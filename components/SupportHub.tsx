@@ -14,6 +14,7 @@ interface SupportHubProps {
   tableNumber: string;
   sessionId?: string;
   qrToken?: string;
+  onScanQR?: () => void;
 }
 
 type Mode = 'staff' | 'ai' | 'waiter';
@@ -48,7 +49,7 @@ const getDeviceId = () => {
     return id;
 };
 
-const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, restaurantId, tableNumber, sessionId, qrToken }) => {
+const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, restaurantId, tableNumber, sessionId, qrToken, onScanQR }) => {
   const [mode, setMode] = useState<Mode>('staff');
   const [staffMessages, setStaffMessages] = useState<Message[]>([]);
   const [aiMessages, setAiMessages] = useState<Message[]>([]);
@@ -238,13 +239,38 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
                   hasInteracted={hasInteracted}
                   faqs={FAQS[mode]}
                   scrollRef={scrollRef}
+                  needsScan={!qrToken}
+                  onScanQR={onScanQR}
                 />
             ) : (
                 <WaiterRequest 
                   waiterStatus={waiterStatus}
                   onCallWaiter={handleCallWaiter}
                   tableNumber={tableNumber}
+                  needsScan={!qrToken}
+                  onScanQR={onScanQR}
                 />
+            )}
+            
+            {!qrToken && !sessionId && (
+                <div className="absolute inset-0 z-[100] bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center space-y-6">
+                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 text-3xl mb-2">
+                        <i className="fa-solid fa-qrcode"></i>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Scan to Connect</h3>
+                        <p className="text-slate-500 font-medium leading-relaxed max-w-xs mx-auto">
+                            Please scan the QR code on your table to start chatting with us or to request service.
+                        </p>
+                    </div>
+                    <button 
+                        onClick={onScanQR}
+                        className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-3"
+                    >
+                        <i className="fa-solid fa-camera"></i>
+                        <span>Scan QR Code</span>
+                    </button>
+                </div>
             )}
         </div>
       </div>

@@ -173,9 +173,18 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
       ? item.ingredients.map(i => typeof i === 'string' ? i : (i.label || i.name)).join(', ')
       : '';
 
+    // If variant, use parent's category
+    let categoryName = item.cat_name === 'Uncategorized' ? '' : item.cat_name;
+    if (item.parent_id) {
+        const parent = items.find(i => String(i.id) === String(item.parent_id));
+        if (parent) {
+            categoryName = parent.cat_name === 'Uncategorized' ? '' : parent.cat_name;
+        }
+    }
+
     setFormData({ 
       name: item.name, desc: item.description, ingredients: ingString, 
-      price: item.price.toString(), cat: item.cat_name === 'Uncategorized' ? '' : item.cat_name, 
+      price: item.price.toString(), cat: categoryName, 
       people: item.pax || '1 Person', mins: (item.serving_time || '').replace(/\D/g, '') || '15', image: item.image_url, 
       imageFile: null,
       isPopular: !!item.is_popular, 

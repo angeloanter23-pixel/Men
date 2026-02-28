@@ -12,7 +12,7 @@ const Popular: React.FC<PopularProps> = ({ items, onItemSelect, getPriceDisplay 
 
   return (
     <section className="mb-8">
-      <div className="px-6 mb-4 max-w-2xl mx-auto">
+      <div className="px-6 mb-4 w-full">
         <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Trending Picks</h3>
       </div>
       <div className="flex overflow-x-auto no-scrollbar gap-3 px-6 pb-4">
@@ -24,7 +24,7 @@ const Popular: React.FC<PopularProps> = ({ items, onItemSelect, getPriceDisplay 
                 className="w-[180px] bg-white rounded-[1.5rem] p-2.5 text-left group active:scale-[0.98] transition-all border border-slate-100 shadow-sm flex flex-col"
               >
                 <div className="aspect-square w-full rounded-xl overflow-hidden mb-2.5 relative bg-slate-50">
-                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
                   <div className="absolute top-2 right-2 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-black text-slate-900 shadow-sm border border-slate-50">
                     {getPriceDisplay(item)}
                   </div>

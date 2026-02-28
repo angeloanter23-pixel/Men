@@ -105,7 +105,7 @@ const PremiumDetailPanel: React.FC<PremiumDetailPanelProps> = ({
     <div className={`fixed inset-0 z-[1200] transition-all duration-700 bg-[#0A0A0B] text-white font-['Outfit'] flex flex-col ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}>
       
       <div className="relative h-[45vh] w-full shrink-0 group">
-          <img src={item.image_url} alt="" className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-[10s]" />
+          <img src={item.image_url} alt="" className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-[10s]" referrerPolicy="no-referrer" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0B] via-transparent to-black/30"></div>
           
           <button onClick={onClose} className="absolute top-8 left-8 w-14 h-14 bg-white/10 backdrop-blur-2xl rounded-2xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all shadow-2xl">

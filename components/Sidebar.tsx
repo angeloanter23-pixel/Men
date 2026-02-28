@@ -7,11 +7,12 @@ interface SidebarProps {
   onClose: () => void;
   onNavigate: (view: ViewState) => void;
   currentView: ViewState;
+  isDemo?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentView }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentView, isDemo }) => {
   const navItems: { id: ViewState; label: string; icon: string }[] = [
-    { id: 'landing', label: 'Product Overview', icon: 'fa-circle-info' },
+    { id: 'landing', label: isDemo ? 'Exit Demo' : 'Product Overview', icon: isDemo ? 'fa-door-open' : 'fa-circle-info' },
     { id: 'terms', label: 'Terms and Agreement', icon: 'fa-file-contract' },
     { id: 'privacy', label: 'Privacy Policy', icon: 'fa-shield-halved' },
   ];

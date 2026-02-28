@@ -160,10 +160,18 @@ const DishModal: React.FC<DishModalProps> = ({
 
               <div className="bg-white rounded-[1.5rem] p-4 shadow-sm border border-slate-200/60">
                 <SettingRow icon="fa-folder-tree" color="bg-indigo-500" label="Category">
-                  <select value={formData.cat} onChange={e => setFormData({...formData, cat: e.target.value})} className="bg-transparent text-xs font-bold text-[#007AFF] outline-none appearance-none cursor-pointer text-right pr-4">
-                    <option value="">Global</option>
-                    {cats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                  </select>
+                  <div className="relative flex items-center justify-end">
+                    {isVariant && <i className="fa-solid fa-lock text-[10px] text-slate-400 mr-2"></i>}
+                    <select 
+                      disabled={isVariant}
+                      value={formData.cat} 
+                      onChange={e => setFormData({...formData, cat: e.target.value})} 
+                      className={`bg-transparent text-xs font-bold text-[#007AFF] outline-none appearance-none text-right pr-4 ${isVariant ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      <option value="">Global</option>
+                      {cats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
                 </SettingRow>
                 
                 {!isGroupHeader && (

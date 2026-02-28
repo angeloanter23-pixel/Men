@@ -27,14 +27,15 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
 
   return (
     <div className="animate-fade-in bg-[#FBFBFD] min-h-screen">
-      <div className="max-w-[800px] mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <header className="mb-6">
           <p className="text-[9px] font-black text-[#FF6B00] uppercase tracking-[0.4em] mb-1 leading-none">Your Selection</p>
           <h1 className="text-4xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Your <span className="text-[#FF6B00]">Cart</span></h1>
         </header>
 
-        <div className="space-y-3 pb-48">
-          {cart.map((item, idx) => (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-48">
+          <div className="lg:col-span-2 space-y-3">
+            {cart.map((item, idx) => (
             <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 flex gap-3 group transition-all shadow-sm hover:shadow-md relative">
                <button 
                  onClick={() => onRemove(idx)} 
@@ -80,11 +81,39 @@ const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemove, o
                </div>
             </div>
           ))}
+          </div>
+
+          <div className="lg:col-span-1">
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm sticky top-24">
+              <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-6">Order Summary</h3>
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between text-slate-400 font-bold text-sm uppercase tracking-wider">
+                  <span>Subtotal</span>
+                  <span className="text-slate-900">₱{total.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-slate-400 font-bold text-sm uppercase tracking-wider">
+                  <span>Service Fee</span>
+                  <span className="text-slate-900">₱0.00</span>
+                </div>
+                <div className="h-px bg-slate-100 my-4"></div>
+                <div className="flex justify-between text-slate-900 font-black text-xl uppercase tracking-tighter">
+                  <span>Total</span>
+                  <span className="text-[#FF6B00]">₱{total.toLocaleString()}</span>
+                </div>
+              </div>
+              <button 
+                onClick={onCheckout}
+                className="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+              >
+                Place Order
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Floating Checkout FAB */}
-      <div className="fixed bottom-24 left-0 right-0 p-6 z-[45] flex justify-center">
+      {/* Floating Checkout FAB (Mobile Only) */}
+      <div className="fixed bottom-24 left-0 right-0 p-6 z-[45] flex justify-center lg:hidden">
         <button 
           onClick={onCheckout} 
           className="w-full max-w-md bg-slate-900 text-white py-5 px-10 rounded-2xl font-bold text-[12px] uppercase tracking-[0.2em] shadow-2xl active:scale-95 border border-white/10 flex justify-between items-center group transition-all"
