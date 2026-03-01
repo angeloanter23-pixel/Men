@@ -30,13 +30,13 @@ const DetailedItem: React.FC<DetailedItemProps> = ({ item, onItemSelect, getPric
              <p className="text-slate-500 text-[14px] leading-relaxed font-medium line-clamp-2">{item.description}</p>
              
              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                  <i className="fa-solid fa-clock text-[9px] text-slate-400"></i>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{item.serving_time}</span>
+                <div className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                  <i className="fa-solid fa-clock text-[9px]"></i>
+                  <span className="text-[9px] font-bold uppercase tracking-wider">{item.serving_time}</span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                  <i className="fa-solid fa-user-group text-[9px] text-slate-400"></i>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{item.pax}</span>
+                <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                  <i className="fa-solid fa-user-group text-[9px]"></i>
+                  <span className="text-[9px] font-bold uppercase tracking-wider">{item.pax}</span>
                 </div>
              </div>
           </div>

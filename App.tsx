@@ -295,7 +295,10 @@ export default function App() {
         session_token: 'demo-session'
     };
     setActiveSession(dummySession);
-    await syncDatabaseData(demoId);
+    
+    // Non-blocking sync for instant demo load
+    syncDatabaseData(demoId).catch(console.error);
+    
     setShowWelcomeModal(true);
     navigateTo('menu');
   };
@@ -341,8 +344,6 @@ export default function App() {
       <div className={!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col bg-[#F8FAFC] relative overflow-hidden` : 'min-h-screen flex flex-col'}>
         {!['admin', 'super-admin', 'test-supabase', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-            {/* Top - Left - Orange */}
-            <div className="absolute top-[-10%] left-[-20%] w-[500px] h-[500px] md:w-[700px] md:h-[700px] bg-orange-200/20 rounded-full blur-2xl"></div>
             
             {/* Top Middle - Right - Blue - Hidden on mobile */}
             <div className="hidden md:block absolute top-[25%] right-[-10%] w-[300px] h-[300px] bg-blue-200/20 rounded-full blur-2xl"></div>
@@ -365,7 +366,7 @@ export default function App() {
           <DetailPanel item={selectedItem} isOpen={!!selectedItem} isProcessing={isDispatching} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={(item) => activeSession ? finalizeOrder(activeSession, [item]) : (setPendingSingleItem(item), navigateTo('qr-verify'))} />
         )}
         <VariationDrawer item={activeVariantSource} variants={menuItems.filter(i => i.parent_id === activeVariantSource?.id)} isOpen={!!activeVariantSource} onClose={() => setActiveVariantSource(null)} onSelect={(v) => { setActiveVariantSource(null); setSelectedItem(v); }} />
-        <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} />
+        <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} onScanQR={() => { setIsSupportHubOpen(false); navigateTo('qr-verify'); }} />
         {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
           <Navbar logo={appTheme.logo_url || null} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.length} />
         )}

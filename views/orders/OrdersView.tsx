@@ -78,6 +78,8 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
 
   const [showPayNow, setShowPayNow] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<'counter' | 'maya' | 'gcash' | 'card'>('counter');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,6 +95,9 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  const unpaidOrders = useMemo(() => orders.filter(o => o.payment_status !== 'Paid'), [orders]);
+  const unpaidTotal = useMemo(() => unpaidOrders.reduce((sum, o) => sum + o.amount, 0), [unpaidOrders]);
 
   return (
     <div className="animate-fade-in bg-slate-50 min-h-screen pb-64 font-jakarta relative">
@@ -145,7 +150,7 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
         {/* PAY NOW FOOTER */}
         {orders.length > 0 && (
             <div className={`fixed bottom-24 left-0 right-0 z-[110] transition-transform duration-300 ${showPayNow ? 'translate-y-0' : 'translate-y-full'}`}>
-                <PayNowButton totalAmount={totalAmount} onPayNow={onPayNow} />
+                <PayNowButton totalAmount={totalAmount} onPayNow={() => setShowPaymentModal(true)} />
             </div>
         )}
       </div>
@@ -158,6 +163,104 @@ const OrdersView: React.FC<OrdersViewProps> = ({ restaurantId, tableNumber, onPa
       {/* ORDER DETAIL MODAL */}
       {selectedOrder && (
         <OrderBottomModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      )}
+
+      {/* PAYMENT MODAL */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[5000] flex items-end justify-center animate-fade-in" onClick={() => setShowPaymentModal(false)}>
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
+            <div className="relative bg-[#F2F2F7] w-full max-w-lg rounded-t-[2rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto my-4 shrink-0" />
+                
+                <div className="px-8 pb-6">
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-1">Payment Method</h3>
+                    <p className="text-sm font-medium text-slate-500">Choose how you want to pay</p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-8 space-y-6">
+                    <div className="space-y-3">
+                        <button 
+                            onClick={() => setSelectedPayment('counter')}
+                            className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${selectedPayment === 'counter' ? 'bg-white border-indigo-600 shadow-md ring-1 ring-indigo-600' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 text-xl">
+                                    <i className="fa-solid fa-cash-register"></i>
+                                </div>
+                                <div className="text-left">
+                                    <span className="block font-bold text-slate-900">Over the Counter</span>
+                                    <span className="text-xs font-medium text-slate-400">Pay cash or card at the cashier</span>
+                                </div>
+                            </div>
+                            {selectedPayment === 'counter' && <i className="fa-solid fa-circle-check text-indigo-600 text-xl"></i>}
+                        </button>
+
+                        {['maya', 'gcash', 'card'].map((method) => (
+                            <button 
+                                key={method}
+                                disabled
+                                className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 flex items-center justify-between opacity-60 cursor-not-allowed"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-slate-400 text-xl shadow-sm">
+                                        {method === 'card' ? <i className="fa-solid fa-credit-card"></i> : <i className="fa-solid fa-wallet"></i>}
+                                    </div>
+                                    <div className="text-left">
+                                        <span className="block font-bold text-slate-900 capitalize">{method}</span>
+                                        <span className="text-[10px] font-bold text-orange-500 uppercase tracking-wider bg-orange-100 px-2 py-0.5 rounded-full">Coming Soon</span>
+                                    </div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    {selectedPayment === 'counter' && (
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-6 animate-fade-in">
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 font-bold text-lg">1</div>
+                                <div>
+                                    <h4 className="font-bold text-slate-900 text-sm">Proceed to the Cashier</h4>
+                                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">Show your table number <span className="font-bold text-slate-900">#{tableNumber}</span> to the staff.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="border-t border-slate-100 pt-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Unpaid Orders</span>
+                                    <span className="text-xl font-black text-slate-900">₱{unpaidTotal.toLocaleString()}</span>
+                                </div>
+                                {unpaidOrders.length > 0 ? (
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                        {unpaidOrders.map(order => (
+                                            <div key={order.id} className="flex justify-between items-center text-sm">
+                                                <div className="flex items-center gap-2 text-slate-600">
+                                                    <span className="font-bold text-xs w-5">{order.quantity}x</span>
+                                                    <span className="truncate max-w-[180px]">{order.item_name}</span>
+                                                </div>
+                                                <span className="font-bold text-slate-900">₱{order.amount.toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4 text-emerald-600 font-bold text-sm bg-emerald-50 rounded-xl">
+                                        <i className="fa-solid fa-check-circle mr-2"></i> All orders paid
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="p-6 bg-white border-t border-slate-100">
+                    <button 
+                        onClick={() => setShowPaymentModal(false)}
+                        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );

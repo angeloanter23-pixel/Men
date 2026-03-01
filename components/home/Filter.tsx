@@ -15,8 +15,8 @@ const Filter: React.FC<FilterProps> = ({ categories, activeCategory, onCategoryS
   ];
 
   return (
-    <div className="px-6 mb-8">
-      <div className="flex overflow-x-auto no-scrollbar gap-3 scroll-smooth pb-2">
+    <div className="px-6 mb-4">
+      <div className="flex overflow-x-auto no-scrollbar gap-2 scroll-smooth pb-2">
         {categoryList.map((catObj) => {
           const cat = catObj.name;
           const isActive = activeCategory === cat;
@@ -24,13 +24,13 @@ const Filter: React.FC<FilterProps> = ({ categories, activeCategory, onCategoryS
             <button 
               key={cat} 
               onClick={() => onCategorySelect(cat)} 
-              className={`shrink-0 px-5 py-2.5 text-[14px] font-bold tracking-tight whitespace-nowrap transition-all flex items-center gap-2.5 rounded-full active:scale-95 ${
+              className={`shrink-0 px-3 py-2 text-[11px] font-bold tracking-tight whitespace-nowrap transition-all flex items-center gap-1.5 rounded-xl active:scale-[0.98] border border-white/50 ${
                 isActive 
-                  ? 'bg-slate-900 text-white shadow-md' 
-                  : 'bg-slate-100/80 text-slate-500 hover:bg-slate-200 hover:text-slate-800'
+                  ? 'bg-[#FF6B00] text-white shadow-[inset_2px_2px_4px_#cc5500,inset_-2px_-2px_4px_#ff8100]' 
+                  : 'bg-[#F2F2F7] text-slate-500 shadow-[3px_3px_6px_#d1d1d6,-3px_-3px_6px_#ffffff] hover:shadow-[5px_5px_10px_#d1d1d6,-5px_-5px_10px_#ffffff]'
               }`}
             >
-              <i className={`fa-solid ${catObj.icon || 'fa-tag'} text-[13px] ${isActive ? 'text-white/80' : 'text-slate-400'}`}></i>
+              <i className={`fa-solid ${catObj.icon || 'fa-tag'} text-[11px] ${isActive ? 'text-white/80' : 'text-slate-400'}`}></i>
               <span>
                 {cat === 'all' ? 'All' : cat}
               </span>

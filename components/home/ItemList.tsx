@@ -17,7 +17,7 @@ const ItemList: React.FC<ItemListProps> = ({ items, onItemSelect, getPriceDispla
     <div className="w-full px-3 lg:px-6">
       <div className={
         layout === 'default' ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" : 
-        layout === 'compact' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-6" : 
+        layout === 'compact' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-8 lg:gap-x-6 lg:gap-y-10" : 
         "grid grid-cols-1 md:grid-cols-2 gap-4"
       }>
         {items.map((item, idx) => (

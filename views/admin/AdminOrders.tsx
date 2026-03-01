@@ -8,7 +8,7 @@ import AdminSessions from './AdminSessions';
 import AdminWaiterRequests from './AdminWaiterRequests';
 import MenuFAQ from './menu/MenuFAQ';
 
-type SubTab = 'Live orders' | 'Messages' | 'Waiter request' | 'Sessions';
+type SubTab = 'Live orders' | 'Tables' | 'Messages' | 'Waiter request';
 
 export default function AdminOrders() {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('Live orders');
@@ -123,7 +123,7 @@ export default function AdminOrders() {
     { q: "How do I clear an order from the list?", a: "Click on an order and update its status to 'Served'. If you want to hide it completely, ensure 'Show History' is toggled off in the top sort menu." },
     { q: "What is a Waiter Request?", a: "This is a priority alert triggered by a guest at a physical table. It requires immediate staff attention. Click the request to acknowledge you are heading there." },
     { q: "Are messages private?", a: "Messages are securely encrypted. Only authorized staff and the guest at that specific table can see the conversation thread." },
-    { q: "Can I manage table PINs?", a: "Yes, go to the 'Sessions' tab. You can see active table codes or manually start a session for a walk-in guest." }
+    { q: "Can I manage table PINs?", a: "Yes, go to the 'Tables' tab. You can see active table codes or manually start a session for a walk-in guest." }
   ];
 
   if (showFaq) {
@@ -153,8 +153,8 @@ export default function AdminOrders() {
         </header>
 
         <div className="bg-slate-200/50 p-1.5 rounded-2xl flex border border-slate-200 shadow-inner overflow-x-auto no-scrollbar gap-1" ref={tabListRef}>
-          {(['Live orders', 'Messages', 'Waiter request', 'Sessions'] as SubTab[]).map(tab => {
-            const badge = tab === 'Messages' ? unreadCount : (tab === 'Waiter request' ? waiterRequests.length : tab === 'Sessions' ? activeSessions.length : 0);
+          {(['Live orders', 'Tables', 'Messages', 'Waiter request'] as SubTab[]).map(tab => {
+            const badge = tab === 'Messages' ? unreadCount : (tab === 'Waiter request' ? waiterRequests.length : tab === 'Tables' ? activeSessions.length : 0);
             return (
               <button 
                 key={tab}
@@ -172,6 +172,16 @@ export default function AdminOrders() {
           <LiveOrdersConsole orders={orders} onRefresh={fetchData} />
         )}
 
+        {activeSubTab === 'Tables' && (
+            <AdminSessions 
+              activeSessions={activeSessions} 
+              qrNodes={qrNodes} 
+              onRefresh={fetchData} 
+              getRelativeTime={getRelativeTime}
+              orders={orders}
+            />
+        )}
+
         {activeSubTab === 'Messages' && (
           <AdminMessages messages={messages} restaurantId={restaurantId} onRefresh={fetchData} />
         )}
@@ -181,15 +191,6 @@ export default function AdminOrders() {
                 requests={waiterRequests} 
                 onRefresh={fetchData} 
                 getRelativeTime={getRelativeTime} 
-            />
-        )}
-
-        {activeSubTab === 'Sessions' && (
-            <AdminSessions 
-              activeSessions={activeSessions} 
-              qrNodes={qrNodes} 
-              onRefresh={fetchData} 
-              getRelativeTime={getRelativeTime} 
             />
         )}
       </div>

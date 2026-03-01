@@ -11,24 +11,28 @@ const CompactItem: React.FC<CompactItemProps> = ({ item, onItemSelect, getPriceD
   return (
     <button 
       onClick={() => onItemSelect(item)}
-      className="w-full flex flex-col bg-white rounded-[24px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300 group overflow-hidden border border-slate-100/60 active:scale-[0.98]"
+      className="w-full flex flex-col transition-all duration-300 group active:scale-[0.98] rounded-2xl bg-[#F2F2F7] shadow-[5px_5px_10px_#d1d1d6,-5px_-5px_10px_#ffffff] hover:shadow-[7px_7px_14px_#d1d1d6,-7px_-7px_14px_#ffffff] border border-white/50 overflow-hidden h-full"
     >
-      <div className="aspect-square w-full bg-slate-100 relative overflow-hidden">
+      <div className="aspect-square w-full bg-slate-100 relative overflow-hidden shadow-inner shrink-0">
         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-        {/* Price Tag Overlay */}
-        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm border border-white/50">
-           <span className="text-[11px] font-black text-slate-900 tracking-tight">{getPriceDisplay(item)}</span>
-        </div>
       </div>
-      <div className="p-4 text-left w-full">
-        <h4 className="text-[15px] font-bold text-slate-900 leading-tight mb-1 line-clamp-2 h-[2.5em]">{item.name}</h4>
-        <p className="text-[12px] text-slate-400 mb-3 line-clamp-1 font-medium">{item.cat_name}</p>
-        <div className="flex items-center justify-between">
-           <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-              <i className="fa-solid fa-clock text-[9px]"></i>
-              <span className="text-[10px] font-bold">{item.serving_time}</span>
+      <div className="p-3 text-left w-full flex flex-col flex-1">
+        <div className="flex items-center gap-1.5 mb-1.5 flex-nowrap overflow-hidden">
+           <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
+              <i className="fa-solid fa-user-group text-[7px] shrink-0"></i>
+              <span className="text-[8px] font-bold whitespace-nowrap">{item.pax || '1-2'}</span>
            </div>
-           <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-900 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-colors shadow-sm">
+           <div className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
+              <i className="fa-solid fa-clock text-[7px] shrink-0"></i>
+              <span className="text-[8px] font-bold whitespace-nowrap">{item.serving_time || '15m'}</span>
+           </div>
+        </div>
+
+        <h4 className="text-[13px] font-bold text-slate-900 leading-tight mb-2 line-clamp-2 min-h-[2.4em]">{item.name}</h4>
+        
+        <div className="flex items-center justify-between mt-auto">
+           <span className="text-[12px] font-black text-slate-900 tracking-tight truncate mr-2">{getPriceDisplay(item)}</span>
+           <div className="w-8 h-8 rounded-full bg-[#F2F2F7] text-slate-900 flex items-center justify-center shadow-[3px_3px_6px_#d1d1d6,-3px_-3px_6px_#ffffff] group-hover:shadow-inner transition-all shrink-0">
               <i className="fa-solid fa-plus text-[10px]"></i>
            </div>
         </div>

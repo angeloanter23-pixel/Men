@@ -31,16 +31,6 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({ isOpen, onClose,
           </div>
           <div className="h-20" />
         </div>
-        
-        {/* Modal Dismiss Footer */}
-        <div className="p-8 md:px-12 border-t border-slate-50 bg-slate-50/50 flex justify-center shrink-0">
-            <button 
-                onClick={onClose}
-                className="px-10 py-4 bg-slate-900 text-white rounded-full font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all"
-            >
-                Done
-            </button>
-        </div>
       </div>
 
       <style>{`

@@ -31,11 +31,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, onFilterClick, s
     : [];
 
   return (
-    <div ref={wrapperRef} className="px-6 mb-8 relative z-50">
+    <div ref={wrapperRef} className="px-6 mb-4 relative z-50">
       <div className="flex gap-4 relative items-center">
         <div className="relative flex-1 group">
-          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-            <i className="fa-solid fa-magnifying-glass text-slate-400 group-focus-within:text-slate-900 transition-colors text-sm"></i>
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+            <i className="fa-solid fa-magnifying-glass text-slate-400 group-focus-within:text-slate-600 transition-colors text-xs"></i>
           </div>
           <input
             type="text"
@@ -46,15 +46,15 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, onFilterClick, s
             }}
             onFocus={() => setShowSuggestions(true)}
             placeholder="Search menu..."
-            className="w-full bg-white border-none py-4 pl-12 pr-4 rounded-2xl text-[15px] font-bold text-slate-900 outline-none shadow-[0_2px_20px_-4px_rgba(0,0,0,0.05)] focus:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all placeholder:text-slate-300 placeholder:font-medium"
+            className="w-full bg-[#F2F2F7] border border-white/50 py-2.5 pl-9 pr-4 rounded-xl text-[13px] font-bold text-slate-600 outline-none shadow-[inset_2px_2px_5px_#d1d1d6,inset_-2px_-2px_5px_#ffffff] focus:bg-[#F2F2F7] transition-all placeholder:text-slate-400 placeholder:font-medium"
           />
         </div>
         {onFilterClick && (
           <button 
             onClick={onFilterClick}
-            className="w-12 h-12 flex items-center justify-center text-slate-900 active:scale-90 transition-all hover:opacity-70"
+            className="w-10 h-10 flex items-center justify-center text-slate-500 bg-[#F2F2F7] rounded-xl border border-white/50 shadow-[3px_3px_6px_#d1d1d6,-3px_-3px_6px_#ffffff] hover:shadow-[5px_5px_10px_#d1d1d6,-5px_-5px_10px_#ffffff] active:shadow-[inset_2px_2px_5px_#d1d1d6,inset_-2px_-2px_5px_#ffffff] active:scale-[0.98] transition-all"
           >
-            <i className="fa-solid fa-sliders text-xl"></i>
+            <i className="fa-solid fa-magnifying-glass text-sm"></i>
           </button>
         )}
       </div>

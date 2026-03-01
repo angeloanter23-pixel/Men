@@ -59,7 +59,7 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({
             <ul className="space-y-3.5 text-[14px] font-bold text-slate-400">
               <li><button onClick={onStart} className="hover:text-orange-500 transition-colors border-none bg-transparent">Sandbox</button></li>
               <li><button onClick={onCreateMenu} className="hover:text-orange-500 transition-colors border-none bg-transparent">Pricing</button></li>
-              <li><button onClick={onInvestmentClick} className="hover:text-orange-500 transition-colors text-orange-600 font-bold border-none bg-transparent">Investment</button></li>
+              <li><button onClick={onInvestmentClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Investment</button></li>
               <li><button onClick={onEnterpriseClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Enterprise</button></li>
               <li><button onClick={onShopClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Shop</button></li>
             </ul>
@@ -83,7 +83,6 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({
               <li><button onClick={onPrivacyClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Privacy</button></li>
               <li><button onClick={onTermsClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Terms</button></li>
               <li><button onClick={onNodeRegistryClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Node Registry</button></li>
-              <li><button onClick={onComplianceClick} className="hover:text-orange-500 transition-colors border-none bg-transparent">Compliance</button></li>
             </ul>
           </div>
 

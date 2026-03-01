@@ -15,8 +15,8 @@ interface HeroSectionProps {
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onStart, onCreateMenu, onAffiliateAuth }) => (
-  <section className="relative pt-40 pb-20 md:pt-60 md:pb-40 text-center px-6">
-    <div className="max-w-3xl mx-auto space-y-12">
+  <section className="relative pt-40 pb-20 md:pt-60 md:pb-40 text-center px-6 overflow-hidden">
+    <div className="max-w-3xl mx-auto space-y-12 relative z-10">
       <Reveal>
         <div className="space-y-8">
           <p className="text-orange-500 font-bold uppercase tracking-[0.3em] text-[11px]">Platform Evolution</p>

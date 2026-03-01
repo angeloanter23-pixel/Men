@@ -89,16 +89,16 @@ const MenuView: React.FC<MenuViewProps> = ({
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-4">
         {/* DESKTOP SIDEBAR */}
         <aside className="hidden lg:block w-64 shrink-0 pt-16 sticky top-0 h-screen overflow-y-auto no-scrollbar px-6">
           <Reveal noWait>
-            <p className="text-[#FF6B00] text-[11px] font-black tracking-[0.4em] mb-3">{getGreeting()}</p>
-            <h1 className="text-[32px] font-black tracking-tighter leading-[1] text-slate-900 mb-10">Our <br/><span className="text-slate-400">Menu</span></h1>
+            <p className="text-[#FF6B00] text-[13px] font-bold tracking-normal mb-1">{getGreeting()}</p>
+            <h1 className="text-[32px] font-black tracking-tighter leading-[1] text-slate-900 mb-6">Our <br/><span className="text-slate-400">Menu</span></h1>
           </Reveal>
 
           <div className="space-y-2">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Categories</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Categories</h3>
             {[{ id: 'all', name: 'all', icon: 'fa-layer-group' }, ...categories.filter(c => c.name.toLowerCase() !== 'uncategorized')].map((catObj) => {
               const cat = catObj.name;
               const isActive = activeCategory === cat;
@@ -106,14 +106,14 @@ const MenuView: React.FC<MenuViewProps> = ({
                 <button 
                   key={cat} 
                   onClick={() => onCategorySelect(cat)} 
-                  className={`w-full px-4 py-3 rounded-xl text-left transition-all flex items-center gap-3 group ${
+                  className={`w-full px-3 py-2 rounded-xl text-left transition-all flex items-center gap-2 group border border-white/50 ${
                     isActive 
-                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
-                      : 'text-slate-500 hover:bg-white hover:text-slate-900'
+                      ? 'bg-[#FF6B00] text-white shadow-[inset_2px_2px_4px_#cc5500,inset_-2px_-2px_4px_#ff8100]' 
+                      : 'bg-[#F2F2F7] text-slate-500 shadow-[3px_3px_6px_#d1d1d6,-3px_-3px_6px_#ffffff] hover:shadow-[5px_5px_10px_#d1d1d6,-5px_-5px_10px_#ffffff] active:scale-[0.98]'
                   }`}
                 >
-                  <i className={`fa-solid ${catObj.icon || 'fa-tag'} ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-900'}`}></i>
-                  <span className="text-sm font-bold capitalize">{cat === 'all' ? 'All Items' : cat}</span>
+                  <i className={`fa-solid ${catObj.icon || 'fa-tag'} text-xs ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-900'}`}></i>
+                  <span className="text-xs font-bold capitalize">{cat === 'all' ? 'All Items' : cat}</span>
                 </button>
               );
             })}
@@ -122,21 +122,12 @@ const MenuView: React.FC<MenuViewProps> = ({
 
         <div className="flex-1">
           {/* MOBILE HEADER SECTION */}
-          <header className="px-6 pt-16 pb-2 lg:hidden">
+          <header className="px-6 pt-8 pb-2 lg:hidden">
             <Reveal noWait>
-              <p className="text-[#FF6B00] text-[11px] font-black tracking-[0.4em] mb-3">{getGreeting()}</p>
-              <h1 className="text-[42px] font-black tracking-tighter leading-[1] text-slate-900 mb-10">Discover our <br/><span className="text-slate-400">Menu</span></h1>
+              <p className="text-[#FF6B00] text-[13px] font-bold tracking-normal mb-1">{getGreeting()}</p>
+              <h1 className="text-[42px] font-black tracking-tighter leading-[1] text-slate-900 mb-4">Discover our <br/><span className="text-slate-400">Menu</span></h1>
             </Reveal>
           </header>
-
-          {/* TRENDING PICKS */}
-          {!searchQuery && (
-            <Popular 
-              items={popularItems} 
-              onItemSelect={onItemSelect} 
-              getPriceDisplay={getPriceDisplay} 
-            />
-          )}
 
           {/* SEARCH BAR */}
           <SearchBar 
@@ -147,8 +138,23 @@ const MenuView: React.FC<MenuViewProps> = ({
             onSuggestionClick={onItemSelect}
           />
 
+          {/* TRENDING PICKS */}
+          {!searchQuery && (
+            <Popular 
+              items={popularItems} 
+              onItemSelect={onItemSelect} 
+              getPriceDisplay={getPriceDisplay} 
+            />
+          )}
+
           {/* MOBILE CATEGORIES SECTION */}
           <div className="lg:hidden">
+            <div className="px-6 mb-3 flex justify-between items-center">
+              <h3 className="text-[20px] font-black text-slate-900 tracking-tighter">Categories</h3>
+               <button onClick={() => setIsFilterOpen(true)} className="w-8 h-8 flex items-center justify-center text-slate-500 bg-[#F2F2F7] rounded-xl border border-white/50 shadow-[3px_3px_6px_#d1d1d6,-3px_-3px_6px_#ffffff] active:shadow-[inset_2px_2px_5px_#d1d1d6,inset_-2px_-2px_5px_#ffffff] active:scale-[0.98] transition-all">
+                 <i className="fa-solid fa-sliders text-xs"></i>
+               </button>
+            </div>
             <Filter 
               categories={categories} 
               activeCategory={activeCategory} 
