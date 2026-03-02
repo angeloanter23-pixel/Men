@@ -28,8 +28,7 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
   const sessionOrders = useMemo(() => {
     if (!selectedSession) return [];
     return orders.filter(o => 
-        o.qr_code_token === selectedSession.session_token || 
-        o.table_number === selectedSession.table_label
+        o.qr_code_token === selectedSession.session_token
     );
   }, [selectedSession, orders]);
 

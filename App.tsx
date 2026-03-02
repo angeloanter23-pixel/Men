@@ -94,17 +94,19 @@ export default function App() {
   };
 
   const handleVerificationSuccess = async (session: any) => {
-    setActiveSession(session);
-    localStorage.setItem('foodie_active_session', JSON.stringify(session));
+    // Mark as verified if it was required
+    const verifiedSession = { ...session, is_verified: true };
+    setActiveSession(verifiedSession);
+    localStorage.setItem('foodie_active_session', JSON.stringify(verifiedSession));
     if (session.theme) applyTheme(session.theme);
     
     await syncDatabaseData(session.restaurant_id);
     
     if (pendingSingleItem) {
-        finalizeOrder(session, [pendingSingleItem]);
+        finalizeOrder(verifiedSession, [pendingSingleItem]);
         setPendingSingleItem(null);
     } else if (cart.length > 0) {
-        finalizeOrder(session, cart);
+        finalizeOrder(verifiedSession, cart);
         setCart([]);
     } else {
         navigateTo('menu');
@@ -163,37 +165,61 @@ export default function App() {
             const details = await MenuService.getQRCodeByCode(token);
             if (details) {
                 const existingSession = await MenuService.getActiveSessionByQR(details.id);
-                if (existingSession && existingSession.pin_required) {
-                    setInitialTokenFromUrl(token);
-                    setCurrentView('qr-verify');
-                    window.history.replaceState(null, '', '/');
-                } else {
-                    const session = {
-                        ...(existingSession || { id: `scan-${Date.now()}`, session_token: `scan-${Date.now()}` }),
-                        restaurant_id: details.restaurant_id,
-                        label: details.label,
-                        restaurantName: details.restaurant_name,
-                        status: 'active',
-                        qr_token: details.code,
-                        theme: details.theme
-                    };
-                    setActiveSession(session);
-                    localStorage.setItem('foodie_active_session', JSON.stringify(session));
-                    if (session.theme) applyTheme(session.theme);
-                    await syncDatabaseData(session.restaurant_id);
-                    setShowWelcomeModal(true);
-                    setCurrentView('menu');
-                    // Token preserved in URL to ensure stability on refresh
-                }
+                // If session exists and requires PIN, we don't force it immediately on load.
+                // We let them browse the menu. We only enforce PIN when they try to order.
+                // However, we need to store the context so we know which table they are at.
+                
+                const session = {
+                    ...(existingSession || { id: `scan-${Date.now()}`, session_token: `scan-${Date.now()}` }),
+                    restaurant_id: details.restaurant_id,
+                    label: details.label,
+                    restaurantName: details.restaurant_name,
+                    status: 'active',
+                    qr_token: details.code,
+                    theme: details.theme,
+                    pin_required: existingSession?.pin_required // Store this flag
+                };
+
+                // If PIN is required, we mark the session as 'pending_verification' locally?
+                // Or we just set it active but know that 'pin_required' means we need to verify before checkout.
+                // The prompt says "Show the pin required modal only when ordering".
+                
+                // So we set the session as active, but maybe add a flag 'is_verified: false' if pin is required?
+                // But existing logic in finalizeOrder checks for session validity.
+                
+                // Let's set it as active session, but if pin_required is true, we might need to handle it later.
+                // Actually, if we set it as active session, the UI assumes they are logged in.
+                // We need to ensure that when they click "Add to Order" or "Checkout", we check if verification is needed.
+                
+                // For now, let's just allow them to enter.
+                setActiveSession(session);
+                localStorage.setItem('foodie_active_session', JSON.stringify(session));
+                if (session.theme) applyTheme(session.theme);
+                await syncDatabaseData(session.restaurant_id);
+                setShowWelcomeModal(true);
+                setCurrentView('menu');
+                
+                // PRESERVE TOKEN IN URL: Do not replace state with '/'
+                // We want the URL to remain https://mymenu.asia/TOKEN
+                // But our routing uses hash based routing for views (e.g. #/menu).
+                // The token is in the path or query param.
+                // If the user provided a path like /FC9568, we should keep it?
+                // The browser URL will be https://mymenu.asia/FC9568#/menu
+                
+                // If we use window.history.replaceState(null, '', '/'); it clears it.
+                // So we should REMOVE that line.
+                
                 return;
             }
         } catch (e) {
             console.error("QR Auto-resolve failed", e);
         }
-
+        
+        // If resolution fails, we might still want to keep the token in URL for retry?
+        // Or redirect to verify view.
         setInitialTokenFromUrl(token);
         setCurrentView('qr-verify');
-        window.history.replaceState(null, '', '/');
+        // window.history.replaceState(null, '', '/'); // Don't clear URL
         return;
     }
 
@@ -286,6 +312,27 @@ export default function App() {
     const session = sessionOverride || activeSession;
     const items = itemsOverride || (pendingSingleItem ? [pendingSingleItem] : cart);
     if (!session) { navigateTo('qr-verify'); return; }
+    
+    // Check if PIN verification is required but not yet completed
+    // We assume if 'pin_required' is true in session, we need to verify.
+    // But how do we know if it's already verified?
+    // The session object from localStorage might have 'pin_required: true'.
+    // If we successfully verified, we should have updated the session object to remove that flag or add 'verified: true'.
+    
+    // Let's assume if 'pin_required' is true, we need to re-verify or check.
+    // But wait, if they scanned and entered, we set 'pin_required' from the DB.
+    // If they haven't entered the PIN yet, we should prompt.
+    
+    if (session.pin_required && !session.is_verified) {
+        // Redirect to QR Verify (which handles PIN entry)
+        // We need to pass the current cart/item context so we can return here.
+        // setPendingSingleItem might already be set if it's a single item.
+        // If it's a cart checkout, we just navigate.
+        setInitialTokenFromUrl(session.qr_token); // Ensure the token is passed
+        navigateTo('qr-verify');
+        return;
+    }
+
     if (items.length === 0) return;
     setIsDispatching(true);
     setLastError(null);

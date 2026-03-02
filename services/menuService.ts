@@ -260,13 +260,14 @@ export async function deleteConversation(sessionId: string) {
 }
 
 export async function updateRestaurant(id: string, name: string) {
-    const { data, error } = await supabase.from('restaurants').update({ name }).eq('id', id).select();
+    const slug = name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+    const { data, error } = await supabase.from('restaurants').update({ name, slug, last_name_update: new Date().toISOString(), last_slug_update: new Date().toISOString() }).eq('id', id).select();
     if (error) throw error;
     return data && data[0];
 }
 
 export async function updateRestaurantSlug(id: string, slug: string) {
-    const { data, error } = await supabase.from('restaurants').update({ slug }).eq('id', id).select();
+    const { data, error } = await supabase.from('restaurants').update({ slug, last_slug_update: new Date().toISOString() }).eq('id', id).select();
     if (error) throw error;
     return data && data[0];
 }

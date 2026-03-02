@@ -65,7 +65,7 @@ const AdminAccounts: React.FC<AdminAccountsProps> = ({ setActiveTab }) => {
         }
         // Role defaults to 'waiter' automatically
         const invite = await MenuService.createStaffInvite(formData.email, 'waiter', restaurantId);
-        const inviteLink = `${window.location.origin}/#/accept-invite/${invite.invite_token}`;
+        const inviteLink = `https://mymenu.asia/#/accept-invite/${invite.invite_token}`;
         setGeneratedInvite(inviteLink); 
         await fetchStaff();
     } catch (err: any) { 

@@ -49,6 +49,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   const [storeName, setStoreName] = useState('');
   const [storeNameError, setStoreNameError] = useState<string | null>(null);
   const [urlSlug, setUrlSlug] = useState('');
+  const [urlSlugError, setUrlSlugError] = useState<string | null>(null);
   
   // Password Change State
   const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
@@ -184,23 +185,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
     }
   };
 
-  const handleUpdateSlug = async () => {
-      if (!urlSlug.trim()) return;
-      setLoading(true);
-      try {
-          await MenuService.updateRestaurantSlug(restaurantId, urlSlug.trim());
-          setMerchantData({ ...merchantData, slug: urlSlug.trim() });
-          setToast("URL Updated");
-          setTimeout(() => setToast(null), 2000);
-          setActiveModal(null);
-      } catch (e: any) {
-          setToast("Failed: " + (e.message || "Error"));
-          setTimeout(() => setToast(null), 3000);
-      } finally {
-          setLoading(false);
-      }
-  };
-
   return (
     <div className="min-h-screen font-jakarta pb-60 px-4 md:px-0 bg-[#F2F2F7]">
       {toast && (
@@ -223,8 +207,8 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         <section className="space-y-3">
           <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Visual identity</h3>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
-            <SettingRow icon="fa-palette" color="bg-rose-500" label="Primary accent" onClick={() => setActiveModal('primary_color')} />
-            <SettingRow icon="fa-fill-drip" color="bg-amber-400" label="Secondary accent" onClick={() => setActiveModal('secondary_color')} />
+            <SettingRow icon="fa-palette" color="bg-rose-500" label="Primary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('primary_color')} />
+            <SettingRow icon="fa-fill-drip" color="bg-amber-400" label="Secondary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('secondary_color')} />
             <SettingRow icon="fa-wand-magic-sparkles" color="bg-purple-600" label="Menu template" onClick={() => setActiveModal('template')} />
             <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => setActiveModal('logo')} />
           </div>
@@ -238,6 +222,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
             <SettingRow icon="fa-link" color="bg-emerald-500" label="Restaurant URL" onClick={() => setActiveModal('restaurant_url')} />
             <SettingRow icon="fa-envelope" color="bg-sky-500" label="Owner contact" onClick={() => setActiveModal('owner_contact')} />
             <SettingRow icon="fa-fingerprint" color="bg-indigo-400" label="Restaurant ID" onClick={() => setActiveModal('restaurant_id')} />
+            <SettingRow icon="fa-database" color="bg-slate-800" label="Database Editor" onClick={() => window.location.hash = '#/super-admin'} />
             <SettingRow icon="fa-key" color="bg-slate-400" label="Change password" onClick={() => setActiveModal('change_password')} />
             <SettingRow icon="fa-trash-can" color="bg-rose-100 text-rose-500" label="Delete account" last isDestructive onClick={() => isDemoAccount ? setActiveModal('demo_block') : handleDeleteAccount()} />
           </div>
@@ -349,6 +334,14 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
       {activeModal === 'store_name' && (
         <SettingsModal title="Store name" onClose={() => { setActiveModal(null); setStoreName(merchantData?.name || ''); setStoreNameError(null); }}>
             <div className="space-y-4">
+                {merchantData?.last_name_update && (new Date().getTime() - new Date(merchantData.last_name_update).getTime()) < 30 * 24 * 60 * 60 * 1000 && (
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 items-start">
+                        <i className="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+                        <p className="text-amber-800 text-xs font-medium leading-relaxed">
+                            You have changed your store name within the last 30 days. Frequent changes may confuse your customers.
+                        </p>
+                    </div>
+                )}
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Business Name</label>
                     <input 
@@ -357,16 +350,11 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                         onChange={(e) => { setStoreName(e.target.value); setStoreNameError(null); }}
                         className={`w-full bg-slate-50 border p-4 rounded-xl font-bold text-sm text-slate-900 outline-none transition-all shadow-inner ${storeNameError ? 'border-rose-200 ring-4 ring-rose-50' : 'border-slate-200 focus:bg-white'}`}
                         placeholder="Enter store name"
-                        disabled={isDemoAccount}
                     />
                     {storeNameError && <p className="text-rose-500 text-[9px] font-bold tracking-tight ml-1">{storeNameError}</p>}
                 </div>
                 <button 
                     onClick={async () => {
-                        if (isDemoAccount) {
-                            setActiveModal('demo_block');
-                            return;
-                        }
                         if (!storeName.trim() || storeName === merchantData?.name) return;
                         setLoading(true);
                         try {
@@ -377,7 +365,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                                 return;
                             }
                             await MenuService.updateRestaurant(restaurantId, storeName);
-                            setMerchantData({ ...merchantData, name: storeName });
+                            setMerchantData({ ...merchantData, name: storeName, slug: storeName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''), last_name_update: new Date().toISOString(), last_slug_update: new Date().toISOString() });
                             setToast("Store Name Updated");
                             setTimeout(() => setToast(null), 2000);
                             setActiveModal(null);
@@ -397,8 +385,16 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
       )}
 
       {activeModal === 'restaurant_url' && (
-        <SettingsModal title="Restaurant URL" onClose={() => setActiveModal(null)}>
+        <SettingsModal title="Restaurant URL" onClose={() => { setActiveModal(null); setUrlSlug(merchantData?.slug || ''); setUrlSlugError(null); }}>
             <div className="space-y-4">
+                {merchantData?.last_slug_update && (new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) < 30 * 24 * 60 * 60 * 1000 && (
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 items-start">
+                        <i className="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+                        <p className="text-amber-800 text-xs font-medium leading-relaxed">
+                            You have changed your URL within the last 30 days. Changing it again might break existing QR codes or links.
+                        </p>
+                    </div>
+                )}
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">URL Slug</label>
                     <div className="flex items-center gap-2">
@@ -406,15 +402,36 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                         <input 
                             type="text" 
                             value={urlSlug} 
-                            onChange={(e) => setUrlSlug(e.target.value)}
-                            className="flex-1 bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner"
+                            onChange={(e) => { setUrlSlug(e.target.value); setUrlSlugError(null); }}
+                            className={`flex-1 bg-slate-50 border p-4 rounded-xl font-bold text-sm text-slate-900 outline-none transition-all shadow-inner ${urlSlugError ? 'border-rose-200 ring-4 ring-rose-50' : 'border-slate-200 focus:bg-white'}`}
                             placeholder="restaurant-name"
                         />
                     </div>
+                    {urlSlugError && <p className="text-rose-500 text-[9px] font-bold tracking-tight ml-1">{urlSlugError}</p>}
                 </div>
                 <button 
-                    onClick={handleUpdateSlug}
-                    disabled={loading}
+                    onClick={async () => {
+                        if (!urlSlug.trim() || urlSlug === merchantData?.slug) return;
+                        setLoading(true);
+                        try {
+                            const existing = await MenuService.getRestaurantBySlug(urlSlug.trim());
+                            if (existing && existing.id !== restaurantId) {
+                                setUrlSlugError("This URL is already taken. Please choose another.");
+                                setLoading(false);
+                                return;
+                            }
+                            await MenuService.updateRestaurantSlug(restaurantId, urlSlug.trim());
+                            setMerchantData({ ...merchantData, slug: urlSlug.trim(), last_slug_update: new Date().toISOString() });
+                            setToast("URL Updated");
+                            setTimeout(() => setToast(null), 2000);
+                            setActiveModal(null);
+                        } catch (e) {
+                            setUrlSlugError("Failed to update URL.");
+                        } finally {
+                            setLoading(false);
+                        }
+                    }}
+                    disabled={loading || !urlSlug.trim() || urlSlug === merchantData?.slug}
                     className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                 >
                     {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Update URL'}

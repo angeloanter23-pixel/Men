@@ -9,6 +9,29 @@ interface LiveOrdersConsoleProps {
 
 type SortMode = 'time' | 'table';
 
+const formatDateTime = (ts: string) => {
+  if (!ts) return '-';
+  return new Date(ts).toLocaleString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    hour: 'numeric', 
+    minute: 'numeric', 
+    hour12: true 
+  });
+};
+
+const InfoRow: React.FC<{ icon: string; color: string; label: string; value: string | React.ReactNode; last?: boolean }> = ({ icon, color, label, value, last }) => (
+  <div className={`flex items-center justify-between p-4 ${!last ? 'border-b border-slate-100' : ''}`}>
+    <div className="flex items-center gap-3">
+      <div className={`w-7 h-7 rounded-md ${color} flex items-center justify-center text-white shadow-sm shrink-0`}>
+        <i className={`fa-solid ${icon} text-[12px]`}></i>
+      </div>
+      <span className="text-[13px] font-bold text-slate-900 tracking-tight">{label}</span>
+    </div>
+    <span className="text-[13px] font-medium text-slate-500 text-right">{value}</span>
+  </div>
+);
+
 export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConsoleProps) {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -355,7 +378,7 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
             <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mx-auto text-lg shadow-inner">
                 <i className="fa-solid fa-inbox"></i>
             </div>
-            <p className="text-[9px] font-bold text-slate-300 tracking-widest italic tracking-[0.1em]">queue is clear</p>
+            <p className="text-[9px] font-bold text-slate-300 tracking-widest tracking-[0.1em]">queue is clear</p>
           </div>
         )}
       </div>
@@ -368,7 +391,7 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
             <header className="px-6 pt-6 pb-4 bg-white border-b border-slate-100 shrink-0">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 tracking-tight leading-none italic">{selectedOrder.item_name}</h3>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight leading-none">{selectedOrder.item_name}</h3>
                   <p className="text-[10px] font-bold text-indigo-600 mt-2 tracking-widest leading-none">Table {selectedOrder.table_number} • Qty {selectedOrder.quantity}</p>
                 </div>
                 <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 rounded-full bg-slate-50 text-slate-300 hover:text-slate-900 transition-colors flex items-center justify-center border border-slate-100 shadow-sm"><i className="fa-solid fa-xmark text-lg"></i></button>
@@ -382,40 +405,42 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 pt-6">
               {modalTab === 'info' ? (
                 <div className="space-y-6 animate-fade-in">
-                  <div className="bg-white rounded-xl p-6 border border-white shadow-sm space-y-4">
-                    <div className="flex justify-between items-center border-b border-slate-50 pb-3">
-                      <span className="text-[10px] font-bold text-slate-400 tracking-widest leading-none">Customer</span>
-                      <span className="text-sm font-bold text-slate-900 italic">{selectedOrder.customer_name}</span>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <span className="text-[10px] font-bold text-slate-400 tracking-widest leading-none ml-2">Payment status</span>
-                      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
-                        <button 
-                          onClick={() => setLocalPayment('Paid')}
-                          className={`flex-1 py-3 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-2 ${localPayment === 'Paid' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
-                        >
-                          <i className="fa-solid fa-circle-check"></i> 
-                          Paid
-                        </button>
-                        <button 
-                          onClick={() => setLocalPayment('Unpaid')}
-                          className={`flex-1 py-3 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-2 ${localPayment === 'Unpaid' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
-                        >
-                          <i className="fa-solid fa-clock"></i> 
-                          Unpaid
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-[10px] font-bold text-slate-400 tracking-widest leading-none">Total price</span>
-                      <span className="text-2xl font-black text-slate-900 italic tracking-tighter">₱{selectedOrder.amount.toLocaleString()}</span>
-                    </div>
+                  
+                  <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+                      <InfoRow icon="fa-chair" color="bg-rose-500" label="Table" value={selectedOrder.table_number || 'Walk-in'} />
+                      <InfoRow icon="fa-user" color="bg-slate-900" label="Customer" value={selectedOrder.customer_name} />
+                      <InfoRow icon="fa-clock" color="bg-indigo-500" label="Ordered at" value={formatDateTime(selectedOrder.created_at)} />
+                      {selectedOrder.payment_status === 'Paid' && (
+                          <InfoRow icon="fa-receipt" color="bg-emerald-500" label="Paid at" value={selectedOrder.paid_at ? formatDateTime(selectedOrder.paid_at) : 'Marked as Paid'} />
+                      )}
+                      <InfoRow icon="fa-coins" color="bg-amber-500" label="Total amount" value={<span className="font-bold text-slate-900">₱{selectedOrder.amount.toLocaleString()}</span>} last />
                   </div>
-                  <div className="bg-slate-50 rounded-xl p-6 border border-slate-200/40 shadow-inner">
-                    <p className="text-[10px] font-bold text-slate-400 tracking-widest mb-2 leading-none italic">Guest instructions</p>
-                    <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{selectedOrder.instructions || 'No specific requests.'}"</p>
+
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm space-y-3">
+                      <h4 className="text-[10px] font-bold text-slate-400 tracking-widest uppercase ml-1">Payment Status</h4>
+                      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                          <button 
+                              onClick={() => setLocalPayment('Paid')}
+                              className={`flex-1 py-3 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-2 ${localPayment === 'Paid' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+                          >
+                              <i className="fa-solid fa-circle-check"></i> 
+                              Paid
+                          </button>
+                          <button 
+                              onClick={() => setLocalPayment('Unpaid')}
+                              className={`flex-1 py-3 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-2 ${localPayment === 'Unpaid' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+                          >
+                              <i className="fa-solid fa-clock"></i> 
+                              Unpaid
+                          </button>
+                      </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm space-y-2">
+                      <h4 className="text-[10px] font-bold text-slate-400 tracking-widest uppercase ml-1">Guest Instructions</h4>
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                          <p className="text-sm font-medium text-slate-600 leading-relaxed">"{selectedOrder.instructions || 'No specific requests.'}"</p>
+                      </div>
                   </div>
                 </div>
               ) : (
@@ -445,7 +470,7 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <h4 className="text-[10px] font-bold text-slate-400 tracking-widest ml-4 italic leading-none">Note to guest</h4>
+                    <h4 className="text-[10px] font-bold text-slate-400 tracking-widest ml-4 leading-none">Note to guest</h4>
                     <textarea 
                       value={localNote} 
                       onChange={e => setLocalNote(e.target.value)} 
