@@ -265,6 +265,18 @@ export async function updateRestaurant(id: string, name: string) {
     return data && data[0];
 }
 
+export async function updateRestaurantSlug(id: string, slug: string) {
+    const { data, error } = await supabase.from('restaurants').update({ slug }).eq('id', id).select();
+    if (error) throw error;
+    return data && data[0];
+}
+
+export async function getRestaurantBySlug(slug: string) {
+    const { data, error } = await supabase.from('restaurants').select('*').eq('slug', slug).limit(1);
+    if (error) return null;
+    return data && data[0];
+}
+
 export async function getOrdersByTable(restaurantId: string, tableNumber: string) {
     const { data, error } = await supabase.from('orders').select('*').eq('restaurant_id', restaurantId).eq('table_number', tableNumber).order('created_at', { ascending: false });
     if (error) throw error;

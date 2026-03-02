@@ -11,45 +11,37 @@ const DetailedItem: React.FC<DetailedItemProps> = ({ item, onItemSelect, getPric
   return (
     <button 
       onClick={() => onItemSelect(item)}
-      className="w-full flex flex-col bg-white rounded-[28px] shadow-[0_2px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_15px_40px_-5px_rgba(0,0,0,0.1)] transition-all duration-500 group overflow-hidden mb-6 relative border border-slate-100/60 active:scale-[0.99]"
+      className="w-full flex flex-col bg-[#F2F2F7] rounded-[28px] shadow-[5px_5px_10px_#d1d1d6,-5px_-5px_10px_#ffffff] hover:shadow-[7px_7px_14px_#d1d1d6,-7px_-7px_14px_#ffffff] transition-all duration-500 group overflow-hidden mb-6 relative border border-white/50 active:scale-[0.99]"
     >
-      <div className="aspect-square w-full bg-slate-100 relative overflow-hidden">
+      <div className="aspect-[4/3] w-full bg-slate-100 relative overflow-hidden shadow-inner shrink-0">
         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-80"></div>
-        <div className="absolute bottom-6 left-6 text-white text-left">
-           {item.cat_name.toLowerCase() !== 'uncategorized' && (
-             <p className="text-[10px] font-bold uppercase tracking-widest opacity-90 mb-2 text-white/90">{item.cat_name}</p>
-           )}
-           <h4 className="text-[24px] font-black leading-none tracking-tight">{item.name}</h4>
-        </div>
       </div>
       
-      <div className="p-6 flex flex-col w-full gap-4">
-        <div className="flex items-start justify-between w-full">
-          <div className="max-w-[65%] text-left space-y-3">
-             <p className="text-slate-500 text-[14px] leading-relaxed font-medium line-clamp-2">{item.description}</p>
-             
-             <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                  <i className="fa-solid fa-clock text-[9px]"></i>
-                  <span className="text-[9px] font-bold uppercase tracking-wider">{item.serving_time}</span>
-                </div>
-                <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-                  <i className="fa-solid fa-user-group text-[9px]"></i>
-                  <span className="text-[9px] font-bold uppercase tracking-wider">{item.pax}</span>
-                </div>
+      <div className="p-5 flex flex-col w-full text-left">
+        <div className="flex items-center gap-2 mb-3 flex-nowrap overflow-hidden">
+           <div className="flex items-center gap-1.5 bg-orange-100 text-orange-700 px-2 py-1 rounded-full shadow-sm shrink-0">
+              <i className="fa-solid fa-user-group text-[9px] shrink-0"></i>
+              <span className="text-[10px] font-bold whitespace-nowrap">{item.pax || '1-2'}</span>
+           </div>
+           <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full shadow-sm shrink-0">
+              <i className="fa-solid fa-clock text-[9px] shrink-0"></i>
+              <span className="text-[10px] font-bold whitespace-nowrap">{item.serving_time || '15m'}</span>
+           </div>
+           {item.cat_name.toLowerCase() !== 'uncategorized' && (
+             <div className="px-2 py-1 rounded-full border border-slate-200 text-slate-400 text-[10px] font-bold uppercase tracking-wider ml-auto">
+               {item.cat_name}
              </div>
-          </div>
-
-          <div className="flex flex-col items-end">
-             <span className="text-[20px] font-black text-slate-900 tracking-tight">{getPriceDisplay(item)}</span>
-          </div>
+           )}
         </div>
 
-        <div className="w-full pt-2">
-           <div className="w-full py-3 bg-transparent border border-slate-200 text-slate-900 rounded-full font-bold text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-              <span>View Details</span>
-              <i className="fa-solid fa-arrow-right text-[10px]"></i>
+        <h4 className="text-[22px] font-black text-slate-900 leading-tight mb-2 tracking-tight">{item.name}</h4>
+        <p className="text-slate-500 text-[14px] leading-relaxed font-medium line-clamp-2 mb-6">{item.description}</p>
+
+        <div className="mt-auto flex items-center justify-between">
+           <span className="text-[24px] font-black text-slate-900 tracking-tight">{getPriceDisplay(item)}</span>
+           
+           <div className="w-12 h-12 rounded-full bg-[#F2F2F7] text-slate-900 flex items-center justify-center shadow-[3px_3px_6px_#d1d1d6,-3px_-3px_6px_#ffffff] group-hover:shadow-inner transition-all shrink-0">
+              <i className="fa-solid fa-plus text-lg"></i>
            </div>
         </div>
       </div>

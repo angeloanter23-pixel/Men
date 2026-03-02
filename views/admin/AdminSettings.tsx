@@ -48,6 +48,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeNameError, setStoreNameError] = useState<string | null>(null);
+  const [urlSlug, setUrlSlug] = useState('');
   
   // Password Change State
   const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
@@ -77,6 +78,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
       if (!error && data) {
         setMerchantData(data);
         setStoreName(data.name || '');
+        setUrlSlug(data.slug || '');
         if (data.theme) {
             setThemeForm({
                 primary_color: data.theme.primary_color || '#FF6B00',
@@ -182,6 +184,23 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
     }
   };
 
+  const handleUpdateSlug = async () => {
+      if (!urlSlug.trim()) return;
+      setLoading(true);
+      try {
+          await MenuService.updateRestaurantSlug(restaurantId, urlSlug.trim());
+          setMerchantData({ ...merchantData, slug: urlSlug.trim() });
+          setToast("URL Updated");
+          setTimeout(() => setToast(null), 2000);
+          setActiveModal(null);
+      } catch (e: any) {
+          setToast("Failed: " + (e.message || "Error"));
+          setTimeout(() => setToast(null), 3000);
+      } finally {
+          setLoading(false);
+      }
+  };
+
   return (
     <div className="min-h-screen font-jakarta pb-60 px-4 md:px-0 bg-[#F2F2F7]">
       {toast && (
@@ -216,6 +235,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
           <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Identity record</h3>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
             <SettingRow icon="fa-store" color="bg-slate-900" label="Store name" onClick={() => setActiveModal('store_name')} />
+            <SettingRow icon="fa-link" color="bg-emerald-500" label="Restaurant URL" onClick={() => setActiveModal('restaurant_url')} />
             <SettingRow icon="fa-envelope" color="bg-sky-500" label="Owner contact" onClick={() => setActiveModal('owner_contact')} />
             <SettingRow icon="fa-fingerprint" color="bg-indigo-400" label="Restaurant ID" onClick={() => setActiveModal('restaurant_id')} />
             <SettingRow icon="fa-key" color="bg-slate-400" label="Change password" onClick={() => setActiveModal('change_password')} />
@@ -371,6 +391,33 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                     className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                 >
                     {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Update Store Name'}
+                </button>
+            </div>
+        </SettingsModal>
+      )}
+
+      {activeModal === 'restaurant_url' && (
+        <SettingsModal title="Restaurant URL" onClose={() => setActiveModal(null)}>
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">URL Slug</label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-slate-400 font-bold text-sm">mymenu.asia/</span>
+                        <input 
+                            type="text" 
+                            value={urlSlug} 
+                            onChange={(e) => setUrlSlug(e.target.value)}
+                            className="flex-1 bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner"
+                            placeholder="restaurant-name"
+                        />
+                    </div>
+                </div>
+                <button 
+                    onClick={handleUpdateSlug}
+                    disabled={loading}
+                    className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                >
+                    {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Update URL'}
                 </button>
             </div>
         </SettingsModal>

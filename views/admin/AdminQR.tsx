@@ -16,7 +16,7 @@ const ShareModal: React.FC<{
 }> = ({ asset, restaurantName, onClose }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isCopied, setIsCopied] = useState(false);
-    const productionBase = "https://men-brown.vercel.app/";
+    const productionBase = "https://mymenu.asia/";
     const finalUrl = `${productionBase}${asset.code}`;
 
     useEffect(() => {

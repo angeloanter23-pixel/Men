@@ -11,6 +11,7 @@ interface WelcomeModalProps {
 const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, restaurantName, tableName }) => {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   return (
     <AnimatePresence>
@@ -46,17 +47,30 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, restaurant
             </div>
 
             <div className="space-y-6">
+              <div className="flex items-start gap-3 px-2">
+                <div className="relative flex items-center">
+                  <input 
+                    type="checkbox" 
+                    id="terms-agree" 
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-slate-300 transition-all checked:border-[#FF6B00] checked:bg-[#FF6B00]"
+                  />
+                  <i className="fa-solid fa-check pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-white opacity-0 transition-opacity peer-checked:opacity-100"></i>
+                </div>
+                <label htmlFor="terms-agree" className="text-xs font-medium text-slate-500 leading-relaxed cursor-pointer select-none">
+                  I agree to the <button onClick={() => setShowTerms(true)} className="text-slate-900 font-bold hover:underline">Terms of Service</button> and <button onClick={() => setShowPrivacy(true)} className="text-slate-900 font-bold hover:underline">Privacy Policy</button> of {restaurantName}.
+                </label>
+              </div>
+
               <button
-                onClick={onClose}
-                className="w-full py-6 rounded-2xl font-black uppercase text-[13px] tracking-[0.15em] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 bg-[#FF6B00] text-white shadow-orange-500/20 hover:bg-orange-600"
+                onClick={() => agreed && onClose()}
+                disabled={!agreed}
+                className={`w-full py-6 rounded-2xl font-black uppercase text-[13px] tracking-[0.15em] shadow-xl transition-all flex items-center justify-center gap-3 ${agreed ? 'bg-[#FF6B00] text-white shadow-orange-500/20 hover:bg-orange-600 active:scale-95' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
               >
                 <span>Proceed</span>
                 <i className="fa-solid fa-arrow-right text-[10px]"></i>
               </button>
-
-              <p className="text-center text-xs font-medium text-slate-400 leading-relaxed px-4">
-                By clicking proceed you agree to our <button onClick={() => setShowTerms(true)} className="text-slate-900 font-bold hover:underline">Terms</button> and <button onClick={() => setShowPrivacy(true)} className="text-slate-900 font-bold hover:underline">Privacy Policy</button>.
-              </p>
             </div>
           </motion.div>
 

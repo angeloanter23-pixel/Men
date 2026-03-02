@@ -165,6 +165,35 @@ export default function App() {
         return;
     }
 
+    const knownRoutes = ['landing', 'menu', 'cart', 'qr-verify', 'orders', 'about', 'privacy', 'terms', 'feedback-data', 'feedback', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'careers', 'affiliate-auth', 'affiliate-dashboard', 'admin', 'create-menu', 'demo', 'articles', 'article'];
+    
+    if (path && !knownRoutes.includes(path) && path.length > 0 && !token && !restaurantId && !hasSession) {
+        try {
+             const restaurant = await MenuService.getRestaurantBySlug(path);
+             if (restaurant) {
+                 const dummySession = {
+                    id: `walkin-${Date.now()}`,
+                    restaurant_id: restaurant.id,
+                    label: 'Walk-in',
+                    restaurantName: restaurant.name,
+                    status: 'active',
+                    qr_token: '',
+                    session_token: `walkin-${Date.now()}`
+                };
+                setActiveSession(dummySession);
+                localStorage.setItem('foodie_active_session', JSON.stringify(dummySession));
+                if (restaurant.theme) applyTheme(restaurant.theme);
+                await syncDatabaseData(restaurant.id);
+                setShowWelcomeModal(true);
+                setCurrentView('menu');
+                window.history.replaceState(null, '', '/');
+                return;
+             }
+        } catch (e) {
+            console.error("Slug resolution failed", e);
+        }
+    }
+
     if (restaurantId && !hasSession) {
         const dummySession = {
             id: `walkin-${Date.now()}`,

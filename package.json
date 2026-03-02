@@ -13,6 +13,7 @@
     "@google/genai": "^1.38.0",
     "@supabase/supabase-js": "2.45.1",
     "jsqr": "1.4.0",
+    "lucide-react": "^0.575.0",
     "motion": "^12.34.2",
     "quagga": "^0.12.1",
     "react": "^19.2.3",
