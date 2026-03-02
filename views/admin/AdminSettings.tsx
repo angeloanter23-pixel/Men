@@ -210,7 +210,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
             <SettingRow icon="fa-palette" color="bg-rose-500" label="Primary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('primary_color')} />
             <SettingRow icon="fa-fill-drip" color="bg-amber-400" label="Secondary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('secondary_color')} />
             <SettingRow icon="fa-wand-magic-sparkles" color="bg-purple-600" label="Menu template" onClick={() => setActiveModal('template')} />
-            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => setActiveModal('logo')} />
+            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('logo')} />
           </div>
         </section>
 
@@ -219,7 +219,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
           <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Identity record</h3>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
             <SettingRow icon="fa-store" color="bg-slate-900" label="Store name" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('store_name')} />
-            <SettingRow icon="fa-link" color="bg-emerald-500" label="Restaurant URL" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('restaurant_url')} />
             <SettingRow icon="fa-envelope" color="bg-sky-500" label="Owner contact" onClick={() => setActiveModal('owner_contact')} />
             <SettingRow icon="fa-fingerprint" color="bg-indigo-400" label="Restaurant ID" onClick={() => setActiveModal('restaurant_id')} />
             <SettingRow icon="fa-key" color="bg-slate-400" label="Change password" onClick={() => setActiveModal('change_password')} />
@@ -398,75 +397,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                     className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                 >
                     {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Update Store Name'}
-                </button>
-            </div>
-        </SettingsModal>
-      )}
-
-      {activeModal === 'restaurant_url' && (
-        <SettingsModal title="Restaurant URL" onClose={() => { setActiveModal(null); setUrlSlug(merchantData?.slug || ''); setUrlSlugError(null); }}>
-            <div className="space-y-4">
-                {merchantData?.last_slug_update && (new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) < 30 * 24 * 60 * 60 * 1000 && (
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 items-start">
-                        <i className="fa-solid fa-lock text-amber-500 mt-0.5"></i>
-                        <div className="space-y-1">
-                            <p className="text-amber-800 text-xs font-bold leading-none">URL locked</p>
-                            <p className="text-amber-700 text-[11px] font-medium leading-relaxed">
-                                Updated {Math.floor((new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) / (1000 * 60 * 60 * 24))} days ago. You can only update your URL once every 30 days.
-                            </p>
-                        </div>
-                    </div>
-                )}
-                <div className="space-y-2">
-                    <div className="flex justify-between items-end">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">URL Slug</label>
-                        <button 
-                            onClick={() => {
-                                navigator.clipboard.writeText(`https://mymenu.asia/#/${merchantData?.slug}`);
-                                setToast("Link Copied");
-                                setTimeout(() => setToast(null), 2000);
-                            }}
-                            className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-700 transition-colors flex items-center gap-1"
-                        >
-                            <i className="fa-regular fa-copy"></i> Copy Link
-                        </button>
-                    </div>
-                    <textarea 
-                        value={urlSlug} 
-                        onChange={(e) => { setUrlSlug(e.target.value); setUrlSlugError(null); }}
-                        className={`w-full bg-slate-50 border p-4 rounded-xl font-bold text-sm text-slate-900 outline-none transition-all shadow-inner resize-none h-24 ${urlSlugError ? 'border-rose-200 ring-4 ring-rose-50' : 'border-slate-200 focus:bg-white'}`}
-                        placeholder="restaurant-name"
-                        disabled={merchantData?.last_slug_update && (new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) < 30 * 24 * 60 * 60 * 1000}
-                    />
-                    <p className="text-slate-400 font-medium text-[11px] ml-1">mymenu.asia/#/{urlSlug || 'restaurant-name'}</p>
-                    {urlSlugError && <p className="text-rose-500 text-[9px] font-bold tracking-tight ml-1">{urlSlugError}</p>}
-                </div>
-                <button 
-                    onClick={async () => {
-                        if (!urlSlug.trim() || urlSlug === merchantData?.slug) return;
-                        setLoading(true);
-                        try {
-                            const existing = await MenuService.getRestaurantBySlug(urlSlug.trim());
-                            if (existing && existing.id !== restaurantId) {
-                                setUrlSlugError("This URL is already taken. Please choose another.");
-                                setLoading(false);
-                                return;
-                            }
-                            await MenuService.updateRestaurantSlug(restaurantId, urlSlug.trim());
-                            setMerchantData({ ...merchantData, slug: urlSlug.trim(), last_slug_update: new Date().toISOString() });
-                            setToast("URL Updated");
-                            setTimeout(() => setToast(null), 2000);
-                            setActiveModal(null);
-                        } catch (e) {
-                            setUrlSlugError("Failed to update URL.");
-                        } finally {
-                            setLoading(false);
-                        }
-                    }}
-                    disabled={loading || !urlSlug.trim() || urlSlug === merchantData?.slug || (merchantData?.last_slug_update && (new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) < 30 * 24 * 60 * 60 * 1000)}
-                    className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
-                >
-                    {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : (urlSlug !== merchantData?.slug ? 'Check Availability & Save' : 'Update URL')}
                 </button>
             </div>
         </SettingsModal>

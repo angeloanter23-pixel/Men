@@ -30,10 +30,8 @@ const Navbar: React.FC<NavbarProps> = ({
       
       <div className="flex-1 flex justify-center">
         <div className="cursor-pointer flex items-center" onClick={onLogoClick}>
-          {logo ? (
+          {logo && (
             <img src={logo} alt="Logo" className="h-6 w-auto object-contain" />
-          ) : (
-            <span className="font-black text-lg tracking-tighter text-slate-900">mymenu<span className="text-[#FF6B00]">.asia</span></span>
           )}
         </div>
       </div>
