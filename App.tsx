@@ -159,8 +159,16 @@ export default function App() {
     const restaurantId = urlParams.get('restaurant');
     
     const hasSession = !!localStorage.getItem('foodie_active_session');
+    const storedSession = hasSession ? JSON.parse(localStorage.getItem('foodie_active_session') || '{}') : null;
     
-    if (token && !hasSession) {
+    // If there is a token in the URL, and it doesn't match the current session, we should clear the session and start fresh.
+    if (token && storedSession && storedSession.qr_token !== token) {
+        localStorage.removeItem('foodie_active_session');
+        setActiveSession(null);
+        setCart([]);
+    }
+
+    if (token && (!hasSession || (storedSession && storedSession.qr_token !== token))) {
         try {
             const details = await MenuService.getQRCodeByCode(token);
             if (details) {
@@ -225,7 +233,12 @@ export default function App() {
 
     const knownRoutes = ['landing', 'menu', 'cart', 'qr-verify', 'orders', 'about', 'privacy', 'terms', 'feedback-data', 'feedback', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'careers', 'affiliate-auth', 'affiliate-dashboard', 'admin', 'create-menu', 'demo', 'articles', 'article'];
     
-    if (path && !knownRoutes.includes(path) && path.length > 0 && !token && !restaurantId && !hasSession) {
+    if (path && !knownRoutes.includes(path) && path.length > 0 && !token && !restaurantId && (!hasSession || (storedSession && storedSession.label !== 'Walk-in'))) {
+        if (storedSession && storedSession.label !== 'Walk-in') {
+            localStorage.removeItem('foodie_active_session');
+            setActiveSession(null);
+            setCart([]);
+        }
         try {
              const restaurant = await MenuService.getRestaurantBySlug(path);
              if (restaurant) {
@@ -252,7 +265,12 @@ export default function App() {
         }
     }
 
-    if (restaurantId && !hasSession) {
+    if (restaurantId && (!hasSession || (storedSession && storedSession.restaurant_id !== restaurantId))) {
+        if (storedSession && storedSession.restaurant_id !== restaurantId) {
+            localStorage.removeItem('foodie_active_session');
+            setActiveSession(null);
+            setCart([]);
+        }
         const dummySession = {
             id: `walkin-${Date.now()}`,
             restaurant_id: restaurantId,

@@ -172,17 +172,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         setActiveModal('demo_block');
         return;
     }
-    if (confirm("Are you sure you want to delete your account? This action is irreversible.")) {
-        setLoading(true);
-        try {
-            await MenuService.terminateAccount(session.user.id, restaurantId);
-            onLogout();
-        } catch (e: any) {
-            alert("Failed to delete account: " + e.message);
-        } finally {
-            setLoading(false);
-        }
-    }
+    setActiveModal('delete_account');
   };
 
   return (
@@ -210,7 +200,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
             <SettingRow icon="fa-palette" color="bg-rose-500" label="Primary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('primary_color')} />
             <SettingRow icon="fa-fill-drip" color="bg-amber-400" label="Secondary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('secondary_color')} />
             <SettingRow icon="fa-wand-magic-sparkles" color="bg-purple-600" label="Menu template" onClick={() => setActiveModal('template')} />
-            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('logo')} />
+            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => setActiveModal('logo')} />
           </div>
         </section>
 
@@ -492,6 +482,47 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
             >
                 Copy ID
             </button>
+        </SettingsModal>
+      )}
+
+      {activeModal === 'delete_account' && (
+        <SettingsModal title="Delete Account" onClose={() => setActiveModal(null)}>
+            <div className="space-y-6">
+                <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl flex gap-3 items-start">
+                    <i className="fa-solid fa-triangle-exclamation text-rose-500 mt-0.5"></i>
+                    <div className="space-y-1">
+                        <p className="text-rose-800 text-xs font-bold leading-none">Warning: Irreversible Action</p>
+                        <p className="text-rose-700 text-[11px] font-medium leading-relaxed">
+                            Deleting your account will permanently remove all your menus, categories, items, and settings. This action cannot be undone.
+                        </p>
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    <button 
+                        onClick={async () => {
+                            setLoading(true);
+                            try {
+                                await MenuService.terminateAccount(session.user.id, restaurantId);
+                                onLogout();
+                            } catch (e: any) {
+                                alert("Failed to delete account: " + e.message);
+                                setLoading(false);
+                            }
+                        }}
+                        disabled={loading}
+                        className="w-full py-4 bg-rose-500 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Yes, Delete My Account'}
+                    </button>
+                    <button 
+                        onClick={() => setActiveModal(null)}
+                        disabled={loading}
+                        className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </SettingsModal>
       )}
     </div>
