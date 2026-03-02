@@ -498,9 +498,9 @@ export async function checkEmailExists(email: string) {
   return data && data.length > 0;
 }
 
-export async function createStaffInvite(email: string, role: string, restaurantId: string) {
+export async function createStaffInvite(email: string, role: string, restaurantId: string, invitedBy: string) {
   const token = crypto.randomUUID();
-  const { data, error } = await supabase.from('staff_invites').insert([{ email: email.toLowerCase().trim(), role, restaurant_id: restaurantId, invite_token: token, status: 'pending' }]).select();
+  const { data, error } = await supabase.from('staff_invites').insert([{ email: email.toLowerCase().trim(), role, restaurant_id: restaurantId, invite_token: token, status: 'pending', invited_by: invitedBy }]).select();
   if (error) throw error;
   return data && data[0];
 }
@@ -571,9 +571,9 @@ export async function saveItemOptions(itemId: string | number, optionGroups: any
   }
 }
 
-export async function authSignUp(email: string, pass: string) {
+export async function authSignUp(email: string, pass: string, restaurantName: string = 'New Restaurant') {
   const hashedPass = await hashString(pass);
-  const { data, error: restErr } = await supabase.from('restaurants').insert([{ name: 'New Restaurant', theme: { primary_color: '#FF6B00', secondary_color: '#FFF3E0', font_family: 'Plus Jakarta Sans', template: 'classic', feedback_metrics: ["Cleanliness", "Food Quality", "Speed", "Service", "Value", "Experience"] } }]).select();
+  const { data, error: restErr } = await supabase.from('restaurants').insert([{ name: restaurantName, theme: { primary_color: '#FF6B00', secondary_color: '#FFF3E0', font_family: 'Plus Jakarta Sans', template: 'classic', feedback_metrics: ["Cleanliness", "Food Quality", "Speed", "Service", "Value", "Experience"] } }]).select();
   if (restErr) throw restErr;
   const restaurant = data && data[0];
 

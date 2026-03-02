@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
+import * as MenuService from '../services/menuService';
+
 type TableName = 
   | 'restaurants' 
   | 'menus' 
@@ -56,6 +58,11 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [isAddingRecord, setIsAddingRecord] = useState(false);
   const [newRecordForm, setNewRecordForm] = useState<Record<string, any>>({});
   const [toast, setToast] = useState<string | null>(null);
+
+  // New Account Creator
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [newAccountForm, setNewAccountForm] = useState({ restaurantName: '', email: '', password: '' });
+  const [accountCreating, setAccountCreating] = useState(false);
 
   // Added comment above fix
   // Fixed: Moved tableColumns and groupedTables memos to the top of the component to ensure they are initialized before being used in the render logic, resolving potential 'unknown' type inference and reference errors.
@@ -255,6 +262,22 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       showToast("Copied to clipboard");
   };
 
+  const handleCreateAccount = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setAccountCreating(true);
+      try {
+          await MenuService.authSignUp(newAccountForm.email, newAccountForm.password, newAccountForm.restaurantName);
+          showToast("Account created successfully");
+          setIsCreatingAccount(false);
+          setNewAccountForm({ restaurantName: '', email: '', password: '' });
+          fetchSystemOverview();
+      } catch (err: any) {
+          alert("Account Creation Failed: " + err.message);
+      } finally {
+          setAccountCreating(false);
+      }
+  };
+
   // Added comment above fix
   // Fixed: Combined the dual return blocks into a single return statement with conditional rendering to fix the uninitialized variable and unreachable code issues.
   return (
@@ -300,11 +323,11 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <p className="text-3xl font-black text-slate-900 leading-none">{tableCounts.orders || 0}</p>
              </div>
           </div>
-          <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-white flex flex-col justify-between h-44">
-             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm"><i className="fa-solid fa-bolt-lightning"></i></div>
+          <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-white flex flex-col justify-between h-44 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setIsCreatingAccount(true)}>
+             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm"><i className="fa-solid fa-user-plus"></i></div>
              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Latency</p>
-                <p className="text-3xl font-black text-slate-900 leading-none">12ms</p>
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Accounts</p>
+                <p className="text-xl font-black text-slate-900 leading-none">Create New</p>
              </div>
           </div>
           <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-white flex flex-col justify-between h-44">
@@ -353,6 +376,63 @@ const SuperAdminView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Supreme Data Node v2025.1</p>
         </footer>
       </main>
+
+      {/* Create Account Modal */}
+      {isCreatingAccount && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-fade-in font-jakarta p-4">
+          <div onClick={() => setIsCreatingAccount(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" />
+          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-slide-up p-8">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">New Account</h3>
+                <button onClick={() => setIsCreatingAccount(false)} className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 hover:text-slate-900 flex items-center justify-center transition-colors">
+                    <i className="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onSubmit={handleCreateAccount} className="space-y-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Restaurant Name</label>
+                    <input 
+                        required
+                        type="text" 
+                        value={newAccountForm.restaurantName}
+                        onChange={e => setNewAccountForm({...newAccountForm, restaurantName: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200/60 p-4 rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner"
+                        placeholder="e.g. The Golden Spoon"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                    <input 
+                        required
+                        type="email" 
+                        value={newAccountForm.email}
+                        onChange={e => setNewAccountForm({...newAccountForm, email: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200/60 p-4 rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner"
+                        placeholder="owner@restaurant.com"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                    <input 
+                        required
+                        type="password" 
+                        value={newAccountForm.password}
+                        onChange={e => setNewAccountForm({...newAccountForm, password: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200/60 p-4 rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white transition-all shadow-inner"
+                        placeholder="••••••••"
+                    />
+                </div>
+                <button 
+                    type="submit"
+                    disabled={accountCreating}
+                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all mt-4 disabled:opacity-50"
+                >
+                    {accountCreating ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Create Account'}
+                </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Table Editor Overlay */}
       {isEditorOpen && (

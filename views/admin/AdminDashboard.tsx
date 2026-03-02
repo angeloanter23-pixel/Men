@@ -4,7 +4,6 @@ import AdminAnalytics from './AdminAnalytics';
 import AdminQR from './AdminQR';
 import AdminSettings from './AdminSettings';
 import AdminOrders from './AdminOrders';
-import AdminAccounts from './AdminAccounts';
 import AdminLegal from './AdminLegal';
 import AdminAbout from './AdminAbout';
 import AdminApps from './AdminApps';
@@ -12,7 +11,7 @@ import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
 
-type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'accounts' | 'apps';
+type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'apps';
 type SettingsSubTab = 'general' | 'about' | 'terms' | 'privacy';
 
 interface AdminDashboardProps {
@@ -97,10 +96,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'qr', icon: 'fa-qrcode', label: 'QR and Tables' },
   ];
 
-  const teamNav: { id: AdminTab; icon: string; label: string }[] = [
-    { id: 'accounts', icon: 'fa-user-group', label: 'Team' },
-  ];
-
   const appsNav: { id: AdminTab; icon: string; label: string }[] = [
     { id: 'apps', icon: 'fa-cubes', label: 'Apps' },
   ];
@@ -148,7 +143,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} />;
       case 'qr': return <AdminQR />;
       case 'orders': return <AdminOrders />;
-      case 'accounts': return <AdminAccounts setActiveTab={setActiveTab} />;
       case 'apps': return <AdminApps />;
       case 'settings':
         return (
@@ -171,7 +165,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const currentTabLabel = activeTab === 'qr' ? 'QR and Tables' : (mainNav.find(n => n.id === activeTab) || teamNav.find(n => n.id === activeTab) || appsNav.find(n => n.id === activeTab) || settingsNav.find(n => n.id === activeTab))?.label || 'Dashboard';
+  const currentTabLabel = activeTab === 'qr' ? 'QR and Tables' : (mainNav.find(n => n.id === activeTab) || appsNav.find(n => n.id === activeTab) || settingsNav.find(n => n.id === activeTab))?.label || 'Dashboard';
 
   return (
     <div className="flex h-screen w-full bg-[#F2F2F7] overflow-hidden font-jakarta">
@@ -187,11 +181,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div>
                <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Management</p>
                {mainNav.map(n => renderNavButton(n))}
-            </div>
-            
-            <div>
-               <p className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Team & Security</p>
-               {teamNav.map(n => renderNavButton(n))}
             </div>
 
             <div>
