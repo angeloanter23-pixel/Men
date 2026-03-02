@@ -304,7 +304,23 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         <SettingsModal title="Brand logo" onClose={() => setActiveModal(null)}>
             <div className="flex flex-col items-center gap-6 py-4">
                 {themeForm.logo_url ? (
-                    <img src={themeForm.logo_url} className="w-32 h-32 rounded-2xl object-cover border border-slate-100 shadow-lg" />
+                    <div className="relative group">
+                        <img src={themeForm.logo_url} className="w-32 h-32 rounded-2xl object-cover border border-slate-100 shadow-lg" />
+                        <button 
+                            onClick={() => {
+                                if (confirm("Are you sure you want to remove your logo?")) {
+                                    const nextTheme = { ...themeForm, logo_url: '' };
+                                    setThemeForm(nextTheme);
+                                    MenuService.updateRestaurantTheme(restaurantId, { ...merchantData?.theme, ...nextTheme });
+                                    setToast("Logo removed");
+                                    setTimeout(() => setToast(null), 2000);
+                                }
+                            }}
+                            className="absolute -top-2 -right-2 w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600"
+                        >
+                            <i className="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
                 ) : (
                     <div className="w-32 h-32 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300 border border-slate-200 border-dashed">
                         <span className="text-sm font-bold text-slate-400 tracking-widest">mymenu.asia</span>
@@ -415,17 +431,14 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                             <i className="fa-regular fa-copy"></i> Copy Link
                         </button>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-slate-400 font-bold text-sm">mymenu.asia/#/</span>
-                        <input 
-                            type="text" 
-                            value={urlSlug} 
-                            onChange={(e) => { setUrlSlug(e.target.value); setUrlSlugError(null); }}
-                            className={`flex-1 bg-slate-50 border p-4 rounded-xl font-bold text-sm text-slate-900 outline-none transition-all shadow-inner ${urlSlugError ? 'border-rose-200 ring-4 ring-rose-50' : 'border-slate-200 focus:bg-white'}`}
-                            placeholder="restaurant-name"
-                            disabled={merchantData?.last_slug_update && (new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) < 30 * 24 * 60 * 60 * 1000}
-                        />
-                    </div>
+                    <textarea 
+                        value={urlSlug} 
+                        onChange={(e) => { setUrlSlug(e.target.value); setUrlSlugError(null); }}
+                        className={`w-full bg-slate-50 border p-4 rounded-xl font-bold text-sm text-slate-900 outline-none transition-all shadow-inner resize-none h-24 ${urlSlugError ? 'border-rose-200 ring-4 ring-rose-50' : 'border-slate-200 focus:bg-white'}`}
+                        placeholder="restaurant-name"
+                        disabled={merchantData?.last_slug_update && (new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) < 30 * 24 * 60 * 60 * 1000}
+                    />
+                    <p className="text-slate-400 font-medium text-[11px] ml-1">mymenu.asia/#/{urlSlug || 'restaurant-name'}</p>
                     {urlSlugError && <p className="text-rose-500 text-[9px] font-bold tracking-tight ml-1">{urlSlugError}</p>}
                 </div>
                 <button 
@@ -453,7 +466,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                     disabled={loading || !urlSlug.trim() || urlSlug === merchantData?.slug || (merchantData?.last_slug_update && (new Date().getTime() - new Date(merchantData.last_slug_update).getTime()) < 30 * 24 * 60 * 60 * 1000)}
                     className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                 >
-                    {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : 'Update URL'}
+                    {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : (urlSlug !== merchantData?.slug ? 'Check Availability & Save' : 'Update URL')}
                 </button>
             </div>
         </SettingsModal>

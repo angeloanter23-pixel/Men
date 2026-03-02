@@ -11,7 +11,7 @@ interface WelcomeModalProps {
 const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, restaurantName, tableName }) => {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(true);
 
   return (
     <AnimatePresence>
@@ -42,7 +42,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, restaurant
               </p>
               <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
                 <i className="fa-solid fa-location-dot text-[#FF6B00] text-xs"></i>
-                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{tableName}</span>
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{tableName === 'Walk-in' ? 'Walk-in' : tableName}</span>
               </div>
             </div>
 
@@ -59,7 +59,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, restaurant
                   <i className="fa-solid fa-check pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-white opacity-0 transition-opacity peer-checked:opacity-100"></i>
                 </div>
                 <label htmlFor="terms-agree" className="text-xs font-medium text-slate-500 leading-relaxed cursor-pointer select-none">
-                  I agree to the <button onClick={() => setShowTerms(true)} className="text-slate-900 font-bold hover:underline">Terms of Service</button> and <button onClick={() => setShowPrivacy(true)} className="text-slate-900 font-bold hover:underline">Privacy Policy</button> of {restaurantName}.
+                  By clicking proceed you agree to our <button onClick={() => setShowTerms(true)} className="text-slate-900 font-bold underline">terms</button> and <button onClick={() => setShowPrivacy(true)} className="text-slate-900 font-bold underline">conditions</button>.
                 </label>
               </div>
 
