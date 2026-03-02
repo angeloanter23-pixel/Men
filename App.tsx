@@ -159,6 +159,38 @@ export default function App() {
     const hasSession = !!localStorage.getItem('foodie_active_session');
     
     if (token && !hasSession) {
+        try {
+            const details = await MenuService.getQRCodeByCode(token);
+            if (details) {
+                const existingSession = await MenuService.getActiveSessionByQR(details.id);
+                if (existingSession && existingSession.pin_required) {
+                    setInitialTokenFromUrl(token);
+                    setCurrentView('qr-verify');
+                    window.history.replaceState(null, '', '/');
+                } else {
+                    const session = {
+                        ...(existingSession || { id: `scan-${Date.now()}`, session_token: `scan-${Date.now()}` }),
+                        restaurant_id: details.restaurant_id,
+                        label: details.label,
+                        restaurantName: details.restaurant_name,
+                        status: 'active',
+                        qr_token: details.code,
+                        theme: details.theme
+                    };
+                    setActiveSession(session);
+                    localStorage.setItem('foodie_active_session', JSON.stringify(session));
+                    if (session.theme) applyTheme(session.theme);
+                    await syncDatabaseData(session.restaurant_id);
+                    setShowWelcomeModal(true);
+                    setCurrentView('menu');
+                    // Token preserved in URL to ensure stability on refresh
+                }
+                return;
+            }
+        } catch (e) {
+            console.error("QR Auto-resolve failed", e);
+        }
+
         setInitialTokenFromUrl(token);
         setCurrentView('qr-verify');
         window.history.replaceState(null, '', '/');
