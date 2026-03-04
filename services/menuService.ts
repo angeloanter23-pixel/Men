@@ -47,7 +47,8 @@ export async function getQRCodeByCode(token: string) {
     label: item.label,
     code: item.code,
     restaurant_name: restaurant?.name,
-    theme: restaurant?.theme
+    theme: restaurant?.theme,
+    restaurant: restaurant
   };
 }
 

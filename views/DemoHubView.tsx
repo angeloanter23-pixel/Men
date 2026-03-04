@@ -1,19 +1,6 @@
 
-import React, { useEffect, useRef } from 'react';
-
-const DEMO_RESTAURANTS = [
-  { 
-    id: "01",
-    label: "Demo",
-    name: 'The Coffee House', 
-    industry: 'Cafe & Bakery', 
-    desc: 'Great for busy coffee shops. Customers can quickly add milk options or extra shots to their drinks.', 
-    code: 'aeec6204-496e-46c4-adfb-ba154fa92153',
-    table: 'Counter 02',
-    accent: '#FF6B00',
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=800'
-  }
-];
+import React, { useEffect, useRef, useState } from 'react';
+import * as MenuService from '../services/menuService';
 
 const QRComponent: React.FC<{ code: string }> = ({ code }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -45,14 +32,39 @@ const QRComponent: React.FC<{ code: string }> = ({ code }) => {
 
 const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) => void }> = ({ onBack, onSelectDemo }) => {
   const [loadingDemo, setLoadingDemo] = React.useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState<string>('');
+  const [demoRestaurant, setDemoRestaurant] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchDemo = async () => {
+        setLoadingStatus('Looking for available demo menu...');
+        const details = await MenuService.getQRCodeByCode('93QBAW');
+        setLoadingStatus('Fetching data...');
+        if (details) {
+            setDemoRestaurant({
+                id: "01",
+                label: "Demo",
+                name: details.restaurant_name,
+                industry: details.restaurant?.industry || 'Cafe & Bakery',
+                desc: details.restaurant?.description || details.restaurant?.desc || 'Great for busy coffee shops. Customers can quickly add milk options or extra shots to their drinks.',
+                code: details.code,
+                table: details.label,
+                accent: details.restaurant?.theme?.accent || '#FF6B00',
+                image: details.restaurant?.image || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=800'
+            });
+        }
+        setLoadingStatus('');
+    };
+    fetchDemo();
+  }, []);
 
   const handleDemoClick = (code: string) => {
     setLoadingDemo(code);
-    // Simulate a short delay for visual feedback if needed, but keep it fast
     setTimeout(() => {
         onSelectDemo(code);
     }, 500);
   };
+
 
   return (
     <div className="min-h-screen bg-white font-jakarta pb-40">
@@ -81,39 +93,41 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
            <p className="text-slate-500 text-[18px] md:text-[21px] font-medium leading-relaxed">
              Select the restaurant below to test our menu. This is a mockup store that shows you how fast ordering works for your guests.
            </p>
+           {loadingStatus && (
+               <p className="text-orange-600 font-bold text-sm animate-pulse">{loadingStatus}</p>
+           )}
         </section>
 
         <div className="grid grid-cols-1 gap-12">
-          {DEMO_RESTAURANTS.map((demo, idx) => (
+          {demoRestaurant && (
             <div 
-              key={idx} 
               className="bg-slate-50 rounded-[4rem] p-8 md:p-16 border border-slate-100/50 hover:bg-white hover:shadow-[0_40px_100px_rgba(0,0,0,0.06)] hover:border-orange-100 transition-all duration-700 group relative overflow-hidden"
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center relative z-10">
                 <div className="lg:col-span-7 space-y-10">
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                        <span className="text-5xl font-black text-orange-500/20 tabular-nums">{demo.id}</span>
+                        <span className="text-5xl font-black text-orange-500/20 tabular-nums">{demoRestaurant.id}</span>
                         <div className="h-px bg-slate-200 flex-1"></div>
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">{demo.label}</span>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">{demoRestaurant.label}</span>
                     </div>
                     <div className="space-y-2">
-                        <p className="text-[11px] font-black text-orange-500 uppercase tracking-[0.4em]">{demo.industry}</p>
-                        <h3 className="text-[36px] md:text-[52px] font-black text-slate-900 leading-none tracking-tight uppercase">{demo.name}</h3>
-                        <p className="text-indigo-600 font-bold text-sm tracking-[0.2em] uppercase leading-none pt-2">Table: {demo.table}</p>
+                        <p className="text-[11px] font-black text-orange-500 uppercase tracking-[0.4em]">{demoRestaurant.industry}</p>
+                        <h3 className="text-[36px] md:text-[52px] font-black text-slate-900 leading-none tracking-tight uppercase">{demoRestaurant.name}</h3>
+                        <p className="text-indigo-600 font-bold text-sm tracking-[0.2em] uppercase leading-none pt-2">Table: {demoRestaurant.table}</p>
                     </div>
                   </div>
 
                   <p className="text-slate-500 text-[16px] md:text-[18px] font-medium leading-relaxed max-w-xl">
-                    {demo.desc}
+                    {demoRestaurant.desc}
                   </p>
 
                   <button 
-                    onClick={() => handleDemoClick(demo.code)}
+                    onClick={() => handleDemoClick(demoRestaurant.code)}
                     disabled={loadingDemo !== null}
                     className="w-full md:w-auto px-12 py-6 bg-slate-900 text-white rounded-full font-black uppercase text-[12px] tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 group-hover:bg-orange-500 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    {loadingDemo === demo.code ? (
+                    {loadingDemo === demoRestaurant.code ? (
                         <>
                             <i className="fa-solid fa-spinner animate-spin text-sm"></i>
                             Loading...
@@ -128,29 +142,19 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
                 </div>
 
                 <div className="lg:col-span-5 flex flex-col items-center">
-                    <QRComponent code={demo.code} />
+                    <QRComponent code={demoRestaurant.code} />
                 </div>
               </div>
             </div>
-          ))}
+          )}
         </div>
 
-        <section className="bg-white rounded-[4rem] p-12 md:p-20 grid grid-cols-1 md:grid-cols-3 gap-16 border border-slate-100 shadow-2xl shadow-slate-200/50">
-           <div className="space-y-6">
-              <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl"><i className="fa-solid fa-bolt"></i></div>
-              <h4 className="text-xl font-bold tracking-tight text-slate-900 uppercase">Fast Sync</h4>
-              <p className="text-[14px] text-slate-500 font-medium leading-relaxed">Orders go from the phone to the kitchen staff in less than a second.</p>
-           </div>
-           <div className="space-y-6">
-              <div className="w-14 h-14 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-xl"><i className="fa-solid fa-wand-magic-sparkles"></i></div>
-              <h4 className="text-xl font-bold tracking-tight text-slate-900 uppercase">AI Helper</h4>
-              <p className="text-[14px] text-slate-500 font-medium leading-relaxed">Our AI helps guests choose the best food based on what they like.</p>
-           </div>
-           <div className="space-y-6">
-              <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl"><i className="fa-solid fa-shield-halved"></i></div>
-              <h4 className="text-xl font-bold tracking-tight text-slate-900 uppercase">Safe & Private</h4>
-              <p className="text-[14px] text-slate-500 font-medium leading-relaxed">Every table is private and secure. No personal data is stored.</p>
-           </div>
+        <section className="bg-slate-50 rounded-[3rem] p-10 md:p-12 border border-slate-100 text-center">
+            <h4 className="text-lg font-bold text-slate-900 uppercase mb-4">Demo Restrictions</h4>
+            <p className="text-[15px] text-slate-600 leading-relaxed max-w-2xl mx-auto">
+                Please note that in this demo environment, some features are restricted to prevent unauthorized modifications. 
+                While some items are editable, all changes made to the demo menu will be automatically erased every 24 hours.
+            </p>
         </section>
 
         <footer className="text-center pt-10 opacity-40">

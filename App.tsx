@@ -403,27 +403,24 @@ export default function App() {
   };
 
   const handleDemoSelect = async (demoId: string) => {
-    let name = 'Demo Restaurant';
-    let table = 'Demo Table';
-
-    if (demoId === 'aeec6204-496e-46c4-adfb-ba154fa92153') {
-        name = 'The Coffee House';
-        table = 'Counter 02';
-    }
+    const details = await MenuService.getQRCodeByCode(demoId);
+    const name = details?.restaurant_name || 'Demo Restaurant';
+    const table = details?.label || 'Demo Table';
+    const restaurantId = details?.restaurant_id || demoId;
 
     const dummySession = {
         id: `demo-${demoId}`,
-        restaurant_id: demoId,
+        restaurant_id: restaurantId,
         label: table,
         restaurantName: name,
         status: 'active',
-        qr_token: 'demo-token',
+        qr_token: demoId,
         session_token: 'demo-session'
     };
     setActiveSession(dummySession);
     
     // Non-blocking sync for instant demo load
-    syncDatabaseData(demoId).catch(console.error);
+    syncDatabaseData(restaurantId).catch(console.error);
     
     setShowWelcomeModal(true);
     navigateTo('menu');

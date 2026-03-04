@@ -200,7 +200,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
             <SettingRow icon="fa-palette" color="bg-rose-500" label="Primary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('primary_color')} />
             <SettingRow icon="fa-fill-drip" color="bg-amber-400" label="Secondary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('secondary_color')} />
             <SettingRow icon="fa-wand-magic-sparkles" color="bg-purple-600" label="Menu template" onClick={() => setActiveModal('template')} />
-            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => setActiveModal('logo')} />
+            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('logo')} />
           </div>
         </section>
 
