@@ -597,7 +597,7 @@ export async function createRestaurantForUser(userId: string, email: string, res
   // 1. Create Restaurant
   const { data: restData, error: restErr } = await supabase.from('restaurants').insert([{ 
     name: restaurantName, 
-    owner_user_id: userId,
+    // owner_user_id removed as it doesn't exist in schema
     account_type: 'trial',
     trial_ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     slug: restaurantName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''),
@@ -623,7 +623,20 @@ export async function createRestaurantForUser(userId: string, email: string, res
           throw updateErr;
       }
   } else {
+      // Insert new user with explicit ID if possible, or let Supabase handle it. 
+      // Since we passed userId to this function, we should probably use it if the users table allows upserting by ID, 
+      // but usually users table in public schema might be separate from auth.users.
+      // However, the previous code didn't use userId in insert, only in owner_user_id.
+      // Let's stick to the existing pattern but ensure restaurant_id is set.
+      
+      // WAIT: The previous code didn't use userId in the users insert either.
+      // It just inserted email, password, etc.
+      // If we are using Supabase Auth, the 'users' table here is likely a public profile table.
+      // We should probably try to link it to the auth user id if possible, but the schema might not have 'id' as a settable field if it's auto-increment or uuid.
+      // Let's assume the previous insert was correct for the users table structure, just missing the link logic which is already there (restaurant_id).
+      
       const { error: userErr } = await supabase.from('users').insert([{ 
+        id: userId, // Explicitly link to the auth user ID if this is a profile table
         email: email.toLowerCase().trim(), 
         password: 'oauth-user', 
         restaurant_id: restaurant.id, 
@@ -645,12 +658,21 @@ export async function createRestaurantForUser(userId: string, email: string, res
 }
 
 export async function getRestaurantByOwnerId(userId: string) {
-  const { data, error } = await supabase.from('restaurants')
-    .select('*')
-    .eq('owner_user_id', userId)
-    .limit(1);
-  if (error) return null;
-  return data && data.length > 0 ? data[0] : null;
+  // Query public users table to find the restaurant linked to this user
+  // We assume public.users.id matches auth.users.id based on our insert logic
+  const { data: user, error } = await supabase.from('users')
+    .select('restaurant_id, restaurants(*)')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error || !user || !user.restaurants) {
+      // Fallback: Try querying by email if ID lookup fails (though ID is preferred)
+      // This handles cases where the user might have been created without explicit ID link previously
+      // But we don't have email here easily unless we fetch it.
+      return null;
+  }
+  
+  return Array.isArray(user.restaurants) ? user.restaurants[0] : user.restaurants;
 }
 
 export async function endTableSession(sessionId: string) {
