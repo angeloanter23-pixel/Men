@@ -31,7 +31,7 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
         try {
             const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
             if (restaurant) {
-                const trialEnd = restaurant.trial_ends_at ? new Date(restaurant.trial_ends_at) : null;
+                const trialEnd = restaurant.trial_end_at ? new Date(restaurant.trial_end_at) : null;
                 const now = new Date();
                 
                 if (restaurant.account_type === 'trial' && trialEnd && trialEnd < now) {

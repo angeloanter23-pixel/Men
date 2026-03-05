@@ -72,7 +72,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             foundRestaurantId = ownerRestaurant.id;
             
             // Check trial status
-            const trialEnd = ownerRestaurant.trial_ends_at ? new Date(ownerRestaurant.trial_ends_at) : null;
+            const trialEnd = ownerRestaurant.trial_end_at ? new Date(ownerRestaurant.trial_end_at) : null;
             const now = new Date();
             if (ownerRestaurant.account_type === 'trial' && trialEnd && trialEnd < now) {
                 // Trial expired

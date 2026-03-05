@@ -122,12 +122,12 @@ export const DebugAccountView: React.FC<DebugAccountViewProps> = ({ onContinue }
                 <>
                   <div className="grid grid-cols-[120px_1fr] gap-2">
                       <span className="font-semibold text-slate-500">Trial Ends:</span> 
-                      <span className="text-slate-900">{restaurant.trial_ends_at ? new Date(restaurant.trial_ends_at).toLocaleString() : 'N/A'}</span>
+                      <span className="text-slate-900">{restaurant.trial_end_at ? new Date(restaurant.trial_end_at).toLocaleString() : 'N/A'}</span>
                   </div>
                   <div className="grid grid-cols-[120px_1fr] gap-2">
                       <span className="font-semibold text-slate-500">Remaining:</span> 
-                      <span className={`font-bold ${calculateRemainingTime(restaurant.trial_ends_at).includes('Expired') ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {restaurant.trial_ends_at ? calculateRemainingTime(restaurant.trial_ends_at) : 'N/A'}
+                      <span className={`font-bold ${calculateRemainingTime(restaurant.trial_end_at).includes('Expired') ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {restaurant.trial_end_at ? calculateRemainingTime(restaurant.trial_end_at) : 'N/A'}
                       </span>
                   </div>
                 </>
