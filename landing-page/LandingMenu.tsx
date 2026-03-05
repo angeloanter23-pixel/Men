@@ -46,7 +46,9 @@ export const LandingMenu: React.FC<LandingMenuProps> = ({ isOpen, onClose, onSel
               <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg">
                 <span className="text-[10px] font-bold">M</span>
               </div>
-              <span className="text-sm font-black tracking-tight text-slate-900 uppercase">Navigation</span>
+              <span className="text-sm font-black tracking-tight text-slate-900 uppercase">
+                Navigation <span className="text-[10px] text-slate-400 ml-1">v1.1</span>
+              </span>
             </div>
             <button 
               onClick={onClose} 
@@ -77,7 +79,7 @@ export const LandingMenu: React.FC<LandingMenuProps> = ({ isOpen, onClose, onSel
           </div>
           
           <div className="pt-4 border-t border-slate-50 max-w-5xl mx-auto w-full flex justify-between items-center">
-            <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.6em]">mymenu.asia v4.5</p>
+            <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.6em]">mymenu.asia v1.1</p>
           </div>
         </div>
       </div>
