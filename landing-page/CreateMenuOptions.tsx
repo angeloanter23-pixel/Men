@@ -59,10 +59,14 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      const redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
+        ? window.location.origin 
+        : 'https://ais-dev-vq36wkzk5myyzjspsrxtyg-10111269819.asia-east1.run.app';
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: redirectUrl
         }
       });
       if (error) throw error;

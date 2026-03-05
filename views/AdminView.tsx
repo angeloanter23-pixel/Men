@@ -65,10 +65,14 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
     setLoading(true);
     try {
+      const redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
+        ? window.location.origin 
+        : 'https://ais-dev-vq36wkzk5myyzjspsrxtyg-10111269819.asia-east1.run.app';
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: redirectUrl
         }
       });
       if (error) throw error;
@@ -134,7 +138,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                 <i className="fa-brands fa-google"></i>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter mb-2 md:mb-3">
-                Merchant Access
+                Merchant Access <span className="text-xs font-mono text-slate-400 align-top ml-1">v1.1</span>
             </h1>
             <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed">
                 Sign in to manage your restaurant.
