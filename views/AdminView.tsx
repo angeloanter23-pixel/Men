@@ -65,9 +65,14 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
     setLoading(true);
     try {
-      const redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
+      let redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
         ? window.location.origin 
         : 'https://ais-dev-vq36wkzk5myyzjspsrxtyg-10111269819.asia-east1.run.app';
+
+      // Explicitly force production URL if on custom domain to prevent localhost fallback
+      if (window.location.hostname.includes('mymenu.asia')) {
+          redirectUrl = 'https://mymenu.asia';
+      }
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -134,11 +139,11 @@ const AdminView: React.FC<AdminViewProps> = ({
       <div className="w-full max-w-[420px] relative z-10 mt-[-40px] md:mt-0">
         <div className="p-4">
             <header className="mb-8 md:mb-12 text-center">
-            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-inner mb-6">
-                <i className="fa-brands fa-google"></i>
+            <div className="w-20 h-20 bg-slate-900 text-white rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-xl shadow-slate-200 mb-6">
+                <i className="fa-solid fa-rocket"></i>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter mb-2 md:mb-3">
-                Merchant Access <span className="text-xs font-mono text-slate-400 align-top ml-1">v1.1</span>
+                Merchant Access <span className="text-xs font-mono text-slate-400 align-top ml-1">v1.2</span>
             </h1>
             <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed">
                 Sign in to manage your restaurant.
@@ -170,15 +175,12 @@ const AdminView: React.FC<AdminViewProps> = ({
                 <button 
                     onClick={handleGoogleLogin}
                     disabled={loading || !agreedToTerms} 
-                    className="w-full h-[64px] md:h-[72px] bg-white border-2 border-slate-100 hover:border-indigo-100 hover:bg-indigo-50 text-slate-900 rounded-3xl font-bold text-[14px] md:text-[15px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.1em] flex items-center justify-center gap-4"
+                    className="w-full h-[64px] md:h-[72px] bg-slate-900 text-white rounded-3xl font-bold text-[14px] md:text-[15px] shadow-xl shadow-slate-200 hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.1em] flex items-center justify-center gap-4"
                 >
                     {loading ? (
-                        <i className="fa-solid fa-spinner animate-spin text-xl text-indigo-600"></i>
+                        <i className="fa-solid fa-spinner animate-spin text-xl"></i>
                     ) : (
-                        <>
-                            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-6 h-6" />
-                            <span>Continue with Google</span>
-                        </>
+                        <span>Continue with Google</span>
                     )}
                 </button>
             </div>

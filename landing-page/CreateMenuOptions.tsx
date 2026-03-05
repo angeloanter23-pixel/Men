@@ -59,9 +59,14 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
+      let redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
         ? window.location.origin 
         : 'https://ais-dev-vq36wkzk5myyzjspsrxtyg-10111269819.asia-east1.run.app';
+
+      // Explicitly force production URL if on custom domain to prevent localhost fallback
+      if (window.location.hostname.includes('mymenu.asia')) {
+          redirectUrl = 'https://mymenu.asia';
+      }
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
