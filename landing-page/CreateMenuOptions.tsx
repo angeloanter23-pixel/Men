@@ -132,25 +132,24 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
       {step === 'login' ? (
         <div className="space-y-8 animate-slide-up">
           <header className="text-center space-y-3">
-            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
-              <i className="fa-brands fa-google"></i>
+            <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-xl shadow-slate-200">
+              <i className="fa-solid fa-rocket"></i>
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Get Started</h2>
-            <p className="text-slate-500 text-sm font-medium">Sign in with Google to create your menu.</p>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
+              Get Started <span className="text-xs font-mono text-slate-400 align-top ml-1">v1.2</span>
+            </h2>
+            <p className="text-slate-500 text-sm font-medium">Sign in to create your digital menu.</p>
           </header>
 
           <button 
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full py-5 bg-white border-2 border-slate-100 hover:border-indigo-100 hover:bg-indigo-50 text-slate-900 rounded-2xl font-bold text-sm shadow-sm hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3"
+            className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-xl shadow-slate-200 hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-3 uppercase tracking-widest"
           >
             {loading ? (
-              <i className="fa-solid fa-spinner animate-spin text-indigo-600"></i>
+              <i className="fa-solid fa-spinner animate-spin"></i>
             ) : (
-              <>
-                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                <span>Continue with Google</span>
-              </>
+              <span>Continue with Google</span>
             )}
           </button>
           
@@ -227,12 +226,14 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
         </div>
       )}
 
-      <button 
-        onClick={onClose}
-        className="w-full py-4 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-900 transition-colors"
-      >
-        Cancel
-      </button>
+      {step !== 'login' && (
+        <button 
+          onClick={onClose}
+          className="w-full py-4 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-900 transition-colors"
+        >
+          Cancel
+        </button>
+      )}
 
       <style>{`
         @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
