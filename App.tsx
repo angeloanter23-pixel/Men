@@ -151,6 +151,13 @@ export default function App() {
   const syncStateWithURL = async () => {
     const path = window.location.pathname.replace(/^\//, '');
     const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
+    
+    // Handle Supabase Auth Redirect
+    if (hash.startsWith('access_token') || hash.includes('access_token=')) {
+        setCurrentView('admin');
+        return;
+    }
+
     const hashParts = hash.split('/');
     const route = (hashParts[0] || 'landing') as ViewState;
     if (route === 'article' && hashParts[1]) setSelectedArticleId(hashParts[1]);
