@@ -34,7 +34,7 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
                 const trialEnd = restaurant.trial_end_at ? new Date(restaurant.trial_end_at) : null;
                 const now = new Date();
                 
-                if (restaurant.account_type === 'trial' && trialEnd && trialEnd < now) {
+                if (restaurant.account_type === 'free' && trialEnd && trialEnd < now) {
                     setError("Your trial has expired. Please upgrade to continue.");
                     // Optional: Redirect to upgrade page
                     return;
@@ -141,7 +141,7 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
               <i className="fa-solid fa-rocket"></i>
             </div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
-              Get Started <span className="text-xs font-mono text-slate-400 align-top ml-1">v1.4</span>
+              Get Started <span className="text-xs font-mono text-slate-400 align-top ml-1">v1.6</span>
             </h2>
             <p className="text-slate-500 text-sm font-medium">Sign in to create your digital menu.</p>
           </header>

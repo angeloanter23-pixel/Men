@@ -109,7 +109,7 @@ export const DebugAccountView: React.FC<DebugAccountViewProps> = ({ onContinue }
                   <span className="font-semibold text-slate-500">Type:</span> 
                   <div>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide ${
-                        accountType === 'trial' ? 'bg-amber-100 text-amber-800' : 
+                        accountType === 'free' ? 'bg-amber-100 text-amber-800' : 
                         accountType === 'Demo' ? 'bg-blue-100 text-blue-800' : 
                         'bg-green-100 text-green-800'
                     }`}>
@@ -118,7 +118,7 @@ export const DebugAccountView: React.FC<DebugAccountViewProps> = ({ onContinue }
                   </div>
               </div>
               
-              {accountType === 'trial' && (
+              {accountType === 'free' && (
                 <>
                   <div className="grid grid-cols-[120px_1fr] gap-2">
                       <span className="font-semibold text-slate-500">Trial Ends:</span> 

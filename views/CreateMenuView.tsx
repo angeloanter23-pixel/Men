@@ -35,7 +35,7 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
                 const trialEnd = restaurant.trial_end_at ? new Date(restaurant.trial_end_at) : null;
                 const now = new Date();
                 
-                if (restaurant.account_type === 'trial' && trialEnd && trialEnd < now) {
+                if (restaurant.account_type === 'free' && trialEnd && trialEnd < now) {
                     setError("Your trial has expired. Please upgrade to continue.");
                     // Optional: Redirect to upgrade page or show modal
                     return;

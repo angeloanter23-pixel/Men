@@ -598,7 +598,7 @@ export async function createRestaurantForUser(userId: string, email: string, res
   const { data: restData, error: restErr } = await supabase.from('restaurants').insert([{ 
     name: restaurantName, 
     // owner_user_id removed as it doesn't exist in schema
-    account_type: 'trial',
+    account_type: 'free',
     trial_end_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     slug: restaurantName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''),
     theme: { primary_color: '#FF6B00', secondary_color: '#FFF3E0', font_family: 'Plus Jakarta Sans', template: 'classic', feedback_metrics: ["Cleanliness", "Food Quality", "Speed", "Service", "Value", "Experience"] } 
