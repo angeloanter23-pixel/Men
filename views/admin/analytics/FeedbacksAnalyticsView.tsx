@@ -8,9 +8,10 @@ interface FeedbacksAnalyticsViewProps {
   chartRef: React.RefObject<HTMLCanvasElement | null>;
   appTheme: any;
   onThemeUpdate: (theme: any) => void;
+  restaurantId: string | null;
 }
 
-const FeedbacksAnalyticsView: React.FC<FeedbacksAnalyticsViewProps> = ({ feedbacks, chartRef, appTheme, onThemeUpdate }) => {
+const FeedbacksAnalyticsView: React.FC<FeedbacksAnalyticsViewProps> = ({ feedbacks, chartRef, appTheme, onThemeUpdate, restaurantId }) => {
   const [editingFeedback, setEditingFeedback] = useState<Feedback | null>(null);
   const [isManagingMetrics, setIsManagingMetrics] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,12 +40,10 @@ const FeedbacksAnalyticsView: React.FC<FeedbacksAnalyticsViewProps> = ({ feedbac
   };
 
   const handleSaveFeedback = async () => {
-    if (!editingFeedback || isSaving) return;
+    if (!editingFeedback || isSaving || !restaurantId) return;
     setIsSaving(true);
     try {
-        const sessionRaw = localStorage.getItem('foodie_supabase_session');
-        const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-        await MenuService.upsertFeedback({ ...editingFeedback, restaurant_id: session?.restaurant?.id });
+        await MenuService.upsertFeedback({ ...editingFeedback, restaurant_id: restaurantId });
         setEditingFeedback(null);
     } catch (e) { 
         console.error("Save error"); 
@@ -72,12 +71,11 @@ const FeedbacksAnalyticsView: React.FC<FeedbacksAnalyticsViewProps> = ({ feedbac
   };
 
   const persistMetrics = async (newMetrics: string[]) => {
+    if (!restaurantId) return;
     setIsSaving(true);
     try {
-        const sessionRaw = localStorage.getItem('foodie_supabase_session');
-        const session = sessionRaw ? JSON.parse(sessionRaw) : null;
         const updatedTheme = { ...appTheme, feedback_metrics: newMetrics };
-        await MenuService.updateRestaurantTheme(session?.restaurant?.id, updatedTheme);
+        await MenuService.updateRestaurantTheme(restaurantId, updatedTheme);
         onThemeUpdate(updatedTheme);
     } catch (e) { 
         console.error("Sync error"); 

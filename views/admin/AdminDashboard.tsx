@@ -45,10 +45,65 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [menuId, setMenuId] = useState<number | null>(null);
   const [showRestrictModal, setShowRestrictModal] = useState(false);
   const [restrictModalContent, setRestrictModalContent] = useState({ title: '', message: '' });
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isTrialExpired, setIsTrialExpired] = useState(false);
   
-  const sessionRaw = localStorage.getItem('foodie_supabase_session');
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  const restaurantId = session?.restaurant?.id;
+  useEffect(() => {
+    const fetchUserAndRestaurant = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.email) {
+        setCurrentUserEmail(user.email);
+        setCurrentUserId(user.id);
+        
+        // Check if it's the demo user from localStorage fallback (if any) or just rely on email
+        if (user.email === 'demo1@mymenu') {
+            // Demo logic might rely on specific ID
+        }
+
+        let foundRestaurantId = null;
+        let userRole = 'super-admin';
+
+        // 1. Check if user is an owner
+        const ownerRestaurant = await MenuService.getRestaurantByOwnerId(user.id);
+        if (ownerRestaurant) {
+            foundRestaurantId = ownerRestaurant.id;
+            
+            // Check trial status
+            const trialEnd = ownerRestaurant.trial_ends_at ? new Date(ownerRestaurant.trial_ends_at) : null;
+            const now = new Date();
+            if (ownerRestaurant.account_type === 'trial' && trialEnd && trialEnd < now) {
+                // Trial expired
+                console.warn("Trial expired for user", user.id);
+                setIsTrialExpired(true);
+            }
+        } else {
+            // 2. Check if user is staff (public.users table)
+            const { data: publicUsers } = await supabase
+              .from('users')
+              .select('restaurant_id, role')
+              .eq('email', user.email)
+              .limit(1);
+            
+            if (publicUsers && publicUsers.length > 0 && publicUsers[0].restaurant_id) {
+                foundRestaurantId = publicUsers[0].restaurant_id;
+                userRole = publicUsers[0].role;
+            }
+        }
+        
+        if (foundRestaurantId) {
+          setRestaurantId(foundRestaurantId);
+          setAdminCreds(prev => ({ ...prev, role: userRole, email: user.email }));
+        } else {
+          if (user.email !== 'demo1@mymenu') {
+            onNavigateToCreateMenu();
+          }
+        }
+      }
+    };
+    fetchUserAndRestaurant();
+  }, []);
 
   useEffect(() => {
     if (!restaurantId || restaurantId === "undefined") return;
@@ -109,7 +164,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'settings', icon: 'fa-gears', label: 'Site Settings' }
   ];
 
-  const isDemoUser = session?.user?.email === 'demo1@mymenu';
+  const isDemoUser = currentUserEmail === 'demo1@mymenu';
 
   const triggerRestrictModal = (title: string, message: string) => {
     setRestrictModalContent({ title, message });
@@ -150,15 +205,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const renderContent = () => {
     switch (activeTab) {
       case 'menu': return <AdminMenu onCreateMenu={onNavigateToCreateMenu} isDemo={isDemoUser} items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} menuId={menuId} restaurantId={restaurantId} onOpenFAQ={onOpenFAQ} />;
-      case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} />;
-      case 'qr': return <AdminQR isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
-      case 'orders': return <AdminOrders isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
-      case 'apps': return <AdminApps isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
+      case 'analytics': return <AdminAnalytics restaurantId={restaurantId} feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} />;
+      case 'qr': return <AdminQR restaurantId={restaurantId} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
+      case 'orders': return <AdminOrders restaurantId={restaurantId} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
+      case 'apps': return <AdminApps restaurantId={restaurantId} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
       case 'settings':
         return (
           <div className="animate-fade-in space-y-6">
             {settingsSubTab === 'general' && (
               <AdminSettings 
+                restaurantId={restaurantId}
+                userId={currentUserId}
+                userEmail={currentUserEmail}
                 onLogout={onLogout} 
                 adminCreds={adminCreds} 
                 setAdminCreds={setAdminCreds} 
@@ -226,6 +284,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onUnderstand={() => setShowRestrictModal(false)}
           onCreateMenu={onNavigateToCreateMenu}
         />
+      )}
+
+      {isTrialExpired && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-white max-w-md w-full rounded-[2rem] p-8 text-center shadow-2xl animate-scale-up">
+            <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl mb-6 shadow-inner">
+              <i className="fa-solid fa-clock"></i>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tight">Trial Expired</h2>
+            <p className="text-slate-500 font-medium mb-8 leading-relaxed">Your 24-hour trial period has ended. Please upgrade your plan to continue managing your restaurant.</p>
+            <button 
+              onClick={() => window.open('https://m.me/940288252493266', '_blank')}
+              className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 mb-4"
+            >
+              Upgrade Now
+            </button>
+            <button 
+              onClick={onLogout}
+              className="text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

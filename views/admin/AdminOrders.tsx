@@ -13,9 +13,10 @@ type SubTab = 'Live orders' | 'Tables' | 'Messages' | 'Waiter request';
 interface AdminOrdersProps {
   isDemo?: boolean;
   onRestrict?: (title: string, message: string) => void;
+  restaurantId: string | null;
 }
 
-export default function AdminOrders({ isDemo, onRestrict }: AdminOrdersProps) {
+export default function AdminOrders({ isDemo, onRestrict, restaurantId }: AdminOrdersProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('Live orders');
   const [orders, setOrders] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -28,10 +29,6 @@ export default function AdminOrders({ isDemo, onRestrict }: AdminOrdersProps) {
   
   const tabListRef = useRef<HTMLDivElement>(null);
   const isSyncing = useRef(false);
-
-  const sessionRaw = localStorage.getItem('foodie_supabase_session');
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  const restaurantId = session?.restaurant?.id;
 
   const fetchData = async () => {
     if (!restaurantId || isSyncing.current) return;

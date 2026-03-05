@@ -5,6 +5,7 @@ import * as MenuService from '../services/menuService';
 import { LandingOverlay } from '../landing-page/LandingOverlay';
 import { TermsSection } from '../landing-page/TermsSection';
 import { PrivacySection } from '../landing-page/PrivacySection';
+import { supabase } from '../lib/supabase';
 
 interface AdminViewProps {
   menuItems: MenuItem[];
@@ -30,105 +31,55 @@ interface AdminViewProps {
 const AdminView: React.FC<AdminViewProps> = ({ 
   menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu, onNavigateToCreateMenu, isDemo
 }) => {
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [isAuthenticated, setIsAuthenticated] = useState(isDemo || false);
-  const [email, setEmail] = useState('demo1@mymenu');
-  const [password, setPassword] = useState('12345678');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [restaurantName, setRestaurantName] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
   const [isPrivacyOverlayOpen, setIsPrivacyOverlayOpen] = useState(false);
-  const [clientIp, setClientIp] = useState('0.0.0.0');
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [countdown, setCountdown] = useState<number>(0);
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
 
   useEffect(() => {
-    const savedSession = localStorage.getItem('foodie_supabase_session');
-    if (savedSession) {
-      try {
-        const session = JSON.parse(savedSession);
-        if (session.user && session.restaurant) {
-          setIsAuthenticated(true);
-        }
-      } catch (e) {
-        localStorage.removeItem('foodie_supabase_session');
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsAuthenticated(true);
       }
-    }
-    MenuService.getClientIp().then(setClientIp);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (clientIp !== '0.0.0.0' && email) {
-      const syncSecurityStatus = async () => {
-        try {
-            const status = await MenuService.getLoginStatus(email, clientIp);
-            if (status.locked_until) {
-                const diff = Math.ceil((new Date(status.locked_until).getTime() - Date.now()) / 1000);
-                if (diff > 0) { setIsBlocked(true); setCountdown(diff); }
-                else { setIsBlocked(false); }
-            }
-        } catch (e) {}
-      };
-      syncSecurityStatus();
+  const handleGoogleLogin = async () => {
+    if (!agreedToTerms) {
+      setError("Please agree to the terms to continue.");
+      return;
     }
-  }, [email, clientIp]);
-
-  useEffect(() => {
-    let timer: number;
-    if (countdown > 0) {
-      timer = window.setInterval(() => {
-        setCountdown(prev => prev <= 1 ? 0 : prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [countdown]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!agreedToTerms) { setError("Please agree to the terms to continue."); return; }
-    if (isBlocked || loading) return;
-    
-    setLoading(true); 
-    setError('');
-    
+    setLoading(true);
     try {
-      const dbResponse = await MenuService.authSignIn(email.trim(), password);
-      await MenuService.clearLoginAttempts(email, clientIp);
-      localStorage.setItem('foodie_supabase_session', JSON.stringify(dbResponse));
-      setIsAuthenticated(true);
-    } catch (dbErr: any) {
-      await MenuService.recordLoginFailure(email, clientIp);
-      setError(dbErr.message || "Login failed. Check your email and password.");
-    } finally { 
-      setLoading(false); 
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      setError(e.message || "Login failed");
+      setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('foodie_supabase_session');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
     setError('');
-  };
-
-  const handleForgotPassword = () => {
-    const targetEmail = forgotEmail || email;
-    if (!targetEmail) {
-        alert("Please enter your email address.");
-        return;
-    }
-    
-    const subject = encodeURIComponent("Password Reset Request");
-    const body = encodeURIComponent(`Hello Support,\n\nI would like to request a password reset for my account associated with email: ${targetEmail}.\n\nThank you.`);
-    window.location.href = `mailto:support@mymenu.asia?subject=${subject}&body=${body}`;
-    setShowForgotModal(false);
   };
 
   if (isAuthenticated) {
@@ -174,83 +125,19 @@ const AdminView: React.FC<AdminViewProps> = ({
       <div className="w-full max-w-[420px] relative z-10 mt-[-40px] md:mt-0">
         <div className="p-4">
             <header className="mb-8 md:mb-12 text-center">
-            <div className="flex justify-center p-1 bg-slate-100 rounded-2xl mb-8 w-fit mx-auto">
-                <button 
-                    onClick={() => setActiveTab('login')}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-                >
-                    Login
-                </button>
-                <button 
-                    onClick={() => setActiveTab('signup')}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
-                >
-                    Signup
-                </button>
+            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-inner mb-6">
+                <i className="fa-brands fa-google"></i>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter mb-2 md:mb-3">
-                {activeTab === 'login' ? 'Welcome Back' : 'Create Account'}
+                Merchant Access
             </h1>
             <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed">
-                {activeTab === 'login' ? 'Enter your credentials to access the console.' : 'Get started with your new restaurant.'}
+                Sign in to manage your restaurant.
             </p>
             </header>
 
-            {activeTab === 'login' ? (
-                <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
-                <div className="space-y-4 md:space-y-5">
-                    <div className="space-y-2">
-                    <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                            <i className="fa-solid fa-envelope text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
-                        </div>
-                        <input 
-                            required 
-                            type="email" 
-                            value={email} 
-                            onChange={e => setEmail(e.target.value)} 
-                            className="w-full pl-14 pr-6 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
-                            placeholder="name@business.com" 
-                        />
-                    </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                    <div className="flex justify-between items-center px-1">
-                        <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest">Password</label>
-                        <button 
-                            type="button" 
-                            onClick={() => { setForgotEmail(email); setShowForgotModal(true); }} 
-                            className="text-[10px] md:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline uppercase tracking-wider"
-                        >
-                            Forgot Password?
-                        </button>
-                    </div>
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                            <i className="fa-solid fa-lock text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
-                        </div>
-                        <input 
-                        required 
-                        type={showPassword ? "text" : "password"} 
-                        value={password} 
-                        onChange={e => setPassword(e.target.value)} 
-                        className="w-full pl-14 pr-14 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
-                        placeholder="Enter your password" 
-                        />
-                        <button 
-                        type="button" 
-                        onClick={() => setShowPassword(!showPassword)} 
-                        className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors p-2"
-                        >
-                        <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-lg`}></i>
-                        </button>
-                    </div>
-                    </div>
-                </div>
-
-                <div className="flex items-start gap-3 px-2 pt-1 md:pt-2">
+            <div className="space-y-6">
+                <div className="flex items-start gap-3 px-2 pt-1 md:pt-2 justify-center">
                     <div 
                     onClick={() => setAgreedToTerms(!agreedToTerms)}
                     className={`mt-0.5 w-6 h-6 rounded-xl border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300'}`}
@@ -272,78 +159,23 @@ const AdminView: React.FC<AdminViewProps> = ({
                 )}
                 
                 <button 
-                    type="submit" 
-                    disabled={loading || isBlocked || !agreedToTerms} 
-                    className="w-full h-[64px] md:h-[72px] bg-slate-900 text-white rounded-3xl font-black text-[14px] md:text-[15px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em] hover:bg-black hover:shadow-2xl mt-4"
+                    onClick={handleGoogleLogin}
+                    disabled={loading || !agreedToTerms} 
+                    className="w-full h-[64px] md:h-[72px] bg-white border-2 border-slate-100 hover:border-indigo-100 hover:bg-indigo-50 text-slate-900 rounded-3xl font-bold text-[14px] md:text-[15px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.1em] flex items-center justify-center gap-4"
                 >
-                    {loading ? <i className="fa-solid fa-spinner animate-spin text-xl"></i> : (isBlocked ? `Wait ${countdown}s` : 'Sign In')}
+                    {loading ? (
+                        <i className="fa-solid fa-spinner animate-spin text-xl text-indigo-600"></i>
+                    ) : (
+                        <>
+                            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-6 h-6" />
+                            <span>Continue with Google</span>
+                        </>
+                    )}
                 </button>
-                <div className="text-center pt-4">
-                    <button 
-                        type="button" 
-                        onClick={() => setActiveTab('signup')}
-                        className="text-sm font-bold text-slate-500 hover:text-slate-900"
-                    >
-                        Don't have an account? <span className="text-indigo-600">Create one</span>
-                    </button>
-                </div>
-                </form>
-            ) : (
-                <form className="space-y-5 md:space-y-6">
-                    <div className="space-y-4">
-                        <input type="text" placeholder="Restaurant Name" value={restaurantName} onChange={e => setRestaurantName(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl" />
-                        <input type="email" placeholder="Email Address" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl" />
-                        <input type="password" placeholder="Password" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl" />
-                        <button type="submit" className="w-full p-4 bg-slate-900 text-white rounded-3xl font-black">Sign Up</button>
-                    </div>
-                </form>
-            )}
+            </div>
         </div>
       </div>
     </div>
-
-      {showForgotModal && (
-        <>
-            <div className="fixed inset-0 z-[5000] bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowForgotModal(false)} />
-            <div className="fixed inset-x-0 bottom-0 z-[5001] bg-white rounded-t-[2.5rem] p-8 md:p-12 shadow-[0_-20px_40px_rgba(0,0,0,0.2)] animate-slide-up font-jakarta">
-                <div className="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
-                <div className="max-w-md mx-auto space-y-8">
-                    <div className="text-center space-y-3">
-                        <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl mx-auto mb-4">
-                            <i className="fa-solid fa-key"></i>
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Reset Password</h3>
-                        <p className="text-slate-500 font-medium leading-relaxed">Enter your email address to generate a pre-filled support request.</p>
-                    </div>
-                    
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
-                            <input 
-                                type="email" 
-                                value={forgotEmail}
-                                onChange={(e) => setForgotEmail(e.target.value)}
-                                className="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                                placeholder="name@business.com"
-                            />
-                        </div>
-                        <button 
-                            onClick={handleForgotPassword}
-                            className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 active:scale-95 transition-all hover:bg-indigo-700 uppercase tracking-widest"
-                        >
-                            Draft Reset Email
-                        </button>
-                        <button 
-                            onClick={() => setShowForgotModal(false)}
-                            className="w-full py-4 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-900 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </>
-      )}
 
       <LandingOverlay 
         isOpen={isTermsOverlayOpen} 

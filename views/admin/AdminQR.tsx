@@ -75,7 +75,7 @@ const ShareModal: React.FC<{
     );
 };
 
-const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message: string) => void }> = ({ isDemo, onRestrict }) => {
+const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message: string) => void; restaurantId: string | null }> = ({ isDemo, onRestrict, restaurantId }) => {
   const [activeTab, setActiveTab] = useState<'gen' | 'bulk' | 'saved'>('gen');
   const [baseName, setBaseName] = useState('Table ');
   const [bulkPrefix, setBulkPrefix] = useState('Table ');
@@ -87,10 +87,6 @@ const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message
   const [loading, setLoading] = useState(false);
   const [qrToShare, setQrToShare] = useState<QRAsset | null>(null);
   const [qrToDelete, setQrToDelete] = useState<QRAsset | null>(null);
-
-  const sessionRaw = localStorage.getItem('foodie_supabase_session');
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  const restaurantId = session?.restaurant?.id;
 
   useEffect(() => { if (restaurantId) fetchQRCodes(); }, [restaurantId]);
   
@@ -314,7 +310,7 @@ const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message
       </div>
 
       {/* SHARE MODAL (APPLE BOTTOM SHEET) */}
-      {qrToShare && <ShareModal asset={qrToShare} restaurantName={session?.restaurant?.name || 'Restaurant'} onClose={() => setQrToShare(null)} />}
+      {qrToShare && <ShareModal asset={qrToShare} restaurantName={'Restaurant'} onClose={() => setQrToShare(null)} />}
 
       {/* DELETE CONFIRMATION (APPLE ACTION SHEET) */}
       {qrToDelete && (

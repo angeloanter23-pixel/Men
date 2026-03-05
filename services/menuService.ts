@@ -586,6 +586,73 @@ export async function authSignUp(email: string, pass: string, restaurantName: st
   return { user: { id: user.id, email: user.email, role: user.role }, restaurant };
 }
 
+export async function createRestaurantForUser(userId: string, email: string, restaurantName: string) {
+  // Check for existing user and trial status
+  const { data: existingPublicUser } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
+  
+  if (existingPublicUser?.trial_used) {
+      throw new Error("You have already utilized your trial period.");
+  }
+
+  // 1. Create Restaurant
+  const { data: restData, error: restErr } = await supabase.from('restaurants').insert([{ 
+    name: restaurantName, 
+    owner_user_id: userId,
+    account_type: 'trial',
+    trial_ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    slug: restaurantName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''),
+    theme: { primary_color: '#FF6B00', secondary_color: '#FFF3E0', font_family: 'Plus Jakarta Sans', template: 'classic', feedback_metrics: ["Cleanliness", "Food Quality", "Speed", "Service", "Value", "Experience"] } 
+  }]).select();
+  
+  if (restErr) throw restErr;
+  const restaurant = restData && restData[0];
+
+  // 2. Create User in public table
+  if (existingPublicUser) {
+      const { error: updateErr } = await supabase.from('users')
+        .update({ 
+            restaurant_id: restaurant.id, 
+            role: 'super-admin', 
+            status: 'active',
+            trial_used: true
+        })
+        .eq('email', email);
+      
+      if (updateErr) {
+          await supabase.from('restaurants').delete().eq('id', restaurant.id);
+          throw updateErr;
+      }
+  } else {
+      const { error: userErr } = await supabase.from('users').insert([{ 
+        email: email.toLowerCase().trim(), 
+        password: 'oauth-user', 
+        restaurant_id: restaurant.id, 
+        role: 'super-admin', 
+        status: 'active',
+        trial_used: true
+      }]);
+
+      if (userErr) { 
+        await supabase.from('restaurants').delete().eq('id', restaurant.id); 
+        throw userErr; 
+      }
+  }
+
+  // 3. Create Default Menu
+  await supabase.from('menus').insert([{ restaurant_id: restaurant.id, name: 'Main Menu' }]);
+
+  return { restaurant };
+}
+
+export async function getRestaurantByOwnerId(userId: string) {
+  const { data, error } = await supabase.from('restaurants')
+    .select('*')
+    .eq('owner_user_id', userId)
+    .limit(1);
+  if (error) return null;
+  return data && data.length > 0 ? data[0] : null;
+}
+
 export async function endTableSession(sessionId: string) {
   const { error } = await supabase.from('table_sessions').update({ 
     status: 'ended', 

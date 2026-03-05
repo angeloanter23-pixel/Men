@@ -23,9 +23,32 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         setUser(session.user);
+        
+        // Check if user already has a restaurant
+        try {
+            const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
+            if (restaurant) {
+                const trialEnd = restaurant.trial_ends_at ? new Date(restaurant.trial_ends_at) : null;
+                const now = new Date();
+                
+                if (restaurant.account_type === 'trial' && trialEnd && trialEnd < now) {
+                    setError("Your trial has expired. Please upgrade to continue.");
+                    // Optional: Redirect to upgrade page
+                    return;
+                }
+
+                // User already has a restaurant, redirect to admin
+                window.location.hash = '#/admin';
+                onClose();
+                return;
+            }
+        } catch (e) {
+            console.error("Error checking restaurant", e);
+        }
+
         if (step === 'login') setStep('identity');
       }
     });
@@ -64,9 +87,17 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
           setLoading(false);
           return;
         }
+
+        // Create Restaurant and User Link
+        if (user && user.email) {
+            await MenuService.createRestaurantForUser(user.id, user.email, brandName);
+        } else {
+            throw new Error("User email not found. Please login again.");
+        }
+
         setStep('activation');
-      } catch (e) {
-        setError("Verification failed. Check your connection.");
+      } catch (e: any) {
+        setError(e.message || "Verification failed. Check your connection.");
       } finally {
         setLoading(false);
       }
@@ -76,6 +107,7 @@ export const CreateMenuOptions: React.FC<CreateMenuOptionsProps> = ({ onClose })
   const handleActivation = () => {
     const message = encodeURIComponent(`Hello! I'd like to activate my digital menu for "${brandName}".`);
     window.open(`https://m.me/940288252493266?text=${message}`, '_blank');
+    window.location.hash = '#/admin';
     onClose();
   };
 

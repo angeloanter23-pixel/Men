@@ -10,6 +10,9 @@ interface AdminSettingsProps {
   setAdminCreds: React.Dispatch<React.SetStateAction<any>>;
   onThemeUpdate: (theme: any) => void;
   onSubTabChange?: (sub: string) => void;
+  restaurantId: string | null;
+  userId: string | null;
+  userEmail: string | null;
 }
 
 const SettingRow: React.FC<{ icon: string; color: string; label: string; sub?: string; last?: boolean; onClick?: () => void; isDestructive?: boolean }> = ({ icon, color, label, sub, last, onClick, isDestructive }) => (
@@ -41,7 +44,7 @@ const SettingsModal: React.FC<{ title: string; onClose: () => void; children: Re
   </div>
 );
 
-const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, setAdminCreds, onThemeUpdate, onSubTabChange }) => {
+const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, setAdminCreds, onThemeUpdate, onSubTabChange, restaurantId, userId, userEmail }) => {
   const [merchantData, setMerchantData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -63,9 +66,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
     logo_url: ''
   });
 
-  const sessionRaw = localStorage.getItem('foodie_supabase_session');
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  const restaurantId = session?.restaurant?.id;
   const isDemoAccount = restaurantId === 'aeec6204-496e-46c4-adfb-ba154fa92153';
 
   useEffect(() => {
@@ -148,6 +148,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         setPassError("Password must be at least 6 characters.");
         return;
     }
+    if (!userId) {
+        setPassError("User ID not found.");
+        return;
+    }
     setLoading(true);
     setPassError(null);
     try {
@@ -155,7 +159,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         // For this mockup, we'll assume current password is correct if provided.
         // But we will block the actual change if it's the demo account (handled above).
         
-        await MenuService.updateUserPassword(session.user.id, passForm.new);
+        await MenuService.updateUserPassword(userId, passForm.new);
         setToast("Password Updated");
         setTimeout(() => setToast(null), 2000);
         setActiveModal(null);
@@ -170,6 +174,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   const handleDeleteAccount = async () => {
     if (isDemoAccount) {
         setActiveModal('demo_block');
+        return;
+    }
+    if (!userId || !restaurantId) {
+        alert("Missing user or restaurant ID.");
         return;
     }
     setActiveModal('delete_account');
@@ -466,7 +474,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         <SettingsModal title="Owner contact" onClose={() => setActiveModal(null)}>
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
                 <i className="fa-solid fa-envelope text-slate-400"></i>
-                <p className="text-lg font-bold text-slate-900">{session?.user?.email}</p>
+                <p className="text-lg font-bold text-slate-900">{userEmail}</p>
             </div>
         </SettingsModal>
       )}
@@ -500,9 +508,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                 <div className="space-y-3">
                     <button 
                         onClick={async () => {
+                            if (!userId || !restaurantId) return;
                             setLoading(true);
                             try {
-                                await MenuService.terminateAccount(session.user.id, restaurantId);
+                                await MenuService.terminateAccount(userId, restaurantId);
                                 onLogout();
                             } catch (e: any) {
                                 alert("Failed to delete account: " + e.message);

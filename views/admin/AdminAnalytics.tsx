@@ -16,7 +16,8 @@ export default function AdminAnalytics({
   setSalesHistory, 
   menuItems,
   appTheme,
-  onThemeUpdate
+  onThemeUpdate,
+  restaurantId
 }: { 
   feedbacks: Feedback[]; 
   salesHistory: SalesRecord[]; 
@@ -24,6 +25,7 @@ export default function AdminAnalytics({
   menuItems: MenuItem[]; 
   appTheme: any;
   onThemeUpdate: (theme: any) => void;
+  restaurantId: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('Revenue');
   const [selectedProductId, setSelectedProductId] = useState<number | 'global'>('global');
@@ -41,10 +43,6 @@ export default function AdminAnalytics({
     feedback: useRef<HTMLCanvasElement>(null)
   };
   const chartInstances = useRef<Record<string, any>>({});
-
-  const sessionRaw = localStorage.getItem('foodie_supabase_session');
-  const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-  const restaurantId = session?.restaurant?.id;
 
   const syncPaidTransactions = async () => {
     if (!restaurantId || restaurantId === "undefined") return;
@@ -397,6 +395,7 @@ export default function AdminAnalytics({
             chartRef={chartRefs.feedback} 
             appTheme={appTheme}
             onThemeUpdate={onThemeUpdate}
+            restaurantId={restaurantId}
           />
         )}
 
