@@ -111,7 +111,8 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   const handleActivation = () => {
     const message = encodeURIComponent(`Hello! I'd like to activate my digital menu for "${brandName}".`);
     window.open(`https://m.me/940288252493266?text=${message}`, '_blank');
-    onComplete();
+    // Force reload to ensure fresh data is fetched and cache is cleared
+    window.location.reload();
   };
 
   return (
