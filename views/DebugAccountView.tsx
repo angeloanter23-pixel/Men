@@ -138,12 +138,24 @@ export const DebugAccountView: React.FC<DebugAccountViewProps> = ({ onContinue }
           )}
         </section>
 
-        <button 
-          onClick={onContinue}
-          className="w-full py-5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg active:scale-[0.99] uppercase tracking-widest text-xs"
-        >
-          Continue to Dashboard
-        </button>
+        <div className="flex flex-col gap-3">
+            <button 
+              onClick={onContinue}
+              className="w-full py-5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg active:scale-[0.99] uppercase tracking-widest text-xs"
+            >
+              Continue to Dashboard
+            </button>
+            <button 
+              onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  window.location.reload();
+              }}
+              className="w-full py-3 bg-white border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest text-[10px]"
+            >
+              Clear Cache & Reload
+            </button>
+        </div>
       </div>
     </div>
   );
