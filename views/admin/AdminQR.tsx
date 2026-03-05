@@ -75,7 +75,7 @@ const ShareModal: React.FC<{
     );
 };
 
-const AdminQR: React.FC = () => {
+const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message: string) => void }> = ({ isDemo, onRestrict }) => {
   const [activeTab, setActiveTab] = useState<'gen' | 'bulk' | 'saved'>('gen');
   const [baseName, setBaseName] = useState('Table ');
   const [bulkPrefix, setBulkPrefix] = useState('Table ');
@@ -107,6 +107,10 @@ const AdminQR: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!baseName.trim() || loading || !restaurantId) return;
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Deploy Node", "Demo mode is read-only. To deploy your own table QR nodes, please create your real restaurant account.");
+        return;
+    }
     setLoading(true);
     try {
       const currentNodes = await fetchQRCodes();
@@ -133,6 +137,10 @@ const AdminQR: React.FC = () => {
 
   const handleBulkGenerate = async () => {
     if (loading || !restaurantId) return;
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Bulk Generate", "Demo mode is read-only. To generate bulk table nodes, please create your real restaurant account.");
+        return;
+    }
     if (bulkEnd < bulkStart) return alert("End number must be greater than start.");
     if (bulkEnd - bulkStart > 50) return alert("Maximum 50 codes at once.");
 
@@ -323,6 +331,11 @@ const AdminQR: React.FC = () => {
                 <div className="flex flex-col gap-2">
                     <button 
                         onClick={async () => {
+                            if (isDemo && onRestrict) {
+                                onRestrict("Cannot Delete Node", "Demo mode is read-only. Table nodes cannot be deleted in this environment.");
+                                setQrToDelete(null);
+                                return;
+                            }
                             setLoading(true);
                             await MenuService.deleteQRCode(qrToDelete.id);
                             await fetchQRCodes();

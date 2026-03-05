@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, ViewState, Feedback } from './types';
 import * as MenuService from './services/menuService';
+import { DemoOrderModal } from './components/DemoOrderModal';
 
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
@@ -58,6 +59,7 @@ export default function App() {
   const [lastError, setLastError] = useState<{msg: string, log: string} | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [pendingSingleItem, setPendingSingleItem] = useState<CartItem | null>(null);
   const [initialTokenFromUrl, setInitialTokenFromUrl] = useState<string | undefined>(undefined);
@@ -311,6 +313,13 @@ export default function App() {
     setCurrentView(view); 
     setSelectedItem(null); 
     setIsSupportHubOpen(false);
+    
+    // Clear demo session if exiting to landing
+    if (view === 'landing' && activeSession?.id?.startsWith('demo-')) {
+      setActiveSession(null);
+      localStorage.removeItem('foodie_supabase_session');
+    }
+
     if (view === 'article' && param) {
       setSelectedArticleId(param);
       window.location.hash = `/${view}/${param}`;
@@ -331,6 +340,12 @@ export default function App() {
     const items = itemsOverride || (pendingSingleItem ? [pendingSingleItem] : cart);
     if (!session) { navigateTo('qr-verify'); return; }
     
+    // Check for demo session
+    if (session.id?.startsWith('demo-')) {
+        setShowDemoModal(true);
+        return;
+    }
+
     // Check if PIN verification is required but not yet completed
     // We assume if 'pin_required' is true in session, we need to verify.
     // But how do we know if it's already verified?
@@ -419,6 +434,12 @@ export default function App() {
     };
     setActiveSession(dummySession);
     
+    // Set admin demo session
+    localStorage.setItem('foodie_supabase_session', JSON.stringify({
+      user: { email: 'demo1@mymenu', id: 'demo-user' },
+      restaurant: { id: restaurantId, name: name }
+    }));
+    
     // Non-blocking sync for instant demo load
     syncDatabaseData(restaurantId).catch(console.error);
     
@@ -428,7 +449,7 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} />;
+      case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('create-menu')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} onAdminAuth={() => navigateTo('admin')} />;
       case 'create-menu': return <CreateMenuView onCancel={() => navigateTo('landing')} onComplete={() => navigateTo('admin')} />;
       case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={handleDemoSelect} />;
       case 'articles': return <ArticlesView onBack={() => navigateTo('landing')} />;
@@ -453,7 +474,7 @@ export default function App() {
       case 'careers': return <CareersView onBack={() => navigateTo('landing')} onAffiliateAuth={() => navigateTo('affiliate-auth')} />;
       case 'affiliate-auth': return <AffiliateAuth onBack={() => navigateTo('landing')} onLogin={() => navigateTo('affiliate-dashboard')} />;
       case 'affiliate-dashboard': return <AffiliateDashboard onLogout={() => navigateTo('landing')} />;
-      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={[]} setSalesHistory={() => {}} adminCreds={{}} setAdminCreds={() => {}} onExit={() => navigateTo('landing')} onLogoUpdate={() => {}} onThemeUpdate={applyTheme} appTheme={appTheme} onOpenFAQ={() => navigateTo('admin-faq')} onBackToMenu={() => navigateTo('menu')} />;
+      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={[]} setSalesHistory={() => {}} adminCreds={{}} setAdminCreds={() => {}} onExit={() => navigateTo('landing')} onLogoUpdate={() => {}} onThemeUpdate={applyTheme} appTheme={appTheme} onOpenFAQ={() => navigateTo('admin-faq')} onBackToMenu={() => navigateTo('menu')} onNavigateToCreateMenu={() => navigateTo('create-menu')} isDemo={activeSession?.id?.startsWith('demo-')} />;
       default: return null;
     }
   };
@@ -489,7 +510,7 @@ export default function App() {
           <DetailPanel item={selectedItem} isOpen={!!selectedItem} isProcessing={isDispatching} onClose={() => setSelectedItem(null)} onAddToCart={(item) => setCart(p => [...p, item])} onSendToKitchen={(item) => activeSession ? finalizeOrder(activeSession, [item]) : (setPendingSingleItem(item), navigateTo('qr-verify'))} />
         )}
         <VariationDrawer item={activeVariantSource} variants={menuItems.filter(i => i.parent_id === activeVariantSource?.id)} isOpen={!!activeVariantSource} onClose={() => setActiveVariantSource(null)} onSelect={(v) => { setActiveVariantSource(null); setSelectedItem(v); }} />
-        <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} onScanQR={() => { setIsSupportHubOpen(false); navigateTo('qr-verify'); }} />
+        <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} onScanQR={() => { setIsSupportHubOpen(false); navigateTo('qr-verify'); }} onCreateMenu={() => { setIsSupportHubOpen(false); navigateTo('create-menu'); }} />
         {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'create-menu', 'admin-faq', 'demo', 'articles', 'article', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
           <Navbar logo={appTheme.logo_url || null} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.length} />
         )}
@@ -511,6 +532,16 @@ export default function App() {
              <button onClick={() => setLastError(null)} className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-xl">Close</button>
           </div>
         </div>
+      )}
+      
+      {showDemoModal && (
+        <DemoOrderModal 
+          title="Demo Ordering"
+          message="This is a demo environment. Orders are not sent to a real kitchen. To start accepting real orders, please create your restaurant account."
+          onClose={() => setShowDemoModal(false)}
+          onUnderstand={() => setShowDemoModal(false)}
+          onCreateMenu={() => { setShowDemoModal(false); navigateTo('create-menu'); }}
+        />
       )}
       
       <WelcomeModal 

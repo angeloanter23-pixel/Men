@@ -5,6 +5,7 @@ import { MenuItem } from '../types';
 import * as MenuService from '../services/menuService';
 import SupportMessages from './support/SupportMessages';
 import WaiterRequest from './support/WaiterRequest';
+import { DemoOrderModal } from './DemoOrderModal';
 
 interface SupportHubProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface SupportHubProps {
   sessionId?: string;
   qrToken?: string;
   onScanQR?: () => void;
+  onCreateMenu: () => void;
 }
 
 type Mode = 'staff' | 'ai' | 'waiter';
@@ -49,8 +51,9 @@ const getDeviceId = () => {
     return id;
 };
 
-const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, restaurantId, tableNumber, sessionId, qrToken, onScanQR }) => {
+const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, restaurantId, tableNumber, sessionId, qrToken, onScanQR, onCreateMenu }) => {
   const [mode, setMode] = useState<Mode>('staff');
+  const [showRestrictModal, setShowRestrictModal] = useState(false);
   const [staffMessages, setStaffMessages] = useState<Message[]>([]);
   const [aiMessages, setAiMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -121,6 +124,10 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
   }, [staffMessages, aiMessages, mode]);
 
   const handleSend = async () => {
+    if (sessionId?.startsWith('demo-')) {
+        setShowRestrictModal(true);
+        return;
+    }
     const txt = input.trim();
     if (!txt || loading) return;
 
@@ -172,6 +179,10 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
   };
 
   const handleCallWaiter = async () => {
+    if (sessionId?.startsWith('demo-')) {
+        setShowRestrictModal(true);
+        return;
+    }
     if (waiterStatus !== 'idle') return;
     if (!sessionId) {
         setMode('staff');
@@ -202,6 +213,15 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-end justify-center p-0 font-jakarta transition-all duration-300">
+      {showRestrictModal && (
+        <DemoOrderModal 
+          title="Demo Support"
+          message="This is a demo environment. Messaging staff and calling waiters are disabled. To use these features in your own restaurant, please create an account."
+          onClose={() => setShowRestrictModal(false)}
+          onUnderstand={() => setShowRestrictModal(false)}
+          onCreateMenu={onCreateMenu}
+        />
+      )}
       <div onClick={onClose} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" />
       <div className="relative bg-white w-full max-w-lg rounded-t-3xl h-[85vh] sm:h-[700px] flex flex-col overflow-hidden shadow-2xl animate-slide-up border-t border-slate-100">
         <header className="bg-white px-8 pt-8 pb-4 shrink-0 border-b border-slate-100">
@@ -212,7 +232,7 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
                 </div>
                 <div>
                   <h3 className="text-xl font-bold tracking-tight uppercase leading-none text-slate-900">
-                    {mode === 'staff' ? 'Staff Help' : mode === 'ai' ? 'AI Helper' : 'Service'}
+                    {mode === 'staff' ? 'Staff Help' : mode === 'ai' ? 'AI Waiter' : 'Service'}
                   </h3>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 leading-none">Table {tableNumber}</p>
                 </div>
@@ -222,7 +242,7 @@ const SupportHub: React.FC<SupportHubProps> = ({ isOpen, onClose, menuItems, res
           
           <div className="bg-slate-100/60 p-1 rounded-2xl flex border border-slate-100 shadow-inner">
             <button onClick={() => setMode('staff')} className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${mode === 'staff' ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Staff</button>
-            <button onClick={() => setMode('ai')} className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${mode === 'ai' ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>AI Hub</button>
+            <button onClick={() => setMode('ai')} className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${mode === 'ai' ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>AI Waiter</button>
             <button onClick={() => setMode('waiter')} className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${mode === 'waiter' ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Request</button>
           </div>
         </header>

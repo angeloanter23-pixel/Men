@@ -7,9 +7,11 @@ interface AdminSessionsProps {
   onRefresh: () => void;
   getRelativeTime: (ts: string) => string;
   orders: any[];
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
-export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getRelativeTime, orders }: AdminSessionsProps) {
+export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getRelativeTime, orders, isDemo, onRestrict }: AdminSessionsProps) {
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
   const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
   const [showTerminateConfirm, setShowTerminateConfirm] = useState(false);
@@ -41,6 +43,12 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
 
   const handleTerminateAndReset = async () => {
     if (!selectedSession) return;
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Reset Session", "Demo mode is read-only. Table session termination and PIN resets are disabled.");
+        setShowTerminateConfirm(false);
+        setSelectedSession(null);
+        return;
+    }
     
     setIsUpdating(true);
     try {
@@ -66,6 +74,12 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
         alert("PIN must be 4 digits.");
         return;
     }
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Update PIN", "Demo mode is read-only. Manual PIN updates are disabled in this environment.");
+        setIsEditingPin(false);
+        setNewPin('');
+        return;
+    }
     setIsUpdating(true);
     try {
         await MenuService.updateTableSession(selectedSession.id, { verification_code: newPin });
@@ -81,6 +95,10 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
   };
 
   const handleTogglePinRequirement = async (sessionId: string, currentStatus: boolean) => {
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Toggle Security", "Demo mode is read-only. Security settings for table sessions cannot be modified.");
+        return;
+    }
     setIsUpdating(true);
     const nextStatus = !currentStatus;
     try {
@@ -95,6 +113,11 @@ export default function AdminSessions({ activeSessions, qrNodes, onRefresh, getR
   };
 
   const handleStartManualSession = async (qrId: string) => {
+      if (isDemo && onRestrict) {
+          onRestrict("Cannot Start Session", "Demo mode is read-only. Manual session initialization is disabled.");
+          setIsAddSessionOpen(false);
+          return;
+      }
       setIsUpdating(true);
       try {
           await MenuService.createManualSession(qrId);

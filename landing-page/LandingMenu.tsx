@@ -24,6 +24,7 @@ export const LandingMenu: React.FC<LandingMenuProps> = ({ isOpen, onClose, onSel
     { id: 'pricing', label: 'Pricing', icon: 'fa-tag' },
     { id: 'about', label: 'About Us', icon: 'fa-circle-info' },
     { id: 'contact', label: 'Contact', icon: 'fa-envelope' },
+    { id: 'merchant-access', label: 'Merchant Access', icon: 'fa-user-tie' },
     { id: 'terms', label: 'Terms', icon: 'fa-file-contract' }
   ];
 

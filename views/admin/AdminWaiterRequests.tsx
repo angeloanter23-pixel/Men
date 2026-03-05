@@ -6,12 +6,19 @@ interface AdminWaiterRequestsProps {
   requests: any[];
   onRefresh: () => void;
   getRelativeTime: (ts: string) => string;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
-export default function AdminWaiterRequests({ requests, onRefresh, getRelativeTime }: AdminWaiterRequestsProps) {
+export default function AdminWaiterRequests({ requests, onRefresh, getRelativeTime, isDemo, onRestrict }: AdminWaiterRequestsProps) {
   const [waiterActionTarget, setWaiterActionTarget] = useState<any | null>(null);
 
   const handleResolveRequest = async (requestId: string) => {
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Clear Request", "Demo mode is read-only. Waiter requests cannot be cleared in this environment.");
+        setWaiterActionTarget(null);
+        return;
+    }
     try {
         await MenuService.supabase.from('messages').delete().eq('id', requestId);
         setWaiterActionTarget(null);

@@ -10,7 +10,12 @@ import MenuFAQ from './menu/MenuFAQ';
 
 type SubTab = 'Live orders' | 'Tables' | 'Messages' | 'Waiter request';
 
-export default function AdminOrders() {
+interface AdminOrdersProps {
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
+}
+
+export default function AdminOrders({ isDemo, onRestrict }: AdminOrdersProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('Live orders');
   const [orders, setOrders] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -169,7 +174,7 @@ export default function AdminOrders() {
         </div>
 
         {activeSubTab === 'Live orders' && (
-          <LiveOrdersConsole orders={orders} onRefresh={fetchData} />
+          <LiveOrdersConsole orders={orders} onRefresh={fetchData} isDemo={isDemo} onRestrict={onRestrict} />
         )}
 
         {activeSubTab === 'Tables' && (
@@ -179,11 +184,13 @@ export default function AdminOrders() {
               onRefresh={fetchData} 
               getRelativeTime={getRelativeTime}
               orders={orders}
+              isDemo={isDemo}
+              onRestrict={onRestrict}
             />
         )}
 
         {activeSubTab === 'Messages' && (
-          <AdminMessages messages={messages} restaurantId={restaurantId} onRefresh={fetchData} />
+          <AdminMessages messages={messages} restaurantId={restaurantId} onRefresh={fetchData} isDemo={isDemo} onRestrict={onRestrict} />
         )}
 
         {activeSubTab === 'Waiter request' && (
@@ -191,6 +198,8 @@ export default function AdminOrders() {
                 requests={waiterRequests} 
                 onRefresh={fetchData} 
                 getRelativeTime={getRelativeTime} 
+                isDemo={isDemo}
+                onRestrict={onRestrict}
             />
         )}
       </div>

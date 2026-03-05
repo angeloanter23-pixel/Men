@@ -23,15 +23,22 @@ interface AdminViewProps {
   appTheme: any; 
   onOpenFAQ?: () => void;
   onBackToMenu?: () => void;
+  onNavigateToCreateMenu: () => void;
+  isDemo?: boolean;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ 
-  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu 
+  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu, onNavigateToCreateMenu, isDemo
 }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
+  const [isAuthenticated, setIsAuthenticated] = useState(isDemo || false);
   const [email, setEmail] = useState('demo1@mymenu');
   const [password, setPassword] = useState('12345678');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [restaurantName, setRestaurantName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
@@ -137,11 +144,14 @@ const AdminView: React.FC<AdminViewProps> = ({
         onThemeUpdate={onThemeUpdate}
         appTheme={appTheme} 
         onOpenFAQ={onOpenFAQ}
+        onNavigateToCreateMenu={onNavigateToCreateMenu}
+        onExit={onExit}
       />
     );
   }
 
   return (
+    <>
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 font-jakarta selection:bg-orange-100 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
@@ -164,98 +174,133 @@ const AdminView: React.FC<AdminViewProps> = ({
       <div className="w-full max-w-[420px] relative z-10 mt-[-40px] md:mt-0">
         <div className="p-4">
             <header className="mb-8 md:mb-12 text-center">
+            <div className="flex justify-center p-1 bg-slate-100 rounded-2xl mb-8 w-fit mx-auto">
+                <button 
+                    onClick={() => setActiveTab('login')}
+                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                    Login
+                </button>
+                <button 
+                    onClick={() => setActiveTab('signup')}
+                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                    Signup
+                </button>
+            </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter mb-2 md:mb-3">
-                Welcome Back
+                {activeTab === 'login' ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed">
-                Enter your credentials to access the console.
+                {activeTab === 'login' ? 'Enter your credentials to access the console.' : 'Get started with your new restaurant.'}
             </p>
             </header>
 
-            <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
-            <div className="space-y-4 md:space-y-5">
-                <div className="space-y-2">
-                <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
-                <div className="relative group">
-                    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                        <i className="fa-solid fa-envelope text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
+            {activeTab === 'login' ? (
+                <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
+                <div className="space-y-4 md:space-y-5">
+                    <div className="space-y-2">
+                    <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                            <i className="fa-solid fa-envelope text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
+                        </div>
+                        <input 
+                            required 
+                            type="email" 
+                            value={email} 
+                            onChange={e => setEmail(e.target.value)} 
+                            className="w-full pl-14 pr-6 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
+                            placeholder="name@business.com" 
+                        />
                     </div>
-                    <input 
+                    </div>
+                    
+                    <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                        <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest">Password</label>
+                        <button 
+                            type="button" 
+                            onClick={() => { setForgotEmail(email); setShowForgotModal(true); }} 
+                            className="text-[10px] md:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline uppercase tracking-wider"
+                        >
+                            Forgot Password?
+                        </button>
+                    </div>
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                            <i className="fa-solid fa-lock text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
+                        </div>
+                        <input 
                         required 
-                        type="email" 
-                        value={email} 
-                        onChange={e => setEmail(e.target.value)} 
-                        className="w-full pl-14 pr-6 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
-                        placeholder="name@business.com" 
-                    />
+                        type={showPassword ? "text" : "password"} 
+                        value={password} 
+                        onChange={e => setPassword(e.target.value)} 
+                        className="w-full pl-14 pr-14 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
+                        placeholder="Enter your password" 
+                        />
+                        <button 
+                        type="button" 
+                        onClick={() => setShowPassword(!showPassword)} 
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors p-2"
+                        >
+                        <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-lg`}></i>
+                        </button>
+                    </div>
+                    </div>
                 </div>
+
+                <div className="flex items-start gap-3 px-2 pt-1 md:pt-2">
+                    <div 
+                    onClick={() => setAgreedToTerms(!agreedToTerms)}
+                    className={`mt-0.5 w-6 h-6 rounded-xl border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                    >
+                    {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
+                    </div>
+                    <p className="text-[12px] md:text-[13px] font-medium text-slate-500 leading-snug">
+                    I agree to the <button type="button" onClick={() => setIsTermsOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Terms</button> and <button type="button" onClick={() => setIsPrivacyOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Privacy Policy</button>
+                    </p>
                 </div>
+
+                {error && (
+                    <div className="bg-rose-50 border border-rose-100 p-4 md:p-5 rounded-3xl animate-fade-in flex items-center gap-4">
+                    <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center shrink-0 text-rose-500">
+                        <i className="fa-solid fa-circle-exclamation"></i>
+                    </div>
+                    <p className="text-rose-600 text-[12px] md:text-[13px] font-bold leading-tight">{error}</p>
+                    </div>
+                )}
                 
-                <div className="space-y-2">
-                <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest">Password</label>
+                <button 
+                    type="submit" 
+                    disabled={loading || isBlocked || !agreedToTerms} 
+                    className="w-full h-[64px] md:h-[72px] bg-slate-900 text-white rounded-3xl font-black text-[14px] md:text-[15px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em] hover:bg-black hover:shadow-2xl mt-4"
+                >
+                    {loading ? <i className="fa-solid fa-spinner animate-spin text-xl"></i> : (isBlocked ? `Wait ${countdown}s` : 'Sign In')}
+                </button>
+                <div className="text-center pt-4">
                     <button 
                         type="button" 
-                        onClick={() => { setForgotEmail(email); setShowForgotModal(true); }} 
-                        className="text-[10px] md:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline uppercase tracking-wider"
+                        onClick={() => setActiveTab('signup')}
+                        className="text-sm font-bold text-slate-500 hover:text-slate-900"
                     >
-                        Forgot Password?
+                        Don't have an account? <span className="text-indigo-600">Create one</span>
                     </button>
                 </div>
-                <div className="relative group">
-                    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                        <i className="fa-solid fa-lock text-slate-400 group-focus-within:text-slate-900 transition-colors text-lg"></i>
+                </form>
+            ) : (
+                <form className="space-y-5 md:space-y-6">
+                    <div className="space-y-4">
+                        <input type="text" placeholder="Restaurant Name" value={restaurantName} onChange={e => setRestaurantName(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl" />
+                        <input type="email" placeholder="Email Address" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl" />
+                        <input type="password" placeholder="Password" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-100 rounded-3xl" />
+                        <button type="submit" className="w-full p-4 bg-slate-900 text-white rounded-3xl font-black">Sign Up</button>
                     </div>
-                    <input 
-                    required 
-                    type={showPassword ? "text" : "password"} 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    className="w-full pl-14 pr-14 py-4 md:py-5 bg-white border-2 border-slate-100 rounded-3xl text-[14px] md:text-[15px] font-bold text-slate-900 outline-none focus:border-slate-900 transition-all shadow-sm placeholder:text-slate-300" 
-                    placeholder="Enter your password" 
-                    />
-                    <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)} 
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors p-2"
-                    >
-                    <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-lg`}></i>
-                    </button>
-                </div>
-                </div>
-            </div>
-
-            <div className="flex items-start gap-3 px-2 pt-1 md:pt-2">
-                <div 
-                onClick={() => setAgreedToTerms(!agreedToTerms)}
-                className={`mt-0.5 w-6 h-6 rounded-xl border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300'}`}
-                >
-                {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
-                </div>
-                <p className="text-[12px] md:text-[13px] font-medium text-slate-500 leading-snug">
-                I agree to the <button type="button" onClick={() => setIsTermsOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Terms</button> and <button type="button" onClick={() => setIsPrivacyOverlayOpen(true)} className="text-slate-900 font-bold hover:underline">Privacy Policy</button>
-                </p>
-            </div>
-
-            {error && (
-                <div className="bg-rose-50 border border-rose-100 p-4 md:p-5 rounded-3xl animate-fade-in flex items-center gap-4">
-                <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center shrink-0 text-rose-500">
-                    <i className="fa-solid fa-circle-exclamation"></i>
-                </div>
-                <p className="text-rose-600 text-[12px] md:text-[13px] font-bold leading-tight">{error}</p>
-                </div>
+                </form>
             )}
-            
-            <button 
-                type="submit" 
-                disabled={loading || isBlocked || !agreedToTerms} 
-                className="w-full h-[64px] md:h-[72px] bg-slate-900 text-white rounded-3xl font-black text-[14px] md:text-[15px] shadow-xl shadow-slate-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em] hover:bg-black hover:shadow-2xl mt-4"
-            >
-                {loading ? <i className="fa-solid fa-spinner animate-spin text-xl"></i> : (isBlocked ? `Wait ${countdown}s` : 'Sign In')}
-            </button>
-            </form>
         </div>
       </div>
+    </div>
 
       {showForgotModal && (
         <>
@@ -318,7 +363,7 @@ const AdminView: React.FC<AdminViewProps> = ({
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
       `}</style>
-    </div>
+    </>
   );
 };
 

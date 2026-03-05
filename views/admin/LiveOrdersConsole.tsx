@@ -5,6 +5,8 @@ import * as MenuService from '../../services/menuService';
 interface LiveOrdersConsoleProps {
   orders: any[];
   onRefresh: () => void;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
 type SortMode = 'time' | 'table';
@@ -32,7 +34,7 @@ const InfoRow: React.FC<{ icon: string; color: string; label: string; value: str
   </div>
 );
 
-export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConsoleProps) {
+export default function LiveOrdersConsole({ orders, onRefresh, isDemo, onRestrict }: LiveOrdersConsoleProps) {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [modalTab, setModalTab] = useState<'info' | 'actions'>('info');
@@ -117,6 +119,11 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
 
   const handleSaveAllChanges = async () => {
     if (!selectedOrder) return;
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Update Order", "Demo mode is read-only. Order status changes are disabled in this environment.");
+        setSelectedOrder(null);
+        return;
+    }
     setIsSaving(true);
     
     try {
@@ -152,6 +159,12 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
 
   const removeOrder = async () => {
     if (!selectedOrder) return;
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Delete Order", "Demo mode is read-only. Orders cannot be deleted in this environment.");
+        setShowDeleteConfirm(false);
+        setSelectedOrder(null);
+        return;
+    }
     setIsSaving(true);
     try {
       await MenuService.deleteOrder(selectedOrder.id);
@@ -166,6 +179,13 @@ export default function LiveOrdersConsole({ orders, onRefresh }: LiveOrdersConso
   };
 
   const handleBulkDelete = async () => {
+      if (isDemo && onRestrict) {
+          onRestrict("Cannot Bulk Delete", "Demo mode is read-only. Bulk order deletion is disabled in this environment.");
+          setShowBulkDeleteConfirm(false);
+          setIsSelectionMode(false);
+          setSelectedOrderIds(new Set());
+          return;
+      }
       setIsSaving(true);
       try {
           for (const id of Array.from(selectedOrderIds)) {

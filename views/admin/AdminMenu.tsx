@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MenuItem, Category, ItemOptionGroup } from '../../types';
 import * as MenuService from '../../services/menuService';
+import { DemoOrderModal } from '../../components/DemoOrderModal';
 
 // Modular Components
 import SingleFoodList from './menu/SingleFoodList';
@@ -17,10 +18,14 @@ interface AdminMenuProps {
   menuId: number | string | null;
   restaurantId?: string;
   onOpenFAQ?: () => void;
+  isDemo?: boolean;
+  onCreateMenu: () => void;
 }
 
-const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, menuId, restaurantId, onOpenFAQ }) => {
+const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, menuId, restaurantId, onOpenFAQ, isDemo, onCreateMenu }) => {
   const [activeTab, setActiveTab] = useState<'categories' | 'items' | 'variations'>('categories');
+  const [showRestrictModal, setShowRestrictModal] = useState(false);
+  const [restrictModalContent, setRestrictModalContent] = useState({ title: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showFaq, setShowFaq] = useState(false);
@@ -53,6 +58,13 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
 
   const showToast = (message: string, type: 'success' | 'error') => { setToast({ message, type }); };
 
+  const triggerRestrictModal = (title: string, message: string) => {
+    setRestrictModalContent({ title, message });
+    setShowRestrictModal(true);
+    setShowDishModal(false);
+    setEntryToDelete(null);
+  };
+
   const handleDiagnosticRefresh = async () => {
     if (!restaurantId) return;
     setLoading(true);
@@ -80,6 +92,13 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
   };
 
   const handleSaveItem = async () => {
+    if (isDemo) { 
+      triggerRestrictModal(
+        editingItem ? "Cannot Edit Item" : "Cannot Create Item", 
+        `Demo mode is read-only. To manage your own ${formData.has_variations ? 'dish groups' : 'menu items'}, please create your real restaurant account.`
+      ); 
+      return; 
+    }
     if (loading || !formData.name.trim() || !restaurantId) return;
     
     setLoading(true);
@@ -134,6 +153,13 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
   };
 
   const executePurge = async (mode: 'default' | 'cascade' | 'orphan' = 'default') => {
+    if (isDemo) { 
+      triggerRestrictModal(
+        "Action Restricted", 
+        `Demo mode is read-only. You cannot delete ${entryToDelete?.type === 'category' ? 'categories' : 'menu items'} in this environment.`
+      ); 
+      return; 
+    }
     if (!entryToDelete || isDeleting) return;
     setIsDeleting(true);
     try {
@@ -198,6 +224,13 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
   };
 
   const handleSaveCategory = async (id: string | number | null, name: string, icon: string) => {
+    if (isDemo) { 
+      triggerRestrictModal(
+        id ? "Cannot Edit Category" : "Cannot Create Category", 
+        "Demo mode is read-only. To customize your menu categories, please create your real restaurant account."
+      ); 
+      return; 
+    }
     if (!restaurantId) return;
     setLoading(true);
     try {
@@ -284,6 +317,8 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
 
         {activeTab === 'categories' && (
           <CategoryList 
+            isDemo={isDemo}
+            onRestrict={triggerRestrictModal}
             cats={cats} 
             onAdd={(name, icon) => handleSaveCategory(null, name, icon)} 
             onDelete={(id) => {
@@ -298,10 +333,18 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
 
         {activeTab === 'items' && (
           <SingleFoodList 
+            isDemo={isDemo}
+            onRestrict={triggerRestrictModal}
             items={groupedItems.standalone} 
             onEdit={startEdit} 
-            onDelete={(item) => setEntryToDelete({ id: item.id, name: item.name, type: 'item' })} 
-            onAddNew={() => { setEditingItem(null); setFormData(initialFormState); setShowDishModal(true); }}
+            onDelete={(item) => {
+              setEntryToDelete({ id: item.id, name: item.name, type: 'item' });
+            }} 
+            onAddNew={() => { 
+              setEditingItem(null); 
+              setFormData(initialFormState); 
+              setShowDishModal(true); 
+            }}
             onDiagnosticRefresh={handleDiagnosticRefresh}
             loading={loading}
           />
@@ -309,13 +352,25 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
 
         {activeTab === 'variations' && (
           <DishGroupsList 
+            isDemo={isDemo}
+            onRestrict={triggerRestrictModal}
             headers={groupedItems.headers} 
             variationMap={groupedItems.variationMap} 
             onEditHeader={startEdit}
             onEditVariant={startEdit}
-            onAddVariant={(pid, cat) => { setEditingItem(null); setFormData({ ...initialFormState, parent_id: pid, cat: cat }); setShowDishModal(true); }}
-            onDelete={(item) => setEntryToDelete({ id: item.id, name: item.name, type: 'item' })}
-            onAddNewGroup={() => { setEditingItem(null); setFormData({ ...initialFormState, has_variations: true }); setShowDishModal(true); }}
+            onAddVariant={(pid, cat) => { 
+              setEditingItem(null); 
+              setFormData({ ...initialFormState, parent_id: pid, cat: cat }); 
+              setShowDishModal(true); 
+            }}
+            onDelete={(item) => {
+              setEntryToDelete({ id: item.id, name: item.name, type: 'item' });
+            }}
+            onAddNewGroup={() => { 
+              setEditingItem(null); 
+              setFormData({ ...initialFormState, has_variations: true }); 
+              setShowDishModal(true); 
+            }}
           />
         )}
       </div>
@@ -382,6 +437,16 @@ const AdminMenu: React.FC<AdminMenuProps> = ({ items, setItems, cats, setCats, m
                 </div>
             </div>
         </div>
+      )}
+
+      {showRestrictModal && (
+        <DemoOrderModal 
+          title={restrictModalContent.title}
+          message={restrictModalContent.message}
+          onClose={() => setShowRestrictModal(false)}
+          onUnderstand={() => setShowRestrictModal(false)}
+          onCreateMenu={onCreateMenu}
+        />
       )}
 
       <style>{`

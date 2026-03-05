@@ -7,6 +7,7 @@ import { LibrarySection } from '../landing-page/LibrarySection';
 import { LandingFaq } from '../landing-page/LandingFaq';
 import { LandingFooter } from '../landing-page/LandingFooter';
 import { LandingMenu } from '../landing-page/LandingMenu';
+import { CreateMenuOptions } from '../landing-page/CreateMenuOptions';
 import { LandingOverlay } from '../landing-page/LandingOverlay';
 
 // Informational Content Components
@@ -31,12 +32,13 @@ interface LandingViewProps {
   onImportMenu: (config: any) => void;
   onMenuClick: () => void;
   onAffiliateAuth: () => void;
+  onAdminAuth: () => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffiliateAuth }) => {
+const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffiliateAuth, onAdminAuth }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | 'investment' | 'shop' | 'enterprise' | 'careers' | 'guides' | 'caseStudies' | 'helpCenter' | 'privacy' | 'nodeRegistry' | 'compliance' | null>(null);
+  const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | 'investment' | 'shop' | 'enterprise' | 'careers' | 'guides' | 'caseStudies' | 'helpCenter' | 'privacy' | 'nodeRegistry' | 'compliance' | 'createMenu' | 'merchant-access' | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -51,10 +53,13 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
       <LandingMenu 
         isOpen={isMenuOpen} 
         onClose={() => setIsMenuOpen(false)} 
-        onSelect={(id) => setActiveOverlay(id)}
+        onSelect={(id) => {
+          if (id === 'merchant-access') onAdminAuth();
+          else setActiveOverlay(id as any);
+        }}
       />
 
-      <HeroSection onStart={onStart} onCreateMenu={onCreateMenu} onAffiliateAuth={onAffiliateAuth} />
+      <HeroSection onStart={onStart} onCreateMenu={() => setActiveOverlay('createMenu')} onAffiliateAuth={onAffiliateAuth} />
       
       <BlueprintStepper />
       
@@ -66,7 +71,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
       
       <LandingFooter 
         onStart={onStart} 
-        onCreateMenu={onCreateMenu} 
+        onCreateMenu={() => setActiveOverlay('createMenu')} 
         onInvestmentClick={() => setActiveOverlay('investment')}
         onCareerClick={() => setActiveOverlay('careers')}
         onShopClick={() => setActiveOverlay('shop')}
@@ -173,10 +178,12 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
       </LandingOverlay>
 
       <LandingOverlay 
-        isOpen={activeOverlay === 'compliance'} 
+        isOpen={activeOverlay === 'createMenu'} 
         onClose={() => setActiveOverlay(null)} 
       >
-        <ComplianceSection />
+        <CreateMenuOptions 
+            onClose={() => setActiveOverlay(null)}
+        />
       </LandingOverlay>
     </div>
   );

@@ -7,9 +7,11 @@ interface AdminMessagesProps {
   messages: any[];
   restaurantId: string;
   onRefresh: () => void;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
-export default function AdminMessages({ messages, restaurantId, onRefresh }: AdminMessagesProps) {
+export default function AdminMessages({ messages, restaurantId, onRefresh, isDemo, onRestrict }: AdminMessagesProps) {
   const [selectedChatThread, setSelectedChatThread] = useState<any | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -61,6 +63,12 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
     const txt = chatInput.trim();
     if (!txt || !selectedChatThread || !restaurantId || isSending) return;
     
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Send Message", "Demo mode is read-only. Replying to guest messages is disabled in this environment.");
+        setChatInput('');
+        return;
+    }
+    
     setIsSending(true);
     setChatInput('');
 
@@ -85,6 +93,11 @@ export default function AdminMessages({ messages, restaurantId, onRefresh }: Adm
   };
 
   const handleDeleteConversation = async (deviceId: string) => {
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Delete Chat", "Demo mode is read-only. Conversations cannot be deleted in this environment.");
+        setThreadToDelete(null);
+        return;
+    }
     try {
         await supabase.from('messages').delete().eq('device_id', deviceId);
         setThreadToDelete(null);

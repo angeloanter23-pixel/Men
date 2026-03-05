@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
             className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-[14px] font-bold text-indigo-600 hover:bg-indigo-50 transition-all group"
           >
             <i className="fa-solid fa-user-tie w-5 text-center text-indigo-400"></i>
-            <span>Merchant Login</span>
+            <span>Admin Panel</span>
           </button>
           <p className="mt-6 text-center text-[9px] font-black text-slate-200 uppercase tracking-widest leading-none">v4.5.2 Platinum</p>
         </div>

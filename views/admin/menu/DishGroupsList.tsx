@@ -9,10 +9,12 @@ interface DishGroupsListProps {
   onEditVariant: (item: MenuItem) => void;
   onDelete: (item: MenuItem) => void;
   onAddNewGroup: () => void;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
 const DishGroupsList: React.FC<DishGroupsListProps> = ({ 
-  headers, variationMap, onEditHeader, onAddVariant, onEditVariant, onDelete, onAddNewGroup 
+  headers, variationMap, onEditHeader, onAddVariant, onEditVariant, onDelete, onAddNewGroup, isDemo, onRestrict 
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [actionSheetItem, setActionSheetItem] = useState<MenuItem | null>(null);

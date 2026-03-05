@@ -8,9 +8,11 @@ interface SectionsListProps {
   onEdit?: (cat: Category) => void;
   onDiagnosticRefresh?: () => void;
   loading: boolean;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
-const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEdit, onDiagnosticRefresh, loading }) => {
+const SectionsList: React.FC<SectionsListProps> = ({ cats, onAdd, onDelete, onEdit, onDiagnosticRefresh, loading, isDemo, onRestrict }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');

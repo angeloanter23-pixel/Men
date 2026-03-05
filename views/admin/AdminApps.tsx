@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import CalculatorApp from '../../components/admin/apps/CalculatorApp';
 import NotepadApp from '../../components/admin/apps/NotepadApp';
 
-const AdminApps: React.FC = () => {
+const AdminApps: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message: string) => void }> = ({ isDemo, onRestrict }) => {
   const [activeApp, setActiveApp] = useState<'calc' | 'notepad' | null>(null);
 
   return (

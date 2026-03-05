@@ -7,6 +7,7 @@ import AdminOrders from './AdminOrders';
 import AdminLegal from './AdminLegal';
 import AdminAbout from './AdminAbout';
 import AdminApps from './AdminApps';
+import { DemoOrderModal } from '../../components/DemoOrderModal';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
@@ -30,16 +31,20 @@ interface AdminDashboardProps {
   onThemeUpdate: (theme: any) => void;
   appTheme: any;
   onOpenFAQ?: () => void;
+  onNavigateToCreateMenu: () => void;
+  onExit: () => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
-  onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ 
+  onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onNavigateToCreateMenu, onExit 
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('menu');
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('general');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [menuId, setMenuId] = useState<number | null>(null);
+  const [showRestrictModal, setShowRestrictModal] = useState(false);
+  const [restrictModalContent, setRestrictModalContent] = useState({ title: '', message: '' });
   
   const sessionRaw = localStorage.getItem('foodie_supabase_session');
   const session = sessionRaw ? JSON.parse(sessionRaw) : null;
@@ -106,13 +111,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const isDemoUser = session?.user?.email === 'demo1@mymenu';
 
+  const triggerRestrictModal = (title: string, message: string) => {
+    setRestrictModalContent({ title, message });
+    setShowRestrictModal(true);
+  };
+
   const renderNavButton = (config: any) => (
     <button 
       key={config.id}
       onClick={() => { 
         if (config.id === 'exit-demo') {
             onLogout();
-            window.location.hash = '#/landing';
+            onExit();
             return;
         }
         setActiveTab(config.id); 
@@ -139,11 +149,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'menu': return <AdminMenu items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} menuId={menuId} restaurantId={restaurantId} onOpenFAQ={onOpenFAQ} />;
+      case 'menu': return <AdminMenu onCreateMenu={onNavigateToCreateMenu} isDemo={isDemoUser} items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} menuId={menuId} restaurantId={restaurantId} onOpenFAQ={onOpenFAQ} />;
       case 'analytics': return <AdminAnalytics feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} />;
-      case 'qr': return <AdminQR />;
-      case 'orders': return <AdminOrders />;
-      case 'apps': return <AdminApps />;
+      case 'qr': return <AdminQR isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
+      case 'orders': return <AdminOrders isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
+      case 'apps': return <AdminApps isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
       case 'settings':
         return (
           <div className="animate-fade-in space-y-6">
@@ -207,6 +217,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </header>
         <main className="flex-1 overflow-y-auto no-scrollbar bg-[#F2F2F7] p-4 md:p-8">{renderContent()}</main>
       </div>
+
+      {showRestrictModal && (
+        <DemoOrderModal 
+          title={restrictModalContent.title}
+          message={restrictModalContent.message}
+          onClose={() => setShowRestrictModal(false)}
+          onUnderstand={() => setShowRestrictModal(false)}
+          onCreateMenu={onNavigateToCreateMenu}
+        />
+      )}
     </div>
   );
 };

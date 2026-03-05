@@ -8,9 +8,11 @@ interface SingleFoodListProps {
   onAddNew: () => void;
   onDiagnosticRefresh?: () => void;
   loading?: boolean;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
-const SingleFoodList: React.FC<SingleFoodListProps> = ({ items, onEdit, onDelete, onAddNew, onDiagnosticRefresh, loading }) => {
+const SingleFoodList: React.FC<SingleFoodListProps> = ({ items, onEdit, onDelete, onAddNew, onDiagnosticRefresh, loading, isDemo, onRestrict }) => {
   const [actionSheetItem, setActionSheetItem] = useState<MenuItem | null>(null);
   const [isPressing, setIsPressing] = useState<string | null>(null);
   const longPressTimer = useRef<number | null>(null);
