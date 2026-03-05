@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
+import { DebugAccountView } from './DebugAccountView';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 import * as MenuService from '../services/menuService';
 import { LandingOverlay } from '../landing-page/LandingOverlay';
@@ -37,6 +38,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
   const [isPrivacyOverlayOpen, setIsPrivacyOverlayOpen] = useState(false);
+  const [showDebug, setShowDebug] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -83,6 +85,9 @@ const AdminView: React.FC<AdminViewProps> = ({
   };
 
   if (isAuthenticated) {
+    if (showDebug) {
+      return <DebugAccountView onContinue={() => setShowDebug(false)} />;
+    }
     return (
       <AdminDashboard 
         onLogout={handleLogout} 
