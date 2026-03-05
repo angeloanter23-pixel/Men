@@ -8,6 +8,7 @@ import AdminLegal from './AdminLegal';
 import AdminAbout from './AdminAbout';
 import AdminApps from './AdminApps';
 import { DemoOrderModal } from '../../components/DemoOrderModal';
+import { UpgradeView } from '../UpgradeView';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
@@ -235,6 +236,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const currentTabLabel = activeTab === 'qr' ? 'QR and Tables' : (mainNav.find(n => n.id === activeTab) || appsNav.find(n => n.id === activeTab) || settingsNav.find(n => n.id === activeTab))?.label || 'Dashboard';
 
+  if (isTrialExpired) {
+    return <UpgradeView onLogout={onLogout} />;
+  }
+
   return (
     <div className="flex h-screen w-full bg-[#F2F2F7] overflow-hidden font-jakarta">
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90]" />}
@@ -284,30 +289,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onUnderstand={() => setShowRestrictModal(false)}
           onCreateMenu={onNavigateToCreateMenu}
         />
-      )}
-
-      {isTrialExpired && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white max-w-md w-full rounded-[2rem] p-8 text-center shadow-2xl animate-scale-up">
-            <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl mb-6 shadow-inner">
-              <i className="fa-solid fa-clock"></i>
-            </div>
-            <h2 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tight">Trial Expired</h2>
-            <p className="text-slate-500 font-medium mb-8 leading-relaxed">Your 24-hour trial period has ended. Please upgrade your plan to continue managing your restaurant.</p>
-            <button 
-              onClick={() => window.open('https://m.me/940288252493266', '_blank')}
-              className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 mb-4"
-            >
-              Upgrade Now
-            </button>
-            <button 
-              onClick={onLogout}
-              className="text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );
