@@ -42,6 +42,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
   const [isPrivacyOverlayOpen, setIsPrivacyOverlayOpen] = useState(false);
   const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
+  const [hasConfirmedAccount, setHasConfirmedAccount] = useState(false);
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
   useEffect(() => {
@@ -128,6 +129,23 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   if (isAuthenticated) {
     if (hasRestaurant === false) {
+      if (userEmail && !hasConfirmedAccount) {
+        return (
+          <div className="fixed inset-0 bg-white z-[200] flex flex-col items-center justify-center p-6 font-jakarta">
+            <div className="w-full max-w-md space-y-8 text-center">
+              <h2 className="text-3xl font-black text-slate-900">Welcome back</h2>
+              <p className="text-slate-500">You are logged in as <strong className="text-slate-900">{userEmail}</strong></p>
+              <button 
+                onClick={() => setHasConfirmedAccount(true)}
+                className="w-full h-14 bg-slate-900 text-white font-bold rounded-xl"
+              >
+                Continue as {userEmail}
+              </button>
+              <button onClick={handleLogout} className="text-slate-500 hover:text-slate-900">Logout</button>
+            </div>
+          </div>
+        );
+      }
       return (
         <RestaurantNameEditor 
           userId={userId || ''}
