@@ -67,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
             <i className="fa-solid fa-user-tie w-5 text-center text-indigo-400"></i>
             <span>Admin Panel</span>
           </button>
-          <p className="mt-6 text-center text-[9px] font-black text-slate-200 uppercase tracking-widest leading-none">v4.5.2 Platinum</p>
+          <p className="mt-6 text-center text-[9px] font-black text-slate-200 uppercase tracking-widest leading-none">v2.3</p>
         </div>
       </aside>
     </>

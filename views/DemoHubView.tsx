@@ -1,6 +1,7 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import * as MenuService from '../services/menuService';
+import { LandingNav } from '../landing-page/LandingNav';
+import { LandingFooter } from '../landing-page/LandingFooter';
 
 const QRComponent: React.FC<{ code: string }> = ({ code }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,6 +35,13 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
   const [loadingDemo, setLoadingDemo] = React.useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState<string>('');
   const [demoRestaurant, setDemoRestaurant] = useState<any>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     const fetchDemo = async () => {
@@ -68,22 +76,8 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
 
   return (
     <div className="min-h-screen bg-white font-jakarta pb-40">
-      <header className="bg-white/90 backdrop-blur-2xl sticky top-0 z-[100] border-b border-slate-100 px-6 h-[72px] flex items-center justify-between">
-        <div className="max-w-[1200px] w-full mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={onBack} className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all active:scale-90 border border-slate-100">
-                <i className="fa-solid fa-chevron-left text-xs"></i>
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white">
-                  <span className="text-[10px] font-bold">M</span>
-                </div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none uppercase">mymenu.asia</h1>
-              </div>
-            </div>
-        </div>
-      </header>
-
+      <LandingNav isScrolled={isScrolled} onOpenMenu={() => {}} />
+      
       <main className="max-w-[1100px] mx-auto px-6 py-20 space-y-32">
         <section className="text-center space-y-6 max-w-3xl mx-auto">
            <div className="inline-flex px-5 py-1.5 rounded-full bg-orange-50 border border-orange-100 text-orange-600 text-[10px] font-black uppercase tracking-[0.4em] shadow-sm">Try our Demo</div>
@@ -157,9 +151,21 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
             </p>
         </section>
 
-        <footer className="text-center pt-10 opacity-40">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.6em]">Demo Version 4.5.2 • 2025</p>
-        </footer>
+        <LandingFooter 
+            onStart={() => {}}
+            onCreateMenu={() => {}}
+            onInvestmentClick={() => {}}
+            onCareerClick={() => {}}
+            onShopClick={() => {}}
+            onEnterpriseClick={() => {}}
+            onGuidesClick={() => {}}
+            onCaseStudiesClick={() => {}}
+            onHelpCenterClick={() => {}}
+            onPrivacyClick={() => {}}
+            onTermsClick={() => {}}
+            onNodeRegistryClick={() => {}}
+            onComplianceClick={() => {}}
+        />
       </main>
     </div>
   );

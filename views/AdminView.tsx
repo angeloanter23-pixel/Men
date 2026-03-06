@@ -147,17 +147,22 @@ const AdminView: React.FC<AdminViewProps> = ({
                 <i className="fa-solid fa-rocket"></i>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter mb-3">
-                {isDemo ? 'Demo Admin' : 'Merchant Access'} <span className="text-xs font-mono text-slate-400 align-top ml-1">v1.3</span>
+                {isDemo ? 'Demo Admin' : 'Merchant Access'} <span className="text-xs font-mono text-slate-400 align-top ml-1">v2.3</span>
             </h1>
             <p className="text-slate-500 text-sm font-medium">
                 {isDemo ? 'For demo, admin features are restricted to view-only.' : 'Sign in to manage your restaurant.'}
             </p>
             {userEmail && (
-                <div className="mt-6 inline-flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <div className="mt-6 flex flex-col items-center gap-4 bg-slate-100 p-6 rounded-3xl">
                     <p className="text-slate-600 text-xs font-mono">
-                        Logged in as {userEmail}
+                        Previously logged in as <span className="font-bold text-slate-900">{userEmail}</span>
                     </p>
+                    <button 
+                        onClick={() => setIsAuthenticated(true)}
+                        className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm uppercase tracking-widest"
+                    >
+                        Continue
+                    </button>
                 </div>
             )}
             </header>
