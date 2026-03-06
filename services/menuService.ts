@@ -588,9 +588,9 @@ export async function authSignUp(email: string, pass: string, restaurantName: st
 
 export async function createRestaurantForUser(userId: string, email: string, restaurantName: string) {
   // Check for existing user and trial status
-  const { data: existingPublicUser } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
+  const { data: existingRestaurant } = await supabase.from('restaurants').select('*').eq('email', email).maybeSingle();
   
-  if (existingPublicUser?.trial_used) {
+  if (existingRestaurant?.trial_used) {
       throw new Error("You have already utilized your trial period.");
   }
 
@@ -600,6 +600,7 @@ export async function createRestaurantForUser(userId: string, email: string, res
     // owner_user_id removed as it doesn't exist in schema
     account_type: 'trial',
     trial_end_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    trial_used: true,
     slug: restaurantName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''),
     theme: { primary_color: '#FF6B00', secondary_color: '#FFF3E0', font_family: 'Plus Jakarta Sans', template: 'classic', feedback_metrics: ["Cleanliness", "Food Quality", "Speed", "Service", "Value", "Experience"] } 
   }]).select();
@@ -608,13 +609,12 @@ export async function createRestaurantForUser(userId: string, email: string, res
   const restaurant = restData && restData[0];
 
   // 2. Create User in public table
-  if (existingPublicUser) {
+  if (existingRestaurant) {
       const { error: updateErr } = await supabase.from('users')
         .update({ 
             restaurant_id: restaurant.id, 
             role: 'super-admin', 
-            status: 'active',
-            trial_used: true
+            status: 'active'
         })
         .eq('email', email);
       
