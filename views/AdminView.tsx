@@ -49,11 +49,7 @@ const AdminView: React.FC<AdminViewProps> = ({
         setUserEmail(session.user.email || null);
         const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
         setHasRestaurant(!!restaurant);
-        
-        // If we have a hash in the URL (e.g. from OAuth redirect), auto-authenticate
-        if (window.location.hash.includes('access_token')) {
-          setIsAuthenticated(true);
-        }
+        setIsAuthenticated(true);
       }
       setHasCheckedSession(true);
     };
@@ -110,6 +106,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     await supabase.auth.signOut();
     setIsAuthenticated(false);
     setError('');
+    window.location.href = '/';
   };
 
   if (!hasCheckedSession) {
