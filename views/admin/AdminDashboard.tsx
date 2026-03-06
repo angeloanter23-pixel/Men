@@ -14,7 +14,7 @@ import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
 import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
 
-type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'apps';
+type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'apps' | 'setup-wizard';
 type SettingsSubTab = 'general' | 'about' | 'terms' | 'privacy';
 
 interface AdminDashboardProps {
@@ -166,7 +166,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'orders', icon: 'fa-message', label: 'Console' },
     { id: 'analytics', icon: 'fa-chart-pie', label: 'Stats' },
     { id: 'qr', icon: 'fa-qrcode', label: 'QR and Tables' },
-    { id: 'setup-wizard', icon: 'fa-wand-magic-sparkles', label: 'Setup Wizard' },
   ];
 
   const appsNav: { id: AdminTab; icon: string; label: string }[] = [
@@ -283,13 +282,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </nav>
         </div>
-        <div className="mt-auto p-6"><button onClick={onLogout} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-700 hover:bg-rose-600 transition-all">Sign Out</button></div>
+        <div className="mt-auto p-6 space-y-3">
+            <button onClick={() => setShowSetupWizard(true)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-500 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
+                <i className="fa-solid fa-wand-magic-sparkles"></i> Setup Wizard
+            </button>
+            <button onClick={onLogout} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-700 hover:bg-rose-600 transition-all">Sign Out</button>
+        </div>
       </aside>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/40 h-24 flex items-center justify-between px-6 md:px-12 shrink-0">
           <div className="flex items-center gap-6">
              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm"><i className="fa-solid fa-bars-staggered text-sm"></i></button>
-             <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">{currentTabLabel}</h2>
+             <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">{currentTabLabel} <span className="text-[10px] font-mono text-slate-400 align-top ml-2">v4.0</span></h2>
           </div>
           <div className="flex items-center gap-4">
             <button 

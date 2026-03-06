@@ -10,7 +10,7 @@ const PLANS = [
     features: ["Unlimited Table Nodes", "AI Concierge Access", "Priority Staff Messaging", "Sales Insights Hub"],
     cta: "Get Lifetime Access",
     highlight: true,
-    action: () => window.location.hash = '#/create-menu'
+    action: () => window.location.hash = '#/admin'
   },
   {
     name: "Enterprise",

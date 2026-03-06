@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { DebugAccountView } from './DebugAccountView';
-import CreateMenuView from './CreateMenuView';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 import * as MenuService from '../services/menuService';
 import { LandingOverlay } from '../landing-page/LandingOverlay';
@@ -40,27 +39,36 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
   const [isPrivacyOverlayOpen, setIsPrivacyOverlayOpen] = useState(false);
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
   const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        setIsAuthenticated(true);
         setUserEmail(session.user.email || null);
         const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
         setHasRestaurant(!!restaurant);
+        
+        // If we have a hash in the URL (e.g. from OAuth redirect), auto-authenticate
+        if (window.location.hash.includes('access_token')) {
+          setIsAuthenticated(true);
+        }
       }
+      setHasCheckedSession(true);
     };
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        setIsAuthenticated(true);
         setUserEmail(session.user.email || null);
         const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
         setHasRestaurant(!!restaurant);
+        if (event === 'SIGNED_IN') {
+          setIsAuthenticated(true);
+          setShowDebug(true);
+        }
       } else {
         setIsAuthenticated(false);
         setUserEmail(null);
@@ -106,18 +114,19 @@ const AdminView: React.FC<AdminViewProps> = ({
     setError('');
   };
 
+  if (!hasCheckedSession) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
   if (isAuthenticated) {
     if (hasRestaurant === null) {
       return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
     }
 
-    if (!hasRestaurant) {
-      return <CreateMenuView onCancel={handleLogout} onComplete={() => setHasRestaurant(true)} />;
-    }
-
     if (showDebug) {
       return <DebugAccountView onContinue={() => setShowDebug(false)} />;
     }
+
     return (
       <AdminDashboard 
         onLogout={handleLogout} 
@@ -138,48 +147,49 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   return (
     <>
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 font-jakarta selection:bg-orange-100 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-orange-200/20 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-200/20 rounded-full blur-2xl"></div>
-      </div>
-
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-jakarta selection:bg-orange-100">
       {onBackToMenu && (
         <button 
           onClick={onBackToMenu}
           className="absolute top-8 left-8 flex items-center gap-3 text-slate-500 hover:text-slate-900 transition-colors group z-20"
         >
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
-            <i className="fa-solid fa-arrow-left text-sm"></i>
+          <div className="w-10 h-10 bg-white flex items-center justify-center border border-slate-200 group-hover:scale-110 transition-transform">
+            <i className="fa-solid fa-xmark text-sm"></i>
           </div>
-          <span className="text-sm font-bold uppercase tracking-widest">Back to Menu</span>
+          <span className="text-sm font-bold uppercase tracking-widest">Close</span>
         </button>
       )}
 
-      <div className="w-full max-w-[440px] relative z-10">
-        <div className="bg-white/80 backdrop-blur-xl p-8 md:p-10 rounded-[3rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-white/50">
-            <header className="mb-10 text-center">
-            <div className="w-20 h-20 bg-slate-900 text-white rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-xl shadow-slate-200 mb-6">
-                <i className="fa-solid fa-rocket"></i>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter mb-3">
-                {isDemo ? 'Demo Admin' : 'Merchant Access'} <span className="text-xs font-mono text-slate-400 align-top ml-1">v2.3</span>
+      <div className="w-full max-w-md relative z-10">
+        <div className="p-8 md:p-10">
+            <header className="mb-12 text-center">
+            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter mb-4 uppercase">
+                {isDemo ? 'Demo Admin' : 'Merchant Access'} <span className="text-xs font-mono text-slate-400 align-top ml-1">v4.0</span>
             </h1>
-            <p className="text-slate-500 text-sm font-medium">
+            <p className="text-slate-500 text-base font-medium">
                 {isDemo ? 'For demo, admin features are restricted to view-only.' : 'Sign in to manage your restaurant.'}
             </p>
             {userEmail && (
-                <div className="mt-6 flex flex-col items-center gap-4 bg-slate-100 p-6 rounded-3xl">
-                    <p className="text-slate-600 text-xs font-mono">
-                        Previously logged in as <span className="font-bold text-slate-900">{userEmail}</span>
-                    </p>
-                    <button 
-                        onClick={() => setIsAuthenticated(true)}
-                        className="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm uppercase tracking-widest"
-                    >
-                        Continue
-                    </button>
+                <div className="mt-8 flex flex-col items-center gap-6">
+                    <div className="text-center w-full">
+                      <p className="text-sm text-slate-500">You previously login as</p>
+                      <p className="font-bold text-slate-900 text-lg truncate">{userEmail}</p>
+                    </div>
+                    <div className="flex flex-col gap-4 w-full">
+                      <button 
+                          onClick={() => { setIsAuthenticated(true); setShowDebug(true); }}
+                          className="w-full py-5 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all uppercase tracking-widest"
+                      >
+                          Continue
+                      </button>
+                      <button 
+                          onClick={handleGoogleLogin}
+                          disabled={loading || !agreedToTerms}
+                          className="w-full py-5 bg-white border border-slate-200 text-slate-900 font-bold text-sm hover:bg-slate-50 transition-all uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                          Login with another account
+                      </button>
+                    </div>
                 </div>
             )}
             </header>
@@ -187,33 +197,38 @@ const AdminView: React.FC<AdminViewProps> = ({
             <div className="space-y-6">
                 {isDemo ? (
                     <button 
-                        onClick={() => setIsAuthenticated(true)}
-                        className="w-full h-[64px] bg-indigo-600 text-white border-2 border-indigo-600 rounded-3xl font-bold text-[15px] hover:bg-indigo-700 active:scale-[0.98] transition-all uppercase tracking-[0.1em] flex items-center justify-center gap-4 shadow-sm"
+                        onClick={() => { setIsAuthenticated(true); setShowDebug(true); }}
+                        className="w-full h-[64px] bg-indigo-600 text-white border-2 border-indigo-600 font-bold text-[15px] hover:bg-indigo-700 active:scale-[0.98] transition-all uppercase tracking-[0.1em] flex items-center justify-center gap-4"
                     >
                         <span>Continue to Demo Admin</span>
                     </button>
-                ) : (
+                ) : !userEmail && (
                     <button 
                         onClick={handleGoogleLogin}
                         disabled={loading || !agreedToTerms} 
-                        className="w-full h-[64px] bg-white text-slate-900 border-2 border-slate-200 rounded-3xl font-bold text-[15px] hover:border-slate-900 hover:bg-slate-50 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.1em] flex items-center justify-center gap-4 shadow-sm"
+                        className="w-full h-[64px] bg-white text-slate-900 border-2 border-slate-200 font-bold text-[15px] hover:border-slate-900 hover:bg-slate-50 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.1em] flex items-center justify-center gap-4"
                     >
                         {loading ? (
                             <i className="fa-solid fa-spinner animate-spin text-xl"></i>
                         ) : (
                             <>
-                                <i className="fa-brands fa-google text-xl"></i>
+                                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                </svg>
                                 <span>Continue with Google</span>
                             </>
                         )}
                     </button>
                 )}
 
-                {!isDemo && (
-                    <div className="flex items-start gap-3 px-2 pt-2 justify-center">
+                {!isDemo && !userEmail && (
+                    <div className="flex items-start gap-3 px-2 pt-4 justify-center">
                         <div 
                         onClick={() => setAgreedToTerms(!agreedToTerms)}
-                        className={`mt-0.5 w-6 h-6 rounded-xl border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                        className={`mt-0.5 w-6 h-6 border-2 shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300'}`}
                         >
                         {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
                         </div>
@@ -224,8 +239,8 @@ const AdminView: React.FC<AdminViewProps> = ({
                 )}
 
                 {error && (
-                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-3xl animate-fade-in flex items-center gap-4">
-                    <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center shrink-0 text-rose-500">
+                    <div className="bg-rose-50 border border-rose-100 p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-rose-100 flex items-center justify-center shrink-0 text-rose-500">
                         <i className="fa-solid fa-circle-exclamation"></i>
                     </div>
                     <p className="text-rose-600 text-[12px] font-bold leading-tight">{error}</p>
