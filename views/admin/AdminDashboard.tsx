@@ -52,6 +52,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [accountType, setAccountType] = useState<'demo' | 'trial' | 'pro'>('demo');
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showDemoNotice, setShowDemoNotice] = useState(false);
   
   useEffect(() => {
     const fetchUserAndRestaurant = async () => {
@@ -67,14 +71,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         const ownerRestaurant = await MenuService.getRestaurantByOwnerId(user.id);
         if (ownerRestaurant) {
             foundRestaurantId = ownerRestaurant.id;
+            setAccountType(ownerRestaurant.account_type === 'trial' ? 'trial' : 'pro');
             
             // Check trial status
             const trialEnd = ownerRestaurant.trial_end_at ? new Date(ownerRestaurant.trial_end_at) : null;
             const now = new Date();
-            if (ownerRestaurant.account_type === 'trial' && trialEnd && trialEnd < now) {
-                // Trial expired
-                console.warn("Trial expired for user", user.id);
-                setIsTrialExpired(true);
+            if (ownerRestaurant.account_type === 'trial' && trialEnd) {
+                const diffTime = trialEnd.getTime() - now.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                setTrialDaysLeft(diffDays > 0 ? diffDays : 0);
+                if (diffDays <= 0) {
+                    setIsTrialExpired(true);
+                }
             }
         } else {
             // 2. Check if user is staff (public.users table)
@@ -96,12 +104,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         } else {
           if (user.email !== 'demo1@mymenu') {
             setShowSetupWizard(true);
+          } else {
+            setAccountType('demo');
           }
         }
       }
     };
     fetchUserAndRestaurant();
   }, []);
+
+  useEffect(() => {
+    if (currentUserEmail === 'demo1@mymenu') setShowDemoNotice(true);
+  }, [currentUserEmail]);
 
   useEffect(() => {
     if (!restaurantId || restaurantId === "undefined") return;
@@ -152,6 +166,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'orders', icon: 'fa-message', label: 'Console' },
     { id: 'analytics', icon: 'fa-chart-pie', label: 'Stats' },
     { id: 'qr', icon: 'fa-qrcode', label: 'QR and Tables' },
+    { id: 'setup-wizard', icon: 'fa-wand-magic-sparkles', label: 'Setup Wizard' },
   ];
 
   const appsNav: { id: AdminTab; icon: string; label: string }[] = [
@@ -176,6 +191,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         if (config.id === 'exit-demo') {
             onLogout();
             onExit();
+            return;
+        }
+        if (config.id === 'setup-wizard') {
+            setShowSetupWizard(true);
             return;
         }
         setActiveTab(config.id); 
@@ -273,6 +292,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
              <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">{currentTabLabel}</h2>
           </div>
           <div className="flex items-center gap-4">
+            <button 
+                onClick={() => setShowUpgradeModal(true)}
+                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                    accountType === 'demo' ? 'bg-slate-100 text-slate-600' :
+                    accountType === 'trial' ? 'bg-orange-100 text-orange-600' :
+                    'bg-emerald-100 text-emerald-600'
+                }`}
+            >
+                {accountType === 'demo' ? 'Demo' : accountType === 'trial' ? `Trial (${trialDaysLeft} days left)` : 'Pro'}
+                {accountType === 'trial' && <i className="fa-solid fa-clock"></i>}
+            </button>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto no-scrollbar bg-[#F2F2F7] p-4 md:p-8">{renderContent()}</main>
@@ -289,6 +319,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
       {showSetupWizard && (
         <QuickSetupWizard onComplete={() => setShowSetupWizard(false)} />
+      )}
+      {showDemoNotice && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center">
+            <div onClick={() => setShowDemoNotice(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+            <div className="w-full max-w-lg bg-white rounded-t-[2rem] p-8 animate-slide-up relative">
+                <button onClick={() => setShowDemoNotice(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900"><i className="fa-solid fa-xmark"></i></button>
+                <div className="text-center space-y-4">
+                    <h3 className="text-2xl font-black uppercase tracking-tight">Demo Mode</h3>
+                    <p className="text-slate-500 text-sm">For demo, admin features are restricted to view-only.</p>
+                    <button 
+                        onClick={() => setShowDemoNotice(false)}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest"
+                    >
+                        Continue to demo admin
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center">
+            <div onClick={() => setShowUpgradeModal(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+            <div className="w-full max-w-lg bg-white rounded-t-[2rem] p-8 animate-slide-up relative">
+                <button onClick={() => setShowUpgradeModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900"><i className="fa-solid fa-xmark"></i></button>
+                <div className="text-center space-y-4">
+                    <h3 className="text-2xl font-black uppercase tracking-tight">Upgrade to Pro</h3>
+                    <p className="text-slate-500 text-sm">Unlock all features and remove limits.</p>
+                    <button 
+                        onClick={() => window.open('https://m.me/940288252493266', '_blank')}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest"
+                    >
+                        Upgrade Now
+                    </button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );
