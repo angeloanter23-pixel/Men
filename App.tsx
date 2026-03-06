@@ -21,6 +21,7 @@ import CartView from './views/CartView';
 import OrdersView from './views/orders/OrdersView';
 import QRVerifyView from './views/QRVerifyView';
 import AdminView from './views/AdminView';
+import { CreateMenuAuthView } from './views/CreateMenuAuthView';
 import LandingView from './views/LandingView';
 import AboutView from './views/AboutView';
 import FeedbackDataView from './views/FeedbackDataView';
@@ -456,7 +457,7 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('admin')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} onAdminAuth={() => navigateTo('admin')} />;
+      case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('create-menu-auth')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} onAdminAuth={() => navigateTo('admin')} />;
       case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={handleDemoSelect} />;
       case 'articles': return <ArticlesView onBack={() => navigateTo('landing')} />;
       case 'article': return <ArticleViewer id={selectedArticleId} onBack={() => navigateTo('articles')} />;
@@ -482,6 +483,7 @@ export default function App() {
       case 'affiliate-auth': return <AffiliateAuth onBack={() => navigateTo('landing')} onLogin={() => navigateTo('affiliate-dashboard')} />;
       case 'affiliate-dashboard': return <AffiliateDashboard onLogout={() => navigateTo('landing')} />;
       case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={[]} setSalesHistory={() => {}} adminCreds={{}} setAdminCreds={() => {}} onExit={() => navigateTo('landing')} onLogoUpdate={() => {}} onThemeUpdate={applyTheme} appTheme={appTheme} onOpenFAQ={() => navigateTo('admin-faq')} onBackToMenu={() => navigateTo('landing')} onNavigateToCreateMenu={() => { setActiveSession(null); navigateTo('admin'); }} isDemo={activeSession?.id?.startsWith('demo-')} />;
+      case 'create-menu-auth': return <CreateMenuAuthView onBack={() => navigateTo('landing')} />;
       default: return null;
     }
   };
