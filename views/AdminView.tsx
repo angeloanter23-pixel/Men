@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
 import { DebugAccountView } from './DebugAccountView';
+import CreateMenuView from './CreateMenuView';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 import * as MenuService from '../services/menuService';
 import { LandingOverlay } from '../landing-page/LandingOverlay';
@@ -40,22 +41,30 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
   const [isPrivacyOverlayOpen, setIsPrivacyOverlayOpen] = useState(false);
   const [showDebug, setShowDebug] = useState(true);
+  const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setIsAuthenticated(true);
         setUserEmail(session.user.email || null);
+        const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
+        setHasRestaurant(!!restaurant);
       }
-    });
+    };
+    checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         setIsAuthenticated(true);
         setUserEmail(session.user.email || null);
+        const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
+        setHasRestaurant(!!restaurant);
       } else {
         setIsAuthenticated(false);
         setUserEmail(null);
+        setHasRestaurant(null);
       }
     });
 
@@ -98,6 +107,14 @@ const AdminView: React.FC<AdminViewProps> = ({
   };
 
   if (isAuthenticated) {
+    if (hasRestaurant === null) {
+      return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    }
+
+    if (!hasRestaurant) {
+      return <CreateMenuView onCancel={handleLogout} onComplete={() => setHasRestaurant(true)} />;
+    }
+
     if (showDebug) {
       return <DebugAccountView onContinue={() => setShowDebug(false)} />;
     }
