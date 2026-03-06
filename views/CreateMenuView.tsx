@@ -17,6 +17,15 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   const [user, setUser] = useState<any>(null);
   const [showPreviouslyLoggedIn, setShowPreviouslyLoggedIn] = useState(false);
   const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
+  
+  // QR Generator State
+  const [savedQrs, setSavedQrs] = useState<any[]>([]);
+  const [activeQrTab, setActiveQrTab] = useState<'gen' | 'bulk' | 'saved'>('gen');
+  const [baseName, setBaseName] = useState('Table ');
+  const [bulkPrefix, setBulkPrefix] = useState('Table ');
+  const [bulkStart, setBulkStart] = useState(1);
+  const [bulkEnd, setBulkEnd] = useState(10);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -25,9 +34,7 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
         setShowPreviouslyLoggedIn(true);
         const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
         setHasRestaurant(!!restaurant);
-        if (!!restaurant) {
-            onComplete();
-        }
+        if (restaurant) setRestaurantId(restaurant.id);
       }
     });
 
@@ -37,14 +44,72 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
         setShowPreviouslyLoggedIn(true);
         const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
         setHasRestaurant(!!restaurant);
-        if (!!restaurant) {
-            onComplete();
-        }
+        if (restaurant) setRestaurantId(restaurant.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [onComplete]);
+  }, []);
+
+  useEffect(() => {
+      if (restaurantId) fetchQRCodes();
+  }, [restaurantId]);
+
+  const fetchQRCodes = async () => {
+    if (!restaurantId) return [];
+    setLoading(true);
+    try { 
+      const data = await MenuService.getQRCodes(restaurantId); 
+      setSavedQrs(data); 
+      return data;
+    }
+    catch (err) { console.error(err); return []; } finally { setLoading(false); }
+  };
+
+  const handleGenerate = async () => {
+    if (!baseName.trim() || loading || !restaurantId) return;
+    setLoading(true);
+    try {
+      const label = baseName.trim();
+      await MenuService.upsertQRCode({ 
+        restaurant_id: restaurantId, 
+        label: label, 
+        code: Math.random().toString(36).substr(2, 6).toUpperCase(), 
+        type: 'menu' 
+      }); 
+      await fetchQRCodes(); 
+      setActiveQrTab('saved');
+      setBaseName('Table ');
+    } catch (err: any) { 
+      setError(err.message || "Error"); 
+    } finally { setLoading(false); }
+  };
+
+  const handleBulkGenerate = async () => {
+    if (loading || !restaurantId) return;
+    if (bulkEnd < bulkStart) { setError("End number must be greater than start."); return; }
+    if (bulkEnd - bulkStart > 50) { setError("Maximum 50 codes at once."); return; }
+
+    setLoading(true);
+    try {
+        const payload = [];
+        for (let i = bulkStart; i <= bulkEnd; i++) {
+            payload.push({
+                restaurant_id: restaurantId,
+                label: `${bulkPrefix}${i}`,
+                code: Math.random().toString(36).substr(2, 6).toUpperCase(),
+                type: 'menu'
+            });
+        }
+        await MenuService.bulkUpsertQRCodes(payload);
+        await fetchQRCodes();
+        setActiveQrTab('saved');
+    } catch (e: any) {
+        setError("Bulk creation failed: " + e.message);
+    } finally {
+        setLoading(false);
+    }
+  };
 
   const handleLogin = () => {
     if (hasRestaurant) {
@@ -142,13 +207,22 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
 
             {showPreviouslyLoggedIn ? (
               <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-                <div className="text-center space-y-1">
-                  <p className="text-sm text-slate-500">You were previously logged in as</p>
-                  <p className="font-bold text-slate-900 text-lg">{user?.email}</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-500">You were previously logged in as</p>
+                    <p className="font-bold text-slate-900 text-base">{user?.email}</p>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <button onClick={handleLogin} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all">Login</button>
-                  <button onClick={handleGoogleLogin} className="w-full py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all">Login with another account</button>
+                  <button onClick={handleLogin} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                    <i className="fa-solid fa-right-to-bracket"></i> Login
+                  </button>
+                  <button onClick={handleGoogleLogin} className="w-full py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+                    <i className="fa-solid fa-user-plus"></i> Login with another account
+                  </button>
                 </div>
               </div>
             ) : (
@@ -230,17 +304,43 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
             </div>
           </div>
         ) : (
-          <div className="space-y-12 animate-slide-up">
-            <header className="text-center space-y-4">
-              <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-inner">
-                <i className="fa-solid fa-qrcode"></i>
-              </div>
-              <h2 className="text-4xl font-black text-slate-900 tracking-tight uppercase">QR Generator</h2>
-              <p className="text-slate-500 text-base font-medium leading-relaxed px-6">Generate your table QR codes.</p>
+          <div className="space-y-8 animate-slide-up">
+            <header className="text-center space-y-2">
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">QR Generator</h2>
+              <p className="text-slate-500 text-sm font-medium">Generate your table QR codes.</p>
             </header>
-            <div className="bg-white border border-slate-200 p-8 rounded-[2.5rem] shadow-sm text-center">
-                <p className="text-sm text-slate-500">QR Generator component placeholder.</p>
+
+            <div className="bg-slate-100 p-1 rounded-xl flex border border-slate-200 shadow-inner gap-1">
+              <button onClick={() => setActiveQrTab('gen')} className={`flex-1 py-2.5 rounded-lg text-[10px] font-bold tracking-tight transition-all ${activeQrTab === 'gen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Single</button>
+              <button onClick={() => setActiveQrTab('bulk')} className={`flex-1 py-2.5 rounded-lg text-[10px] font-bold tracking-tight transition-all ${activeQrTab === 'bulk' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Bulk</button>
+              <button onClick={() => setActiveQrTab('saved')} className={`flex-1 py-2.5 rounded-lg text-[10px] font-bold tracking-tight transition-all ${activeQrTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>List ({savedQrs.length})</button>
             </div>
+
+            {activeQrTab === 'gen' ? (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-4">
+                <input type="text" value={baseName} onChange={e => setBaseName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm" placeholder="e.g. Table 10" />
+                <button onClick={handleGenerate} disabled={loading} className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-sm">Deploy Node</button>
+              </div>
+            ) : activeQrTab === 'bulk' ? (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-4">
+                <input type="text" value={bulkPrefix} onChange={e => setBulkPrefix(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm" placeholder="Prefix (e.g. Table )" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="number" value={bulkStart} onChange={e => setBulkStart(parseInt(e.target.value) || 1)} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm" placeholder="Start" />
+                  <input type="number" value={bulkEnd} onChange={e => setBulkEnd(parseInt(e.target.value) || 10)} className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl font-bold text-sm" placeholder="End" />
+                </div>
+                <button onClick={handleBulkGenerate} disabled={loading} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm">Generate Bulk</button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {savedQrs.map(qr => (
+                  <div key={qr.id} className="bg-white p-4 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <span className="font-bold text-sm">{qr.label}</span>
+                    <span className="text-xs text-slate-400 font-mono">{qr.code}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {error && <p className="text-rose-500 text-center text-sm font-bold">{error}</p>}
           </div>
         )}
       </main>
