@@ -16,12 +16,18 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   const [brandName, setBrandName] = useState('');
   const [user, setUser] = useState<any>(null);
   const [showPreviouslyLoggedIn, setShowPreviouslyLoggedIn] = useState(false);
+  const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         setUser(session.user);
         setShowPreviouslyLoggedIn(true);
+        const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
+        setHasRestaurant(!!restaurant);
+        if (!!restaurant) {
+            onComplete();
+        }
       }
     });
 
@@ -29,11 +35,24 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
       if (session) {
         setUser(session.user);
         setShowPreviouslyLoggedIn(true);
+        const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
+        setHasRestaurant(!!restaurant);
+        if (!!restaurant) {
+            onComplete();
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [onComplete]);
+
+  const handleLogin = () => {
+    if (hasRestaurant) {
+      onComplete();
+    } else {
+      setStep('identity');
+    }
+  };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -91,19 +110,19 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
   };
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] flex flex-col font-jakarta selection:bg-indigo-100 relative">
-      <header className="sticky top-0 z-[100] bg-white/80 backdrop-blur-2xl border-b border-slate-200/50 px-6 py-5">
+    <div className="min-h-screen bg-white flex flex-col font-jakarta selection:bg-indigo-100 relative">
+      <header className="sticky top-0 z-[100] bg-white/80 backdrop-blur-2xl border-b border-slate-100 px-6 py-5">
         <div className="max-w-xl mx-auto flex items-center justify-between">
-           <button onClick={onCancel} className="text-[#007AFF] text-[17px] font-semibold flex items-center gap-1 transition-all active:opacity-50">
+           <button onClick={onCancel} className="text-slate-500 text-[17px] font-medium flex items-center gap-1 transition-all active:opacity-50">
              <i className="fa-solid fa-chevron-left text-sm"></i>
              <span>Exit</span>
            </button>
            <div className="flex flex-col items-center">
              <div className="flex gap-2 mb-1.5">
-               <div className={`h-1 rounded-full transition-all duration-700 ${step === 'login' ? 'bg-indigo-600 w-6' : 'bg-indigo-600 w-6'}`} />
-               <div className={`h-1 rounded-full transition-all duration-700 ${['identity', 'activation', 'qr-generator'].includes(step) ? 'bg-indigo-600 w-6' : 'bg-slate-200 w-3'}`} />
-               <div className={`h-1 rounded-full transition-all duration-700 ${['activation', 'qr-generator'].includes(step) ? 'bg-indigo-600 w-6' : 'bg-slate-200 w-3'}`} />
-               <div className={`h-1 rounded-full transition-all duration-700 ${step === 'qr-generator' ? 'bg-indigo-600 w-6' : 'bg-slate-200 w-3'}`} />
+               <div className={`h-1 rounded-full transition-all duration-700 ${step === 'login' ? 'bg-slate-900 w-6' : 'bg-slate-900 w-6'}`} />
+               <div className={`h-1 rounded-full transition-all duration-700 ${['identity', 'activation', 'qr-generator'].includes(step) ? 'bg-slate-900 w-6' : 'bg-slate-200 w-3'}`} />
+               <div className={`h-1 rounded-full transition-all duration-700 ${['activation', 'qr-generator'].includes(step) ? 'bg-slate-900 w-6' : 'bg-slate-200 w-3'}`} />
+               <div className={`h-1 rounded-full transition-all duration-700 ${step === 'qr-generator' ? 'bg-slate-900 w-6' : 'bg-slate-200 w-3'}`} />
              </div>
              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">
                Step {step === 'login' ? '1' : step === 'identity' ? '2' : step === 'activation' ? '3' : '4'} of 4
@@ -122,11 +141,14 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
             </header>
 
             {showPreviouslyLoggedIn ? (
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
-                <p className="text-sm text-slate-600">You were previously logged in as <span className="font-bold text-slate-900">{user?.email}</span></p>
-                <div className="flex gap-4">
-                  <button onClick={() => setStep('identity')} className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm">Login</button>
-                  <button onClick={handleGoogleLogin} className="flex-1 py-3 bg-white border border-slate-200 text-slate-900 rounded-xl font-bold text-sm">Login with another account</button>
+              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+                <div className="text-center space-y-1">
+                  <p className="text-sm text-slate-500">You were previously logged in as</p>
+                  <p className="font-bold text-slate-900 text-lg">{user?.email}</p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button onClick={handleLogin} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all">Login</button>
+                  <button onClick={handleGoogleLogin} className="w-full py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all">Login with another account</button>
                 </div>
               </div>
             ) : (
@@ -134,7 +156,7 @@ const CreateMenuView: React.FC<CreateMenuViewProps> = ({ onCancel, onComplete })
                 <button 
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="w-full py-5 bg-white border border-slate-200 hover:border-slate-900 text-slate-900 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-4"
+                  className="w-full py-5 bg-white border border-slate-200 hover:border-slate-900 text-slate-900 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-4 shadow-sm"
                 >
                   {loading ? (
                     <i className="fa-solid fa-spinner animate-spin"></i>
