@@ -57,6 +57,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [accountType, setAccountType] = useState<'demo' | 'trial' | 'pro'>('demo');
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
+  const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
+  const [trialTimeLeft, setTrialTimeLeft] = useState<string>('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDemoNotice, setShowDemoNotice] = useState(false);
   
@@ -66,6 +68,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (!trialEndDate) return;
+    const interval = setInterval(() => {
+      const now = new Date();
+      const diff = trialEndDate.getTime() - now.getTime();
+      if (diff <= 0) {
+        setTrialTimeLeft('0d 0h 0m 0s');
+        setIsTrialExpired(true);
+        clearInterval(interval);
+        return;
+      }
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+      setTrialTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [trialEndDate]);
 
   useEffect(() => {
     const fetchUserAndRestaurant = async () => {
@@ -87,6 +109,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             const trialEnd = ownerRestaurant.trial_end_at ? new Date(ownerRestaurant.trial_end_at) : null;
             const now = new Date();
             if (ownerRestaurant.account_type === 'trial' && trialEnd) {
+                setTrialEndDate(trialEnd);
                 const diffTime = trialEnd.getTime() - now.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 setTrialDaysLeft(diffDays > 0 ? diffDays : 0);
@@ -114,6 +137,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     const trialEnd = restData.trial_end_at ? new Date(restData.trial_end_at) : null;
                     const now = new Date();
                     if (restData.account_type === 'trial' && trialEnd) {
+                        setTrialEndDate(trialEnd);
                         const diffTime = trialEnd.getTime() - now.getTime();
                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                         setTrialDaysLeft(diffDays > 0 ? diffDays : 0);
@@ -310,9 +334,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </nav>
         </div>
         <div className="mt-auto p-6 space-y-3">
-            <button onClick={() => setShowSetupWizard(true)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-500 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
-                <i className="fa-solid fa-wand-magic-sparkles"></i> Setup Wizard
-            </button>
             <button onClick={onLogout} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-700 hover:bg-rose-600 transition-all">Sign Out</button>
         </div>
       </aside>
@@ -320,7 +341,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/40 h-24 flex items-center justify-between px-6 md:px-12 shrink-0">
           <div className="flex items-center gap-6">
              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden w-11 h-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm"><i className="fa-solid fa-bars-staggered text-sm"></i></button>
-             <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase">{currentTabLabel} <span className="text-[10px] font-mono text-slate-400 align-top ml-2">v4.0</span></h2>
+             <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase">{currentTabLabel}</h2>
           </div>
           <div className="flex items-center gap-4">
             {accountType === 'trial' && (
@@ -330,7 +351,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                   <div className="flex flex-col">
                      <span className="text-[9px] font-black text-rose-400 uppercase tracking-widest leading-none">Trial</span>
-                     <span className="text-xs font-black text-rose-600 leading-none mt-1">{trialDaysLeft} Days Left</span>
+                     <span className="text-xs font-black text-rose-600 leading-none mt-1">{trialTimeLeft}</span>
                   </div>
                </div>
             )}
@@ -342,7 +363,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     'bg-emerald-100 text-emerald-600'
                 }`}
             >
-                {accountType === 'demo' ? 'Demo' : accountType === 'trial' ? 'Upgrade' : 'Pro'}
+                {accountType === 'demo' ? 'Demo' : accountType === 'trial' ? 'Trial' : 'Pro'}
             </button>
           </div>
         </header>

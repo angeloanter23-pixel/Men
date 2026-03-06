@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as MenuService from '../services/menuService';
 
 interface QuickSetupWizardProps {
@@ -11,6 +11,23 @@ export const QuickSetupWizard: React.FC<QuickSetupWizardProps> = ({ userId, emai
   const [restaurantName, setRestaurantName] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const checkExisting = async () => {
+      try {
+        const restaurant = await MenuService.getRestaurantByOwnerId(userId);
+        if (restaurant) {
+          onComplete('qr');
+        } else {
+          setIsChecking(false);
+        }
+      } catch (err) {
+        setIsChecking(false);
+      }
+    };
+    checkExisting();
+  }, [userId, onComplete]);
 
   const handleVerify = async () => {
     if (!restaurantName.trim()) {
@@ -30,6 +47,14 @@ export const QuickSetupWizard: React.FC<QuickSetupWizardProps> = ({ userId, emai
       setIsVerifying(false);
     }
   };
+
+  if (isChecking) {
+    return (
+      <div className="fixed inset-0 bg-white z-[200] flex items-center justify-center">
+        <i className="fa-solid fa-spinner animate-spin text-4xl text-indigo-600"></i>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-white z-[200] flex flex-col font-jakarta selection:bg-slate-100">

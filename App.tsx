@@ -151,9 +151,10 @@ export default function App() {
   const syncStateWithURL = async () => {
     const path = window.location.pathname.replace(/^\//, '');
     const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
+    const urlParams = new URLSearchParams(window.location.search);
     
     // Handle Supabase Auth Redirect
-    if (hash.startsWith('access_token') || hash.includes('access_token=')) {
+    if (hash.startsWith('access_token') || hash.includes('access_token=') || urlParams.get('code')) {
         setCurrentView('admin');
         return;
     }
@@ -163,7 +164,6 @@ export default function App() {
     if (route === 'article' && hashParts[1]) setSelectedArticleId(hashParts[1]);
     
     // Check for token in URL parameters or path
-    const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || (path.length === 6 ? path : null);
     const restaurantId = urlParams.get('restaurant');
     
