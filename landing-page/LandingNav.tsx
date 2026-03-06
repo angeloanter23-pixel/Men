@@ -13,38 +13,38 @@ export const LandingNav: React.FC<LandingNavProps> = ({ isScrolled, onOpenMenu }
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-500 ${isScrolled ? 'bg-white/90 backdrop-blur-xl border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-6'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/50 py-2 shadow-sm' : 'bg-transparent py-4'}`}>
       <div className="max-w-[1200px] mx-auto flex justify-between items-center px-6">
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-8">
           <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-            <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center text-white transition-all group-hover:scale-95 group-hover:rotate-3 shadow-lg">
-               <span className="text-[11px] font-bold">M</span>
+            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white transition-all group-hover:scale-95 group-hover:rotate-3 shadow-md">
+               <span className="text-[10px] font-bold">M</span>
             </div>
-            <span className="font-bold text-[20px] tracking-tight text-slate-900">mymenu.asia</span>
+            <span className="font-black text-[18px] tracking-tight text-slate-900">mymenu.asia</span>
           </div>
 
           {/* New Menu Bar Items */}
-          <div className="hidden lg:flex items-center gap-8">
-            <button onClick={() => scrollTo('about')} className="text-[13px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">About Us</button>
-            <button onClick={() => scrollTo('pricing')} className="text-[13px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Pricing</button>
-            <button onClick={() => scrollTo('contact')} className="text-[13px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Contact</button>
-            <button onClick={() => scrollTo('terms')} className="text-[13px] font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">Terms</button>
+          <div className="hidden lg:flex items-center gap-6">
+            <button onClick={() => scrollTo('about')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">About Us</button>
+            <button onClick={() => scrollTo('pricing')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Pricing</button>
+            <button onClick={() => scrollTo('contact')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Contact</button>
+            <button onClick={() => scrollTo('terms')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Terms</button>
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button 
             onClick={onOpenMenu} 
-            className="px-6 py-2.5 bg-slate-900 text-white rounded-full text-[12px] font-bold uppercase tracking-widest shadow-xl active:scale-90 transition-all hidden md:block"
+            className="px-5 py-2 bg-slate-900 text-white rounded-full text-[11px] font-bold uppercase tracking-widest shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all hidden md:block"
           >
             Open App
           </button>
           <button 
             onClick={onOpenMenu} 
-            className="w-11 h-11 flex items-center justify-center text-slate-900 bg-white md:bg-transparent hover:bg-slate-50 rounded-2xl border border-slate-100 md:border-none shadow-sm md:shadow-none transition-all active:scale-90"
+            className="w-9 h-9 flex items-center justify-center text-slate-900 bg-white md:bg-transparent hover:bg-slate-50 rounded-xl border border-slate-200 md:border-none shadow-sm md:shadow-none transition-all active:scale-90"
             aria-label="Toggle Menu"
           >
-             <i className="fa-solid fa-bars-staggered text-xl"></i>
+             <i className="fa-solid fa-bars-staggered text-lg"></i>
           </button>
         </div>
       </div>
