@@ -4,7 +4,7 @@ import * as MenuService from '../services/menuService';
 interface QuickSetupWizardProps {
   userId: string;
   email: string;
-  onComplete: (nextAction?: 'menu' | 'qr') => void;
+  onComplete: (nextAction?: 'menu' | 'qr' | 'admin') => void;
 }
 
 export const QuickSetupWizard: React.FC<QuickSetupWizardProps> = ({ userId, email, onComplete }) => {
@@ -18,7 +18,7 @@ export const QuickSetupWizard: React.FC<QuickSetupWizardProps> = ({ userId, emai
       try {
         const restaurant = await MenuService.getRestaurantByOwnerId(userId);
         if (restaurant) {
-          onComplete('qr');
+          onComplete('admin');
         } else {
           setIsChecking(false);
         }
@@ -40,7 +40,7 @@ export const QuickSetupWizard: React.FC<QuickSetupWizardProps> = ({ userId, emai
 
     try {
       await MenuService.createRestaurantForUser(userId, email, restaurantName.trim());
-      onComplete('qr');
+      onComplete('admin');
     } catch (err: any) {
       console.error('Error creating restaurant:', err);
       setError(err.message || 'Failed to create restaurant. Please try again.');

@@ -61,6 +61,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [trialTimeLeft, setTrialTimeLeft] = useState<string>('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDemoNotice, setShowDemoNotice] = useState(false);
+  const [upgradeStep, setUpgradeStep] = useState<'pricing' | 'payment' | 'contact'>('pricing');
   
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
@@ -71,21 +72,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     if (!trialEndDate) return;
-    const interval = setInterval(() => {
+    
+    const updateCountdown = () => {
       const now = new Date();
       const diff = trialEndDate.getTime() - now.getTime();
       if (diff <= 0) {
         setTrialTimeLeft('0d 0h 0m 0s');
         setIsTrialExpired(true);
-        clearInterval(interval);
-        return;
+        return false;
       }
       const d = Math.floor(diff / (1000 * 60 * 60 * 24));
       const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
       const m = Math.floor((diff / 1000 / 60) % 60);
       const s = Math.floor((diff / 1000) % 60);
       setTrialTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
+      return true;
+    };
+
+    updateCountdown(); // Run immediately
+    const interval = setInterval(() => {
+      if (!updateCountdown()) {
+        clearInterval(interval);
+      }
     }, 1000);
+    
     return () => clearInterval(interval);
   }, [trialEndDate]);
 
@@ -302,6 +312,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const currentTabLabel = activeTab === 'qr' ? 'QR and Tables' : (mainNav.find(n => n.id === activeTab) || appsNav.find(n => n.id === activeTab) || settingsNav.find(n => n.id === activeTab))?.label || 'Dashboard';
 
+  if (showSetupWizard && currentUserId && currentUserEmail) {
+    return (
+      <QuickSetupWizard 
+        userId={currentUserId}
+        email={currentUserEmail}
+        onComplete={(nextAction) => {
+          setShowSetupWizard(false);
+          if (nextAction) {
+              window.location.hash = nextAction;
+          }
+          window.location.reload();
+        }} 
+      />
+    );
+  }
+
   if (isTrialExpired) {
     return <UpgradeView onLogout={onLogout} />;
   }
@@ -379,20 +405,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onCreateMenu={onNavigateToCreateMenu}
         />
       )}
-      {showSetupWizard && currentUserId && currentUserEmail && (
-        <QuickSetupWizard 
-          userId={currentUserId}
-          email={currentUserEmail}
-          onComplete={(nextAction) => {
-            setShowSetupWizard(false);
-            if (nextAction) {
-                window.location.hash = nextAction;
-            }
-            // Refresh to load the newly created restaurant
-            window.location.reload();
-          }} 
-        />
-      )}
       {showDemoNotice && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center">
             <div onClick={() => setShowDemoNotice(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
@@ -413,19 +425,94 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center">
-            <div onClick={() => setShowUpgradeModal(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+            <div onClick={() => { setShowUpgradeModal(false); setUpgradeStep('pricing'); }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
             <div className="w-full max-w-lg bg-white rounded-t-[2rem] p-8 animate-slide-up relative">
-                <button onClick={() => setShowUpgradeModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900"><i className="fa-solid fa-xmark"></i></button>
-                <div className="text-center space-y-4">
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Upgrade to Pro</h3>
-                    <p className="text-slate-500 text-sm">Unlock all features and remove limits.</p>
-                    <button 
-                        onClick={() => window.open('https://m.me/940288252493266', '_blank')}
-                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest"
-                    >
-                        Upgrade Now
-                    </button>
-                </div>
+                <button onClick={() => { setShowUpgradeModal(false); setUpgradeStep('pricing'); }} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900"><i className="fa-solid fa-xmark"></i></button>
+                
+                {upgradeStep === 'pricing' && (
+                    <div className="text-center space-y-6">
+                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i className="fa-solid fa-crown text-2xl"></i>
+                        </div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Professional Plan</h3>
+                        <div>
+                            <span className="text-4xl font-black tracking-tighter">₱1,299</span>
+                            <span className="text-xs font-bold text-slate-400 ml-2">/ one-time</span>
+                        </div>
+                        <ul className="text-left space-y-3 text-sm font-medium text-slate-600 bg-slate-50 p-6 rounded-2xl">
+                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> Unlimited Table Nodes</li>
+                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> AI Concierge Access</li>
+                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> Priority Staff Messaging</li>
+                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> Sales Insights Hub</li>
+                        </ul>
+                        <button 
+                            onClick={() => setUpgradeStep('payment')}
+                            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-colors"
+                        >
+                            Continue to Payment
+                        </button>
+                    </div>
+                )}
+
+                {upgradeStep === 'payment' && (
+                    <div className="space-y-6">
+                        <button onClick={() => setUpgradeStep('pricing')} className="text-slate-400 hover:text-slate-900 text-sm font-bold flex items-center gap-2 mb-4">
+                            <i className="fa-solid fa-arrow-left"></i> Back
+                        </button>
+                        <h3 className="text-2xl font-black uppercase tracking-tight text-center">Payment Method</h3>
+                        <p className="text-slate-500 text-sm text-center">Please send ₱1,299 to any of the following accounts:</p>
+                        
+                        <div className="space-y-4">
+                            <div className="p-4 border-2 border-slate-100 rounded-2xl">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">GCash</p>
+                                <p className="font-bold text-lg">0912 345 6789</p>
+                                <p className="text-sm text-slate-500">Juan Dela Cruz</p>
+                            </div>
+                            <div className="p-4 border-2 border-slate-100 rounded-2xl">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">BDO (Bank Transfer)</p>
+                                <p className="font-bold text-lg">0012 3456 7890</p>
+                                <p className="text-sm text-slate-500">Juan Dela Cruz</p>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => setUpgradeStep('contact')}
+                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 transition-colors"
+                        >
+                            I have made the payment
+                        </button>
+                    </div>
+                )}
+
+                {upgradeStep === 'contact' && (
+                    <div className="text-center space-y-6">
+                        <button onClick={() => setUpgradeStep('payment')} className="absolute top-8 left-8 text-slate-400 hover:text-slate-900 text-sm font-bold flex items-center gap-2">
+                            <i className="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i className="fa-solid fa-receipt text-2xl"></i>
+                        </div>
+                        <h3 className="text-2xl font-black uppercase tracking-tight">Send Proof of Payment</h3>
+                        <p className="text-slate-500 text-sm">Please send us a screenshot of your transaction to activate your Pro account.</p>
+                        
+                        <div className="grid grid-cols-2 gap-4 pt-4">
+                            <button 
+                                onClick={() => window.open('https://m.me/940288252493266', '_blank')}
+                                className="p-4 border-2 border-slate-100 rounded-2xl hover:border-[#0084FF] hover:bg-[#0084FF]/5 transition-colors group flex flex-col items-center gap-3"
+                            >
+                                <i className="fa-brands fa-facebook-messenger text-3xl text-slate-300 group-hover:text-[#0084FF] transition-colors"></i>
+                                <span className="font-bold text-sm text-slate-600 group-hover:text-[#0084FF]">Messenger</span>
+                            </button>
+                            <button 
+                                onClick={() => window.location.href = 'mailto:support@mymenu.asia?subject=Pro%20Upgrade%20Payment'}
+                                className="p-4 border-2 border-slate-100 rounded-2xl hover:border-rose-500 hover:bg-rose-50 transition-colors group flex flex-col items-center gap-3"
+                            >
+                                <i className="fa-solid fa-envelope text-3xl text-slate-300 group-hover:text-rose-500 transition-colors"></i>
+                                <span className="font-bold text-sm text-slate-600 group-hover:text-rose-500">Email</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
       )}
