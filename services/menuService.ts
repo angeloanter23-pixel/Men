@@ -641,8 +641,7 @@ export async function createRestaurantForUser(userId: string, email: string, res
         password: 'oauth-user', 
         restaurant_id: restaurant.id, 
         role: 'super-admin', 
-        status: 'active',
-        trial_used: true
+        status: 'active'
       }]);
 
       if (userErr) { 
