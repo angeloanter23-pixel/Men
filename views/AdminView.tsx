@@ -39,7 +39,6 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [isTermsOverlayOpen, setIsTermsOverlayOpen] = useState(false);
   const [isPrivacyOverlayOpen, setIsPrivacyOverlayOpen] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
   const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
@@ -67,7 +66,6 @@ const AdminView: React.FC<AdminViewProps> = ({
         setHasRestaurant(!!restaurant);
         if (event === 'SIGNED_IN') {
           setIsAuthenticated(true);
-          setShowDebug(true);
         }
       } else {
         setIsAuthenticated(false);
@@ -123,10 +121,6 @@ const AdminView: React.FC<AdminViewProps> = ({
       return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
     }
 
-    if (showDebug) {
-      return <DebugAccountView onContinue={() => setShowDebug(false)} />;
-    }
-
     return (
       <AdminDashboard 
         onLogout={handleLogout} 
@@ -147,29 +141,22 @@ const AdminView: React.FC<AdminViewProps> = ({
 
   return (
     <>
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center p-6 font-jakarta selection:bg-indigo-100 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-indigo-50/80 blur-[100px]"></div>
-        <div className="absolute top-[60%] -right-[10%] w-[40%] h-[60%] rounded-full bg-orange-50/80 blur-[120px]"></div>
-      </div>
-
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-jakarta selection:bg-slate-100 relative">
       {onBackToMenu && (
         <button 
           onClick={onBackToMenu}
-          className="absolute top-8 left-8 flex items-center gap-3 text-slate-500 hover:text-slate-900 transition-colors group z-20"
+          className="absolute top-8 left-8 flex items-center gap-3 text-slate-400 hover:text-slate-900 transition-colors group z-20"
         >
-          <div className="w-10 h-10 bg-white flex items-center justify-center rounded-full border border-slate-200 shadow-sm group-hover:scale-105 transition-all">
+          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 group-hover:bg-slate-100 transition-colors">
             <i className="fa-solid fa-xmark text-sm"></i>
           </div>
           <span className="text-sm font-bold uppercase tracking-widest">Close</span>
         </button>
       )}
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="bg-white p-10 md:p-12 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-            <header className="mb-10 text-center">
-            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white mx-auto mb-8 shadow-lg transform -rotate-3">
+      <div className="w-full max-w-sm relative z-10">
+        <div className="text-center mb-12">
+            <div className="w-16 h-16 bg-slate-900 flex items-center justify-center text-white mx-auto mb-8">
                <span className="text-2xl font-black">M</span>
             </div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">
@@ -178,45 +165,45 @@ const AdminView: React.FC<AdminViewProps> = ({
             <p className="text-slate-500 text-sm font-medium">
                 {isDemo ? 'Explore the admin dashboard in view-only mode.' : 'Sign in to manage your restaurant.'}
             </p>
-            {userEmail && (
-                <div className="mt-8 flex flex-col items-center gap-6">
-                    <div className="text-center w-full bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                      <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Signed in as</p>
-                      <p className="font-bold text-slate-900 text-base truncate">{userEmail}</p>
-                    </div>
-                    <div className="flex flex-col gap-3 w-full">
-                      <button 
-                          onClick={() => { setIsAuthenticated(true); setShowDebug(true); }}
-                          className="w-full py-4 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
-                      >
-                          Continue to Dashboard
-                      </button>
-                      <button 
-                          onClick={handleGoogleLogin}
-                          disabled={loading || !agreedToTerms}
-                          className="w-full py-4 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                          Use a different account
-                      </button>
-                    </div>
-                </div>
-            )}
-            </header>
+        </div>
 
-            <div className="space-y-6">
+        {userEmail ? (
+            <div className="flex flex-col items-center gap-8">
+                <div className="text-center w-full">
+                  <p className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2">Signed in as</p>
+                  <p className="font-bold text-slate-900 text-lg truncate">{userEmail}</p>
+                </div>
+                <div className="flex flex-col gap-4 w-full">
+                  <button 
+                      onClick={() => { setIsAuthenticated(true); }}
+                      className="w-full py-5 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors uppercase tracking-widest"
+                  >
+                      Continue to Dashboard
+                  </button>
+                  <button 
+                      onClick={handleGoogleLogin}
+                      disabled={loading || !agreedToTerms}
+                      className="w-full py-5 bg-transparent border-2 border-slate-200 text-slate-600 font-bold text-sm hover:border-slate-900 hover:text-slate-900 transition-colors uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      Use a different account
+                  </button>
+                </div>
+            </div>
+        ) : (
+            <div className="space-y-8">
                 {isDemo ? (
                     <button 
-                        onClick={() => { setIsAuthenticated(true); setShowDebug(true); }}
-                        className="w-full h-[56px] bg-indigo-600 text-white rounded-xl font-bold text-[15px] hover:bg-indigo-700 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3"
+                        onClick={() => { setIsAuthenticated(true); }}
+                        className="w-full h-[64px] bg-slate-900 text-white font-bold text-[13px] hover:bg-slate-800 transition-colors uppercase tracking-widest flex items-center justify-center gap-3"
                     >
                         <span>Continue to Demo Admin</span>
                         <i className="fa-solid fa-arrow-right text-sm"></i>
                     </button>
-                ) : !userEmail && (
+                ) : (
                     <button 
                         onClick={handleGoogleLogin}
                         disabled={loading || !agreedToTerms} 
-                        className="w-full h-[56px] bg-white text-slate-700 border border-slate-200 rounded-xl font-bold text-[15px] hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                        className="w-full h-[64px] bg-transparent text-slate-900 border-2 border-slate-200 font-bold text-[13px] hover:border-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest flex items-center justify-center gap-4"
                     >
                         {loading ? (
                             <i className="fa-solid fa-spinner animate-spin text-xl"></i>
@@ -234,11 +221,11 @@ const AdminView: React.FC<AdminViewProps> = ({
                     </button>
                 )}
 
-                {!isDemo && !userEmail && (
-                    <div className="flex items-start gap-3 px-2 pt-2 justify-center">
+                {!isDemo && (
+                    <div className="flex items-start gap-3 px-2 justify-center">
                         <div 
                         onClick={() => setAgreedToTerms(!agreedToTerms)}
-                        className={`mt-0.5 w-5 h-5 rounded border shrink-0 transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300 hover:border-indigo-400'}`}
+                        className={`mt-0.5 w-5 h-5 border-2 shrink-0 transition-colors flex items-center justify-center cursor-pointer ${agreedToTerms ? 'bg-slate-900 border-slate-900' : 'bg-transparent border-slate-300 hover:border-slate-900'}`}
                         >
                         {agreedToTerms && <i className="fa-solid fa-check text-white text-[10px]"></i>}
                         </div>
@@ -249,15 +236,15 @@ const AdminView: React.FC<AdminViewProps> = ({
                 )}
 
                 {error && (
-                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center gap-3">
-                    <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center shrink-0 text-rose-500">
+                    <div className="bg-rose-50 border border-rose-100 p-4 flex items-center gap-3">
+                    <div className="w-8 h-8 bg-rose-100 flex items-center justify-center shrink-0 text-rose-500">
                         <i className="fa-solid fa-circle-exclamation text-sm"></i>
                     </div>
                     <p className="text-rose-600 text-[12px] font-bold leading-tight">{error}</p>
                     </div>
                 )}
             </div>
-        </div>
+        )}
       </div>
     </div>
 
