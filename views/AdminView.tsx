@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
-import { QuickSetupWizard } from '../components/QuickSetupWizard';
+import { RestaurantNameEditor } from '../components/RestaurantNameEditor';
 import { DebugAccountView } from './DebugAccountView';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 import * as MenuService from '../services/menuService';
@@ -115,13 +115,21 @@ const AdminView: React.FC<AdminViewProps> = ({
   };
 
   if (!hasCheckedSession) {
-    return <div className="flex items-center justify-center min-h-screen bg-[#F2F2F7]"><div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
+    return (
+      <div className="fixed inset-0 bg-white z-[200] flex flex-col items-center justify-center font-jakarta">
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+        </div>
+        <p className="mt-6 text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Initializing</p>
+      </div>
+    );
   }
 
   if (isAuthenticated) {
     if (hasRestaurant === false) {
       return (
-        <QuickSetupWizard 
+        <RestaurantNameEditor 
           userId={userId || ''}
           email={userEmail || ''}
           onComplete={() => {
