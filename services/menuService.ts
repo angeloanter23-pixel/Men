@@ -588,8 +588,10 @@ export async function authSignUp(email: string, pass: string, restaurantName: st
 
 export async function createRestaurantForUser(userId: string, email: string, restaurantName: string) {
   // Check for existing user and trial status
-  const { data: existingRestaurant } = await supabase.from('restaurants').select('*').eq('email', email).maybeSingle();
+  const { data: existingUser } = await supabase.from('users').select('*, restaurants(*)').eq('email', email).maybeSingle();
   
+  const existingRestaurant = existingUser?.restaurants ? (Array.isArray(existingUser.restaurants) ? existingUser.restaurants[0] : existingUser.restaurants) : null;
+
   if (existingRestaurant?.trial_used) {
       throw new Error("You have already utilized your trial period.");
   }
@@ -597,9 +599,8 @@ export async function createRestaurantForUser(userId: string, email: string, res
   // 1. Create Restaurant
   const { data: restData, error: restErr } = await supabase.from('restaurants').insert([{ 
     name: restaurantName, 
-    // owner_user_id removed as it doesn't exist in schema
     account_type: 'trial',
-    trial_end_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    trial_end_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days trial
     trial_used: true,
     slug: restaurantName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''),
     theme: { primary_color: '#FF6B00', secondary_color: '#FFF3E0', font_family: 'Plus Jakarta Sans', template: 'classic', feedback_metrics: ["Cleanliness", "Food Quality", "Speed", "Service", "Value", "Experience"] } 
@@ -609,7 +610,7 @@ export async function createRestaurantForUser(userId: string, email: string, res
   const restaurant = restData && restData[0];
 
   // 2. Create User in public table
-  if (existingRestaurant) {
+  if (existingUser) {
       const { error: updateErr } = await supabase.from('users')
         .update({ 
             restaurant_id: restaurant.id, 
@@ -623,18 +624,6 @@ export async function createRestaurantForUser(userId: string, email: string, res
           throw updateErr;
       }
   } else {
-      // Insert new user with explicit ID if possible, or let Supabase handle it. 
-      // Since we passed userId to this function, we should probably use it if the users table allows upserting by ID, 
-      // but usually users table in public schema might be separate from auth.users.
-      // However, the previous code didn't use userId in insert, only in owner_user_id.
-      // Let's stick to the existing pattern but ensure restaurant_id is set.
-      
-      // WAIT: The previous code didn't use userId in the users insert either.
-      // It just inserted email, password, etc.
-      // If we are using Supabase Auth, the 'users' table here is likely a public profile table.
-      // We should probably try to link it to the auth user id if possible, but the schema might not have 'id' as a settable field if it's auto-increment or uuid.
-      // Let's assume the previous insert was correct for the users table structure, just missing the link logic which is already there (restaurant_id).
-      
       const { error: userErr } = await supabase.from('users').insert([{ 
         id: userId, // Explicitly link to the auth user ID if this is a profile table
         email: email.toLowerCase().trim(), 

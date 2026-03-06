@@ -95,6 +95,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             if (publicUsers && publicUsers.length > 0 && publicUsers[0].restaurant_id) {
                 foundRestaurantId = publicUsers[0].restaurant_id;
                 userRole = publicUsers[0].role;
+
+                // Fetch the restaurant to get account_type and trial info
+                const { data: restData } = await supabase.from('restaurants').select('*').eq('id', foundRestaurantId).single();
+                if (restData) {
+                    setAccountType(restData.account_type === 'trial' ? 'trial' : 'pro');
+                    
+                    const trialEnd = restData.trial_end_at ? new Date(restData.trial_end_at) : null;
+                    const now = new Date();
+                    if (restData.account_type === 'trial' && trialEnd) {
+                        const diffTime = trialEnd.getTime() - now.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        setTrialDaysLeft(diffDays > 0 ? diffDays : 0);
+                        if (diffDays <= 0) {
+                            setIsTrialExpired(true);
+                        }
+                    }
+                }
             }
         }
         
@@ -321,8 +338,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onCreateMenu={onNavigateToCreateMenu}
         />
       )}
-      {showSetupWizard && (
-        <QuickSetupWizard onComplete={() => setShowSetupWizard(false)} />
+      {showSetupWizard && currentUserId && currentUserEmail && (
+        <QuickSetupWizard 
+          userId={currentUserId}
+          email={currentUserEmail}
+          onComplete={() => {
+            setShowSetupWizard(false);
+            // Refresh to load the newly created restaurant
+            window.location.reload();
+          }} 
+        />
       )}
       {showDemoNotice && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center">
