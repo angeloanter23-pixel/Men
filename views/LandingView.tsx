@@ -7,7 +7,6 @@ import { LibrarySection } from '../landing-page/LibrarySection';
 import { LandingFaq } from '../landing-page/LandingFaq';
 import { LandingFooter } from '../landing-page/LandingFooter';
 import { LandingMenu } from '../landing-page/LandingMenu';
-import { CreateMenuOptions } from '../landing-page/CreateMenuOptions';
 import { LandingOverlay } from '../landing-page/LandingOverlay';
 
 // Informational Content Components
@@ -59,7 +58,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
         }}
       />
 
-      <HeroSection onStart={onStart} onCreateMenu={() => setActiveOverlay('createMenu')} onAffiliateAuth={onAffiliateAuth} />
+      <HeroSection onStart={onStart} onCreateMenu={onCreateMenu} onAffiliateAuth={onAffiliateAuth} />
       
       <BlueprintStepper />
       
@@ -71,7 +70,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
       
       <LandingFooter 
         onStart={onStart} 
-        onCreateMenu={() => setActiveOverlay('createMenu')} 
+        onCreateMenu={onCreateMenu} 
         onInvestmentClick={() => setActiveOverlay('investment')}
         onCareerClick={() => setActiveOverlay('careers')}
         onShopClick={() => setActiveOverlay('shop')}
@@ -175,15 +174,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
         onClose={() => setActiveOverlay(null)} 
       >
         <NodeRegistrySection />
-      </LandingOverlay>
-
-      <LandingOverlay 
-        isOpen={activeOverlay === 'createMenu'} 
-        onClose={() => setActiveOverlay(null)} 
-      >
-        <CreateMenuOptions 
-            onClose={() => setActiveOverlay(null)}
-        />
       </LandingOverlay>
     </div>
   );
