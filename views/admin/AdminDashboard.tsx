@@ -7,6 +7,7 @@ import AdminOrders from './AdminOrders';
 import AdminLegal from './AdminLegal';
 import AdminAbout from './AdminAbout';
 import AdminApps from './AdminApps';
+import { QuickSetupWizard } from '../../components/QuickSetupWizard';
 import { DemoOrderModal } from '../../components/DemoOrderModal';
 import { UpgradeView } from '../UpgradeView';
 import { MenuItem, Category, Feedback, SalesRecord } from '../../types';
@@ -50,6 +51,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isTrialExpired, setIsTrialExpired] = useState(false);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
   
   useEffect(() => {
     const fetchUserAndRestaurant = async () => {
@@ -58,11 +60,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setCurrentUserEmail(user.email);
         setCurrentUserId(user.id);
         
-        // Check if it's the demo user from localStorage fallback (if any) or just rely on email
-        if (user.email === 'demo1@mymenu') {
-            // Demo logic might rely on specific ID
-        }
-
         let foundRestaurantId = null;
         let userRole = 'super-admin';
 
@@ -98,7 +95,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           setAdminCreds(prev => ({ ...prev, role: userRole, email: user.email }));
         } else {
           if (user.email !== 'demo1@mymenu') {
-            onNavigateToCreateMenu();
+            setShowSetupWizard(true);
           }
         }
       }
@@ -289,6 +286,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onUnderstand={() => setShowRestrictModal(false)}
           onCreateMenu={onNavigateToCreateMenu}
         />
+      )}
+      {showSetupWizard && (
+        <QuickSetupWizard onComplete={() => setShowSetupWizard(false)} />
       )}
     </div>
   );

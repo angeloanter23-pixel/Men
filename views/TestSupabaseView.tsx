@@ -5,7 +5,11 @@ type ModalType = 'branch' | 'category' | 'item' | 'delete-account' | null;
 
 const CATEGORY_PRESETS = ['Signature', 'Main Course', 'Appetizers', 'Beverages', 'Desserts', 'Snacks'];
 
-const TestSupabaseView: React.FC = () => {
+interface TestSupabaseViewProps {
+  onLoginSuccess: () => void;
+}
+
+const TestSupabaseView: React.FC<TestSupabaseViewProps> = ({ onLoginSuccess }) => {
   // Auth State
   const [session, setSession] = useState<{user: any, restaurant: any} | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -59,6 +63,7 @@ const TestSupabaseView: React.FC = () => {
       }
       setSession(res);
       localStorage.setItem('foodie_supabase_session', JSON.stringify(res));
+      onLoginSuccess();
     } catch (err: any) {
       setError(err.message || "Access Denied.");
     } finally {

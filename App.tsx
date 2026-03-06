@@ -26,6 +26,7 @@ import AboutView from './views/AboutView';
 import FeedbackDataView from './views/FeedbackDataView';
 import SuperAdminView from './views/SuperAdminView';
 import TestSupabaseView from './views/TestSupabaseView';
+import { DebugAccountView } from './views/DebugAccountView';
 import AcceptInviteView from './views/AcceptInviteView';
 import AIAssistantView from './views/AIAssistantView';
 import CreateMenuView from './views/CreateMenuView';
@@ -474,7 +475,8 @@ export default function App() {
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} appTheme={appTheme} />;
       case 'feedback': return <FeedbackForm restaurantId={activeSession?.restaurant_id} onSubmit={() => { navigateTo('feedback-data'); }} onCancel={() => navigateTo('menu')} appTheme={appTheme} />;
       case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
-      case 'test-supabase': return <TestSupabaseView />;
+      case 'test-supabase': return <TestSupabaseView onLoginSuccess={() => navigateTo('debug-account')} />;
+      case 'debug-account': return <DebugAccountView onContinue={() => navigateTo('admin')} />;
       case 'accept-invite': return <AcceptInviteView onComplete={() => navigateTo('admin')} onCancel={() => navigateTo('landing')} />;
       case 'ai-assistant': return <AIAssistantView menuItems={menuItems} onItemSelect={handleItemSelect} onGoBack={() => navigateTo('menu')} />;
       case 'admin-faq': return <MenuFAQ onBack={() => navigateTo('admin')} />;

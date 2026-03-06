@@ -33,6 +33,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu, onNavigateToCreateMenu, isDemo
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(isDemo || false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
@@ -44,14 +45,17 @@ const AdminView: React.FC<AdminViewProps> = ({
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsAuthenticated(true);
+        setUserEmail(session.user.email || null);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setIsAuthenticated(true);
+        setUserEmail(session.user.email || null);
       } else {
         setIsAuthenticated(false);
+        setUserEmail(null);
       }
     });
 
@@ -148,6 +152,11 @@ const AdminView: React.FC<AdminViewProps> = ({
             <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed">
                 Sign in to manage your restaurant.
             </p>
+            {userEmail && (
+                <p className="text-slate-400 text-xs mt-4 font-mono">
+                    You are currently logged in as {userEmail}
+                </p>
+            )}
             </header>
 
             <div className="space-y-6">
