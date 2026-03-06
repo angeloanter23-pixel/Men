@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminDashboard from './admin/AdminDashboard';
+import { QuickSetupWizard } from '../components/QuickSetupWizard';
 import { DebugAccountView } from './DebugAccountView';
 import { MenuItem, Category, Feedback, SalesRecord } from '../types';
 import * as MenuService from '../services/menuService';
@@ -34,6 +35,7 @@ const AdminView: React.FC<AdminViewProps> = ({
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(isDemo || false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
@@ -47,6 +49,7 @@ const AdminView: React.FC<AdminViewProps> = ({
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUserEmail(session.user.email || null);
+        setUserId(session.user.id || null);
         const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
         setHasRestaurant(!!restaurant);
         setIsAuthenticated(true);
@@ -58,6 +61,7 @@ const AdminView: React.FC<AdminViewProps> = ({
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         setUserEmail(session.user.email || null);
+        setUserId(session.user.id || null);
         const restaurant = await MenuService.getRestaurantByOwnerId(session.user.id);
         setHasRestaurant(!!restaurant);
         if (event === 'SIGNED_IN') {
@@ -66,6 +70,7 @@ const AdminView: React.FC<AdminViewProps> = ({
       } else {
         setIsAuthenticated(false);
         setUserEmail(null);
+        setUserId(null);
         setHasRestaurant(null);
       }
     });
@@ -110,12 +115,21 @@ const AdminView: React.FC<AdminViewProps> = ({
   };
 
   if (!hasCheckedSession) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen bg-[#F2F2F7]"><div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
   }
 
   if (isAuthenticated) {
-    if (hasRestaurant === null) {
-      return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    if (hasRestaurant === false) {
+      return (
+        <QuickSetupWizard 
+          userId={userId || ''}
+          email={userEmail || ''}
+          onComplete={() => {
+            setHasRestaurant(true);
+            window.location.reload();
+          }} 
+        />
+      );
     }
 
     return (
