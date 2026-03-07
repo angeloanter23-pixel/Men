@@ -260,6 +260,14 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
 
 
 
+        {/* SYSTEM */}
+        <section className="space-y-3">
+          <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">System</h3>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
+            <SettingRow icon="fa-bug" color="bg-rose-500" label="Debug console" last onClick={() => onSubTabChange?.('debug')} />
+          </div>
+        </section>
+
         {/* CONTENT MANAGEMENT */}
         <section className="space-y-3">
           <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Content management</h3>

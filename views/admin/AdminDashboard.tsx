@@ -7,6 +7,7 @@ import AdminOrders from './AdminOrders';
 import AdminLegal from './AdminLegal';
 import AdminAbout from './AdminAbout';
 import AdminApps from './AdminApps';
+import DebugDataView from './DebugDataView';
 import { QuickSetupWizard } from '../../components/QuickSetupWizard';
 import { DemoOrderModal } from '../../components/DemoOrderModal';
 import { UpgradeView } from '../UpgradeView';
@@ -15,7 +16,7 @@ import * as MenuService from '../../services/menuService';
 import { supabase } from '../../lib/supabase';
 
 type AdminTab = 'menu' | 'analytics' | 'qr' | 'settings' | 'orders' | 'apps' | 'setup-wizard';
-type SettingsSubTab = 'general' | 'about' | 'terms' | 'privacy';
+type SettingsSubTab = 'general' | 'about' | 'terms' | 'privacy' | 'debug';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -222,14 +223,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const refreshAllData = async () => {
     if (!restaurantId || restaurantId === "undefined") return;
     try {
-      const cloudMenu = await MenuService.getMenuByRestaurantId(restaurantId);
+      const [cloudMenu, cloudFeedbacks] = await Promise.all([
+        MenuService.getMenuByRestaurantId(restaurantId),
+        MenuService.getFeedbacks(restaurantId)
+      ]);
+
       if (cloudMenu) {
         setMenuId(cloudMenu.menu_id);
         setMenuItems(cloudMenu.items || []);
         setCategories(cloudMenu.categories || []);
       }
       
-      const cloudFeedbacks = await MenuService.getFeedbacks(restaurantId);
       setFeedbacks(cloudFeedbacks);
 
     } catch (err: any) {
@@ -321,6 +325,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} onBack={() => setSettingsSubTab('general')} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />}
             {settingsSubTab === 'terms' && <AdminLegal restaurantId={restaurantId} initialDocType="terms" onBack={() => setSettingsSubTab('general')} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />}
             {settingsSubTab === 'privacy' && <AdminLegal restaurantId={restaurantId} initialDocType="privacy" onBack={() => setSettingsSubTab('general')} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />}
+            {settingsSubTab === 'debug' && <DebugDataView restaurantId={restaurantId} userId={currentUserId} />}
           </div>
         );
       default: return null;

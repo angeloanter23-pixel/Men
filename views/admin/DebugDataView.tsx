@@ -4,40 +4,65 @@ import { supabase } from '../../lib/supabase';
 
 interface DebugDataViewProps {
   restaurantId: string | null;
+  userId: string | null;
 }
 
-export const DebugDataView: React.FC<DebugDataViewProps> = ({ restaurantId }) => {
+export const DebugDataView: React.FC<DebugDataViewProps> = ({ restaurantId, userId }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
+  const [activeRestaurantId, setActiveRestaurantId] = useState(restaurantId);
 
   const addLog = (msg: string) => {
       setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
 
   useEffect(() => {
-    fetchData();
-  }, [restaurantId]);
+    const init = async () => {
+        let rid = restaurantId;
+        if (!rid && userId) {
+            addLog(`No restaurant ID provided. Fetching for user: ${userId}`);
+            const restaurant = await MenuService.getRestaurantByOwnerId(userId);
+            if (restaurant) {
+                rid = restaurant.id;
+                setActiveRestaurantId(rid);
+                addLog(`Found restaurant ID: ${rid}`);
+            } else {
+                // Try checking public users table
+                const { data: publicUsers } = await supabase
+                  .from('users')
+                  .select('restaurant_id')
+                  .eq('id', userId)
+                  .limit(1);
+                
+                if (publicUsers && publicUsers.length > 0) {
+                    rid = publicUsers[0].restaurant_id;
+                    setActiveRestaurantId(rid);
+                    addLog(`Found restaurant ID from users table: ${rid}`);
+                }
+            }
+        }
+        if (rid) {
+            fetchData(rid);
+        } else {
+            addLog(`ERROR: Could not find restaurant ID.`);
+            setError("Could not find restaurant ID.");
+            setLoading(false);
+        }
+    };
+    init();
+  }, [restaurantId, userId]);
 
-  const fetchData = async () => {
+  const fetchData = async (rid: string) => {
     setLoading(true);
     setError(null);
-    setLogs([]);
     
-    addLog(`Initializing debug fetch...`);
-    addLog(`Restaurant ID provided: ${restaurantId}`);
-
-    if (!restaurantId) {
-        addLog(`ERROR: No restaurant ID provided. Cannot fetch data.`);
-        setError("No restaurant ID provided.");
-        setLoading(false);
-        return;
-    }
+    addLog(`Initializing debug fetch for restaurant: ${rid}`);
 
     try {
       addLog(`Fetching restaurant details from Supabase...`);
-      const restaurantRes = await supabase.from('restaurants').select('*').eq('id', restaurantId).single();
+      const restaurantRes = await supabase.from('restaurants').select('*').eq('id', rid).single();
       
       if (restaurantRes.error) {
           addLog(`SUPABASE ERROR (restaurants): ${JSON.stringify(restaurantRes.error, null, 2)}`);
@@ -46,15 +71,15 @@ export const DebugDataView: React.FC<DebugDataViewProps> = ({ restaurantId }) =>
       addLog(`Restaurant details fetched successfully.`);
 
       addLog(`Fetching QR codes...`);
-      const qrCodes = await MenuService.getQRCodes(restaurantId);
+      const qrCodes = await MenuService.getQRCodes(rid);
       addLog(`Fetched ${qrCodes?.length || 0} QR codes.`);
 
       addLog(`Fetching Menu...`);
-      const menu = await MenuService.getMenuByRestaurantId(restaurantId);
+      const menu = await MenuService.getMenuByRestaurantId(rid);
       addLog(`Fetched ${menu?.items?.length || 0} menu items.`);
 
       addLog(`Fetching Live Messages...`);
-      const messages = await MenuService.getLiveMessages(restaurantId);
+      const messages = await MenuService.getLiveMessages(rid);
       addLog(`Fetched ${messages?.length || 0} messages.`);
 
       setData({
@@ -94,7 +119,7 @@ export const DebugDataView: React.FC<DebugDataViewProps> = ({ restaurantId }) =>
       <section>
         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Restaurant ID</h4>
         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 break-all font-mono text-sm text-slate-600">
-            {restaurantId || 'No Restaurant ID'}
+            {activeRestaurantId || 'No Restaurant ID'}
         </div>
       </section>
 
@@ -145,3 +170,5 @@ export const DebugDataView: React.FC<DebugDataViewProps> = ({ restaurantId }) =>
     </div>
   );
 };
+
+export default DebugDataView;
