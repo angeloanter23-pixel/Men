@@ -259,13 +259,18 @@ const AdminView: React.FC<AdminViewProps> = ({
             ) : (
                 <div className="space-y-6">
                     {isDemo ? (
-                        <button 
-                            onClick={() => { setIsAuthenticated(true); }}
-                            className="w-full h-14 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors uppercase tracking-widest flex items-center justify-center gap-4"
-                        >
-                            <span>Continue to Demo Admin</span>
-                            <i className="fa-solid fa-arrow-right text-sm"></i>
-                        </button>
+                        <div className="space-y-4">
+                            <p className="text-slate-500 font-medium text-sm text-center">
+                                All features are for viewing only, editing is restricted.
+                            </p>
+                            <button 
+                                onClick={() => { setIsAuthenticated(true); }}
+                                className="w-full h-14 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors uppercase tracking-widest flex items-center justify-center gap-4"
+                            >
+                                <span>Continue as Demo Account</span>
+                                <i className="fa-solid fa-arrow-right text-sm"></i>
+                            </button>
+                        </div>
                     ) : (
                         <>
                         <button 

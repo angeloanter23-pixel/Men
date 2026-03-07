@@ -83,10 +83,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setIsTrialExpired(true);
         return false;
       }
-      const h = Math.floor((diff / (1000 * 60 * 60)));
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
       const m = Math.floor((diff / 1000 / 60) % 60);
       const s = Math.floor((diff / 1000) % 60);
-      setTrialTimeLeft(`${h}h ${m}m ${s}s`);
+      setTrialTimeLeft(d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`);
       return true;
     };
 
@@ -405,7 +406,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     'bg-emerald-100 text-emerald-600'
                 }`}
             >
-                {accountType === 'demo' ? 'Demo' : accountType === 'trial' ? 'Trial' : 'Pro'}
+                {accountType === 'demo' ? 'Demo' : accountType === 'trial' ? `Trial: ${trialTimeLeft}` : 'Pro'}
             </button>
           </div>
         </header>
@@ -440,33 +441,75 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
       {showUpgradeModal && (
-        <div className="fixed inset-0 z-[2000] flex items-end justify-center">
+        <div className="fixed inset-0 z-[2000] flex items-end md:items-center justify-center p-4">
             <div onClick={() => { setShowUpgradeModal(false); setUpgradeStep('pricing'); }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <div className="w-full max-w-lg bg-white rounded-t-[2rem] p-8 animate-slide-up relative">
-                <button onClick={() => { setShowUpgradeModal(false); setUpgradeStep('pricing'); }} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900"><i className="fa-solid fa-xmark"></i></button>
+            <div className={`w-full ${upgradeStep === 'pricing' ? 'max-w-4xl' : 'max-w-lg'} bg-white rounded-[2rem] p-6 md:p-8 animate-slide-up relative max-h-[90vh] overflow-y-auto no-scrollbar`}>
+                <button onClick={() => { setShowUpgradeModal(false); setUpgradeStep('pricing'); }} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 z-10 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full"><i className="fa-solid fa-xmark"></i></button>
                 
                 {upgradeStep === 'pricing' && (
-                    <div className="text-center space-y-6">
-                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i className="fa-solid fa-crown text-2xl"></i>
+                    <div className="space-y-8">
+                        <div className="text-center space-y-2">
+                            <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight">Select a Plan</h3>
+                            <p className="text-slate-500 text-sm font-medium">Flexible for every kitchen.</p>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight">Professional Plan</h3>
-                        <div>
-                            <span className="text-4xl font-black tracking-tighter">₱1,299</span>
-                            <span className="text-xs font-bold text-slate-400 ml-2">/ one-time</span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Professional Plan */}
+                            <div className="p-8 rounded-[2rem] bg-slate-900 text-white border border-slate-900 shadow-2xl flex flex-col justify-between relative overflow-hidden">
+                                <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-bl-xl">Popular</div>
+                                <div>
+                                    <h4 className="text-[13px] font-black uppercase tracking-[0.3em] mb-4 opacity-60">Professional</h4>
+                                    <div className="mb-6">
+                                        <span className="text-4xl font-black tracking-tighter">₱1,299</span>
+                                        <span className="text-xs font-bold opacity-40 ml-2">/ one-time</span>
+                                    </div>
+                                    <p className="text-sm font-medium mb-8 leading-relaxed text-slate-400">Our most popular lifetime license for individual venues.</p>
+                                    <ul className="space-y-4">
+                                        {["Unlimited Table Nodes", "AI Concierge Access", "Priority Staff Messaging", "Sales Insights Hub"].map((f, j) => (
+                                            <li key={j} className="flex items-center gap-3 text-[13px] font-bold">
+                                                <i className="fa-solid fa-circle-check text-xs text-indigo-400"></i>
+                                                {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <button 
+                                    onClick={() => setUpgradeStep('payment')}
+                                    className="w-full py-4 rounded-xl font-black uppercase text-[11px] tracking-widest mt-10 transition-all active:scale-95 bg-white text-slate-900 hover:bg-slate-100"
+                                >
+                                    Get Lifetime Access
+                                </button>
+                            </div>
+
+                            {/* Enterprise Plan */}
+                            <div className="p-8 rounded-[2rem] bg-white text-slate-900 border border-slate-200 shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <h4 className="text-[13px] font-black uppercase tracking-[0.3em] mb-4 opacity-60">Enterprise</h4>
+                                    <div className="mb-6">
+                                        <span className="text-4xl font-black tracking-tighter">Custom</span>
+                                    </div>
+                                    <p className="text-sm font-medium mb-8 leading-relaxed text-slate-500">For chains, franchises, and luxury hospitality groups.</p>
+                                    <ul className="space-y-4">
+                                        {["Custom Domain", "Custom Designer", "Multi-branch Management", "Dedicated Support Node", "Custom API Access"].map((f, j) => (
+                                            <li key={j} className="flex items-center gap-3 text-[13px] font-bold">
+                                                <i className="fa-solid fa-circle-check text-xs text-emerald-500"></i>
+                                                {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        const subject = encodeURIComponent("Enterprise Inquiry: mymenu.asia");
+                                        const body = encodeURIComponent("Hello Mymenu Team,\n\nI am interested in the Enterprise plan for my business. I would like to discuss custom domains and designer options.\n\nBusiness Name:\nContact Number:");
+                                        window.location.href = `mailto:geloelolo@gmail.com?subject=${subject}&body=${body}`;
+                                    }}
+                                    className="w-full py-4 rounded-xl font-black uppercase text-[11px] tracking-widest mt-10 transition-all active:scale-95 bg-slate-900 text-white hover:bg-black"
+                                >
+                                    Contact Us Now
+                                </button>
+                            </div>
                         </div>
-                        <ul className="text-left space-y-3 text-sm font-medium text-slate-600 bg-slate-50 p-6 rounded-2xl">
-                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> Unlimited Table Nodes</li>
-                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> AI Concierge Access</li>
-                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> Priority Staff Messaging</li>
-                            <li className="flex items-center gap-3"><i className="fa-solid fa-check text-emerald-500"></i> Sales Insights Hub</li>
-                        </ul>
-                        <button 
-                            onClick={() => setUpgradeStep('payment')}
-                            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-colors"
-                        >
-                            Continue to Payment
-                        </button>
                     </div>
                 )}
 
