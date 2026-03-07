@@ -37,6 +37,7 @@ import ArticleViewer from './views/ArticleViewer';
 import CareersView from './views/CareersView';
 import AffiliateAuth from './views/AffiliateAuth';
 import AffiliateDashboard from './views/AffiliateDashboard';
+import SignUpView from './views/SignUpView';
 
 import { defaultMenu } from './src/data/defaultMenu';
 
@@ -90,6 +91,14 @@ export default function App() {
       
       const fbs = await MenuService.getFeedbacks(restaurantId);
       setFeedbacks(fbs || []);
+
+      const qrCodes = await MenuService.getQRCodes(restaurantId);
+      // Assuming we need a state for qrCodes, I'll check if it exists or add it.
+      // For now, I'll just log it to verify, or if there's no state, I'll need to add one.
+      console.log("Fetched QR Codes:", qrCodes);
+
+      const messages = await MenuService.getLiveMessages(restaurantId);
+      console.log("Fetched Messages:", messages);
     } catch (e) {
       console.error("Critical Sync Error", e);
     }
@@ -240,7 +249,7 @@ export default function App() {
         return;
     }
 
-    const knownRoutes = ['landing', 'menu', 'cart', 'qr-verify', 'orders', 'about', 'privacy', 'terms', 'feedback-data', 'feedback', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'careers', 'affiliate-auth', 'affiliate-dashboard', 'admin', 'demo', 'articles', 'article'];
+    const knownRoutes = ['landing', 'menu', 'cart', 'qr-verify', 'orders', 'about', 'privacy', 'terms', 'feedback-data', 'feedback', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'careers', 'affiliate-auth', 'affiliate-dashboard', 'admin', 'demo', 'articles', 'article', 'sign-up'];
     
     if (path && !knownRoutes.includes(path) && path.length > 0 && !token && !restaurantId && (!hasSession || (storedSession && storedSession.label !== 'Walk-in'))) {
         if (storedSession && storedSession.label !== 'Walk-in') {
@@ -457,7 +466,7 @@ export default function App() {
   const renderView = () => {
     switch (currentView) {
       case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('admin')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} onAdminAuth={() => navigateTo('admin')} />;
-      case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={handleDemoSelect} />;
+      case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={handleDemoSelect} onSignUp={() => navigateTo('sign-up')} />;
       case 'articles': return <ArticlesView onBack={() => navigateTo('landing')} />;
       case 'article': return <ArticleViewer id={selectedArticleId} onBack={() => navigateTo('articles')} />;
       case 'menu': 
@@ -479,9 +488,10 @@ export default function App() {
       case 'ai-assistant': return <AIAssistantView menuItems={menuItems} onItemSelect={handleItemSelect} onGoBack={() => navigateTo('menu')} />;
       case 'admin-faq': return <MenuFAQ onBack={() => navigateTo('admin')} />;
       case 'careers': return <CareersView onBack={() => navigateTo('landing')} onAffiliateAuth={() => navigateTo('affiliate-auth')} />;
-      case 'affiliate-auth': return <AffiliateAuth onBack={() => navigateTo('landing')} onLogin={() => navigateTo('affiliate-dashboard')} />;
+      case 'affiliate-auth': return <AffiliateAuth onBack={() => navigateTo('landing')} onLogin={() => navigateTo('affiliate-dashboard')} onSignUp={() => navigateTo('sign-up')} />;
       case 'affiliate-dashboard': return <AffiliateDashboard onLogout={() => navigateTo('landing')} />;
-      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={[]} setSalesHistory={() => {}} adminCreds={{}} setAdminCreds={() => {}} onExit={() => navigateTo('landing')} onLogoUpdate={() => {}} onThemeUpdate={applyTheme} appTheme={appTheme} onOpenFAQ={() => navigateTo('admin-faq')} onBackToMenu={() => navigateTo('landing')} onNavigateToCreateMenu={() => { setActiveSession(null); navigateTo('admin'); }} isDemo={activeSession?.id?.startsWith('demo-')} />;
+      case 'sign-up': return <SignUpView onBack={() => navigateTo('affiliate-auth')} onComplete={() => navigateTo('admin')} />;
+      case 'admin': return <AdminView menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} feedbacks={feedbacks} setFeedbacks={setFeedbacks} salesHistory={[]} setSalesHistory={() => {}} adminCreds={{}} setAdminCreds={() => {}} onExit={() => navigateTo('landing')} onLogoUpdate={() => {}} onThemeUpdate={applyTheme} appTheme={appTheme} onOpenFAQ={() => navigateTo('admin-faq')} onBackToMenu={() => navigateTo('landing')} onNavigateToCreateMenu={() => { setActiveSession(null); navigateTo('admin'); }} onLoginSuccess={(restaurantId, restaurantName) => { syncDatabaseData(restaurantId); console.log("Logged in to:", restaurantName); }} isDemo={activeSession?.id?.startsWith('demo-')} />;
       default: return null;
     }
   };

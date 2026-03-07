@@ -192,7 +192,12 @@ export async function authSignIn(email: string, pass: string) {
   const user = users[0];
   if (user.status !== 'active') throw new Error("Account inactive.");
   
-  const restaurant = Array.isArray(user.restaurants) ? user.restaurants[0] : user.restaurants;
+  let restaurant = Array.isArray(user.restaurants) ? user.restaurants[0] : user.restaurants;
+  
+  if (!restaurant && user.restaurant_id) {
+      const { data: restData } = await supabase.from('restaurants').select('*').eq('id', user.restaurant_id).single();
+      restaurant = restData;
+  }
   
   return { 
     user: { id: user.id, email: user.email, role: user.role }, 
@@ -653,14 +658,18 @@ export async function getRestaurantByOwnerId(userId: string) {
     .eq('id', userId)
     .maybeSingle();
 
-  if (error || !user || !user.restaurants) {
-      // Fallback: Try querying by email if ID lookup fails (though ID is preferred)
-      // This handles cases where the user might have been created without explicit ID link previously
-      // But we don't have email here easily unless we fetch it.
+  if (error || !user) {
       return null;
   }
   
-  return Array.isArray(user.restaurants) ? user.restaurants[0] : user.restaurants;
+  let restaurant = Array.isArray(user.restaurants) ? user.restaurants[0] : user.restaurants;
+  
+  if (!restaurant && user.restaurant_id) {
+      const { data: restData } = await supabase.from('restaurants').select('*').eq('id', user.restaurant_id).single();
+      restaurant = restData;
+  }
+  
+  return restaurant;
 }
 
 export async function endTableSession(sessionId: string) {

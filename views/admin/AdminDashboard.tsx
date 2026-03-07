@@ -35,10 +35,12 @@ interface AdminDashboardProps {
   onOpenFAQ?: () => void;
   onNavigateToCreateMenu: () => void;
   onExit: () => void;
+  initialUserId?: string | null;
+  initialUserEmail?: string | null;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
-  onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onNavigateToCreateMenu, onExit 
+  onLogout, menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onNavigateToCreateMenu, onExit, initialUserId, initialUserEmail 
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>(() => {
     const hash = window.location.hash.replace('#', '');
@@ -100,24 +102,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     const fetchUserAndRestaurant = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && user.email) {
-        setCurrentUserEmail(user.email);
-        setCurrentUserId(user.id);
+      let userEmail = initialUserEmail;
+      let userId = initialUserId;
+
+      if (!userId) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+              userEmail = user.email || null;
+              userId = user.id;
+          }
+      }
+
+      if (userId && userEmail) {
+        setCurrentUserEmail(userEmail);
+        setCurrentUserId(userId);
         
         let foundRestaurantId = null;
         let userRole = 'super-admin';
 
         // 1. Check if user is an owner
-        const ownerRestaurant = await MenuService.getRestaurantByOwnerId(user.id);
+        const ownerRestaurant = await MenuService.getRestaurantByOwnerId(userId);
         if (ownerRestaurant) {
             foundRestaurantId = ownerRestaurant.id;
-            setAccountType(ownerRestaurant.account_type === 'trial' ? 'trial' : 'pro');
+            const dbAccountType = ownerRestaurant.account_type?.toLowerCase();
+            setAccountType(dbAccountType === 'demo' ? 'demo' : dbAccountType === 'trial' ? 'trial' : 'pro');
             
             // Check trial status
             const trialEnd = ownerRestaurant.trial_end_at ? new Date(ownerRestaurant.trial_end_at) : null;
             const now = new Date();
-            if (ownerRestaurant.account_type === 'trial' && trialEnd) {
+            if (dbAccountType === 'trial' && trialEnd) {
                 setTrialEndDate(trialEnd);
                 const diffTime = trialEnd.getTime() - now.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -131,7 +144,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             const { data: publicUsers } = await supabase
               .from('users')
               .select('restaurant_id, role')
-              .eq('email', user.email)
+              .eq('email', userEmail)
               .limit(1);
             
             if (publicUsers && publicUsers.length > 0 && publicUsers[0].restaurant_id) {
@@ -141,11 +154,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 // Fetch the restaurant to get account_type and trial info
                 const { data: restData } = await supabase.from('restaurants').select('*').eq('id', foundRestaurantId).single();
                 if (restData) {
-                    setAccountType(restData.account_type === 'trial' ? 'trial' : 'pro');
+                    const dbAccountType = restData.account_type?.toLowerCase();
+                    setAccountType(dbAccountType === 'demo' ? 'demo' : dbAccountType === 'trial' ? 'trial' : 'pro');
                     
                     const trialEnd = restData.trial_end_at ? new Date(restData.trial_end_at) : null;
                     const now = new Date();
-                    if (restData.account_type === 'trial' && trialEnd) {
+                    if (dbAccountType === 'trial' && trialEnd) {
                         setTrialEndDate(trialEnd);
                         const diffTime = trialEnd.getTime() - now.getTime();
                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -160,18 +174,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         if (foundRestaurantId) {
           setRestaurantId(foundRestaurantId);
-          setAdminCreds(prev => ({ ...prev, role: userRole, email: user.email }));
+          setAdminCreds(prev => ({ ...prev, role: userRole, email: userEmail }));
         } else {
-          if (user.email !== 'demo1@mymenu') {
+          if (userEmail !== 'demo1@mymenu') {
             setShowSetupWizard(true);
           } else {
             setAccountType('demo');
+            setRestaurantId('aeec6204-496e-46c4-adfb-ba154fa92153');
           }
         }
       }
     };
     fetchUserAndRestaurant();
-  }, []);
+  }, [initialUserId, initialUserEmail]);
 
   useEffect(() => {
     if (currentUserEmail === 'demo1@mymenu') setShowDemoNotice(true);
@@ -236,7 +251,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'settings', icon: 'fa-gears', label: 'Site Settings' }
   ];
 
-  const isDemoUser = currentUserEmail === 'demo1@mymenu';
+  const isDemoUser = currentUserEmail === 'demo1@mymenu' || accountType === 'demo';
 
   const triggerRestrictModal = (title: string, message: string) => {
     setRestrictModalContent({ title, message });
@@ -281,7 +296,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const renderContent = () => {
     switch (activeTab) {
       case 'menu': return <AdminMenu onCreateMenu={onNavigateToCreateMenu} isDemo={isDemoUser} items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} menuId={menuId} restaurantId={restaurantId} onOpenFAQ={onOpenFAQ} />;
-      case 'analytics': return <AdminAnalytics restaurantId={restaurantId} feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} />;
+      case 'analytics': return <AdminAnalytics restaurantId={restaurantId} feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
       case 'qr': return <AdminQR restaurantId={restaurantId} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
       case 'orders': return <AdminOrders restaurantId={restaurantId} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
       case 'apps': return <AdminApps restaurantId={restaurantId} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
@@ -298,11 +313,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 setAdminCreds={setAdminCreds} 
                 onThemeUpdate={onThemeUpdate} 
                 onSubTabChange={(sub) => setSettingsSubTab(sub as SettingsSubTab)}
+                isDemo={isDemoUser}
+                onRestrict={triggerRestrictModal}
               />
             )}
-            {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} onBack={() => setSettingsSubTab('general')} />}
-            {settingsSubTab === 'terms' && <AdminLegal restaurantId={restaurantId} initialDocType="terms" onBack={() => setSettingsSubTab('general')} />}
-            {settingsSubTab === 'privacy' && <AdminLegal restaurantId={restaurantId} initialDocType="privacy" onBack={() => setSettingsSubTab('general')} />}
+            {settingsSubTab === 'about' && <AdminAbout restaurantId={restaurantId} onBack={() => setSettingsSubTab('general')} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />}
+            {settingsSubTab === 'terms' && <AdminLegal restaurantId={restaurantId} initialDocType="terms" onBack={() => setSettingsSubTab('general')} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />}
+            {settingsSubTab === 'privacy' && <AdminLegal restaurantId={restaurantId} initialDocType="privacy" onBack={() => setSettingsSubTab('general')} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />}
           </div>
         );
       default: return null;

@@ -17,7 +17,9 @@ export default function AdminAnalytics({
   menuItems,
   appTheme,
   onThemeUpdate,
-  restaurantId
+  restaurantId,
+  isDemo,
+  onRestrict
 }: { 
   feedbacks: Feedback[]; 
   salesHistory: SalesRecord[]; 
@@ -26,6 +28,8 @@ export default function AdminAnalytics({
   appTheme: any;
   onThemeUpdate: (theme: any) => void;
   restaurantId: string | null;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('Revenue');
   const [selectedProductId, setSelectedProductId] = useState<number | 'global'>('global');
@@ -34,6 +38,14 @@ export default function AdminAnalytics({
   const [dateFilter, setDateFilter] = useState(new Date().toLocaleDateString('en-CA'));
   const [dbSales, setDbSales] = useState<SalesRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const handleRecordSale = () => {
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Record Sale", "Demo mode is read-only. To record sales for your restaurant, please create your real account.");
+        return;
+    }
+    // ... existing logic
+  };
   
   const navContainerRef = useRef<HTMLDivElement>(null);
   const chartRefs = { 

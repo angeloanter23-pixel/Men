@@ -75,16 +75,14 @@ const ShareModal: React.FC<{
     );
 };
 
-const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message: string) => void; restaurantId: string | null }> = ({ isDemo, onRestrict, restaurantId }) => {
-  const [activeTab, setActiveTab] = useState<'gen' | 'bulk' | 'saved'>('gen');
+const AdminQR: React.FC<{ restaurantId: string | null, isDemo?: boolean, onRestrict?: (title: string, message: string) => void }> = ({ restaurantId, isDemo, onRestrict }) => {
+  const [activeTab, setActiveTab] = useState<'gen' | 'saved'>('gen');
   const [baseName, setBaseName] = useState('Table ');
-  const [bulkPrefix, setBulkPrefix] = useState('Table ');
-  const [bulkStart, setBulkStart] = useState(1);
-  const [bulkEnd, setBulkEnd] = useState(10);
   const [showFaq, setShowFaq] = useState(false);
   
   const [savedQrs, setSavedQrs] = useState<QRAsset[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [qrToShare, setQrToShare] = useState<QRAsset | null>(null);
   const [qrToDelete, setQrToDelete] = useState<QRAsset | null>(null);
 
@@ -93,20 +91,26 @@ const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message
   const fetchQRCodes = async () => {
     if (!restaurantId) return [];
     setLoading(true);
+    setError(null);
     try { 
       const data = await MenuService.getQRCodes(restaurantId); 
       setSavedQrs(data); 
       return data;
     }
-    catch (err) { console.error(err); return []; } finally { setLoading(false); }
+    catch (err: any) { 
+        console.error(err); 
+        const errorMsg = err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        setError("Failed to fetch QR codes: " + errorMsg);
+        return []; 
+    } finally { setLoading(false); }
   };
 
   const handleGenerate = async () => {
-    if (!baseName.trim() || loading || !restaurantId) return;
     if (isDemo && onRestrict) {
-        onRestrict("Cannot Deploy Node", "Demo mode is read-only. To deploy your own table QR nodes, please create your real restaurant account.");
+        onRestrict("Cannot Create QR Codes", "Demo mode is read-only. Please create your real account to manage QR codes.");
         return;
     }
+    if (!baseName.trim() || loading || !restaurantId) return;
     setLoading(true);
     try {
       const currentNodes = await fetchQRCodes();
@@ -129,36 +133,6 @@ const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message
     } catch (err: any) { 
       alert("Fail: " + (err.message || "Error")); 
     } finally { setLoading(false); }
-  };
-
-  const handleBulkGenerate = async () => {
-    if (loading || !restaurantId) return;
-    if (isDemo && onRestrict) {
-        onRestrict("Cannot Bulk Generate", "Demo mode is read-only. To generate bulk table nodes, please create your real restaurant account.");
-        return;
-    }
-    if (bulkEnd < bulkStart) return alert("End number must be greater than start.");
-    if (bulkEnd - bulkStart > 50) return alert("Maximum 50 codes at once.");
-
-    setLoading(true);
-    try {
-        const payload = [];
-        for (let i = bulkStart; i <= bulkEnd; i++) {
-            payload.push({
-                restaurant_id: restaurantId,
-                label: `${bulkPrefix}${i}`,
-                code: Math.random().toString(36).substr(2, 6).toUpperCase(),
-                type: 'menu'
-            });
-        }
-        await MenuService.bulkUpsertQRCodes(payload);
-        await fetchQRCodes();
-        setActiveTab('saved');
-    } catch (e: any) {
-        alert("Bulk creation failed: " + e.message);
-    } finally {
-        setLoading(false);
-    }
   };
 
   const isDuplicate = savedQrs.some(q => q.label.toLowerCase().trim() === baseName.toLowerCase().trim());
@@ -200,10 +174,16 @@ const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message
           </button>
         </header>
 
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-600 p-4 rounded-xl text-sm font-bold flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={fetchQRCodes} className="text-rose-800 hover:text-rose-900"><i className="fa-solid fa-rotate-right"></i></button>
+          </div>
+        )}
+
         {/* Tab Switcher */}
         <div className="bg-slate-200/50 p-1 rounded-xl flex border border-slate-200 shadow-inner overflow-x-auto no-scrollbar gap-1">
           <button onClick={() => setActiveTab('gen')} className={`flex-1 min-w-[90px] py-2.5 rounded-lg text-[10px] font-bold tracking-tight transition-all ${activeTab === 'gen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Single</button>
-          <button onClick={() => setActiveTab('bulk')} className={`flex-1 min-w-[90px] py-2.5 rounded-lg text-[10px] font-bold tracking-tight transition-all ${activeTab === 'bulk' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Bulk tool</button>
           <button onClick={() => setActiveTab('saved')} className={`flex-1 min-w-[90px] py-2.5 rounded-lg text-[10px] font-bold tracking-tight transition-all ${activeTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>Archive ({savedQrs.length})</button>
         </div>
 
@@ -239,41 +219,6 @@ const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message
                 {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-bolt text-xs"></i>}
                 <span>Deploy node</span>
               </button>
-            </div>
-          </section>
-        ) : activeTab === 'bulk' ? (
-          <section className="space-y-3 animate-fade-in">
-            <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Bulk generator</h3>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50 space-y-6">
-                <div className="space-y-4">
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1">Prefix</label>
-                        <input type="text" value={bulkPrefix} onChange={e => setBulkPrefix(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl font-bold text-sm" placeholder="e.g. Table " />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1">Start number</label>
-                            <input type="number" value={bulkStart} onChange={e => setBulkStart(parseInt(e.target.value) || 1)} className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl font-bold text-sm" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1">End number</label>
-                            <input type="number" value={bulkEnd} onChange={e => setBulkEnd(parseInt(e.target.value) || 10)} className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl font-bold text-sm" />
-                        </div>
-                    </div>
-                    <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center gap-3">
-                        <div className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center shrink-0"><i className="fa-solid fa-wand-magic-sparkles text-xs"></i></div>
-                        <p className="text-[11px] text-indigo-900 font-bold leading-tight">Creates {bulkEnd - bulkStart + 1} nodes instantly.</p>
-                    </div>
-                </div>
-
-                <button 
-                    disabled={loading} 
-                    onClick={handleBulkGenerate} 
-                    className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-[12px] tracking-tight shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                    {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-plus-circle text-xs"></i>}
-                    <span>Generate bulk nodes</span>
-                </button>
             </div>
           </section>
         ) : (
@@ -328,7 +273,7 @@ const AdminQR: React.FC<{ isDemo?: boolean; onRestrict?: (title: string, message
                     <button 
                         onClick={async () => {
                             if (isDemo && onRestrict) {
-                                onRestrict("Cannot Delete Node", "Demo mode is read-only. Table nodes cannot be deleted in this environment.");
+                                onRestrict("Cannot Delete QR Codes", "Demo mode is read-only. Please create your real account to manage QR codes.");
                                 setQrToDelete(null);
                                 return;
                             }

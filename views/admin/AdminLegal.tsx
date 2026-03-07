@@ -7,6 +7,8 @@ interface AdminLegalProps {
   restaurantId: string;
   initialDocType?: 'terms' | 'privacy';
   onBack: () => void;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
 const DEFAULT_TERMS = `
@@ -35,7 +37,7 @@ const DEFAULT_PRIVACY = `
   </div>
 `;
 
-const AdminLegal: React.FC<AdminLegalProps> = ({ restaurantId, initialDocType = 'terms', onBack }) => {
+const AdminLegal: React.FC<AdminLegalProps> = ({ restaurantId, initialDocType = 'terms', onBack, isDemo, onRestrict }) => {
   const [docType, setDocType] = useState<'terms' | 'privacy'>(initialDocType);
   const [content, setContent] = useState({ terms: '', privacy: '' });
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ const AdminLegal: React.FC<AdminLegalProps> = ({ restaurantId, initialDocType = 
   const [showDemoBlock, setShowDemoBlock] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   
-  const isDemoAccount = restaurantId === 'aeec6204-496e-46c4-adfb-ba154fa92153';
+  const isDemoAccount = restaurantId === 'aeec6204-496e-46c4-adfb-ba154fa92153' || isDemo;
   const editorRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
@@ -107,7 +109,11 @@ const AdminLegal: React.FC<AdminLegalProps> = ({ restaurantId, initialDocType = 
   const handleSave = async (newContent?: { terms: string, privacy: string }) => {
     if (!restaurantId || isSaving) return;
     if (isDemoAccount) {
-        setShowDemoBlock(true);
+        if (onRestrict) {
+            onRestrict("Cannot Edit Legal Docs", "Demo mode is read-only. Please create your real account to manage legal documents.");
+        } else {
+            setShowDemoBlock(true);
+        }
         return;
     }
     setIsSaving(true);
@@ -138,7 +144,11 @@ const AdminLegal: React.FC<AdminLegalProps> = ({ restaurantId, initialDocType = 
   const commitEdit = () => {
     if (!editingDoc) return;
     if (isDemoAccount) {
-        setShowDemoBlock(true);
+        if (onRestrict) {
+            onRestrict("Cannot Edit Legal Docs", "Demo mode is read-only. Please create your real account to manage legal documents.");
+        } else {
+            setShowDemoBlock(true);
+        }
         return;
     }
     const nextContent = { ...content, [editingDoc]: tempContent };

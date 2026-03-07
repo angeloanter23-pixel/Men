@@ -27,12 +27,15 @@ interface AdminViewProps {
   onOpenFAQ?: () => void;
   onBackToMenu?: () => void;
   onNavigateToCreateMenu: () => void;
+  onLoginSuccess: (restaurantId: string, restaurantName: string) => void;
   isDemo?: boolean;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ 
-  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu, onNavigateToCreateMenu, isDemo
+  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu, onNavigateToCreateMenu, onLoginSuccess, isDemo
 }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(isDemo || false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -44,6 +47,30 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
   const [hasConfirmedAccount, setHasConfirmedAccount] = useState(false);
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
+
+  const handleManualLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agreedToTerms) {
+      setError("Please agree to the terms to continue.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const { user, restaurant } = await MenuService.authSignIn(email, password);
+      setUserEmail(user.email);
+      setUserId(user.id);
+      setIsAuthenticated(true);
+      setHasRestaurant(!!restaurant);
+      if (restaurant) {
+        onLoginSuccess(restaurant.id, restaurant.name);
+      }
+    } catch (e: any) {
+      setError(e.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const checkSession = async () => {
@@ -172,6 +199,8 @@ const AdminView: React.FC<AdminViewProps> = ({
         onOpenFAQ={onOpenFAQ}
         onNavigateToCreateMenu={onNavigateToCreateMenu}
         onExit={onExit}
+        initialUserId={userId}
+        initialUserEmail={userEmail}
       />
     );
   }
@@ -238,6 +267,7 @@ const AdminView: React.FC<AdminViewProps> = ({
                             <i className="fa-solid fa-arrow-right text-sm"></i>
                         </button>
                     ) : (
+                        <>
                         <button 
                             onClick={handleGoogleLogin}
                             disabled={loading || !agreedToTerms} 
@@ -257,6 +287,39 @@ const AdminView: React.FC<AdminViewProps> = ({
                                 </>
                             )}
                         </button>
+
+                        <div className="relative flex items-center py-4">
+                          <div className="flex-grow border-t border-slate-200"></div>
+                          <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest">Or</span>
+                          <div className="flex-grow border-t border-slate-200"></div>
+                        </div>
+
+                        <form onSubmit={handleManualLogin} className="space-y-4">
+                            <input 
+                                required 
+                                type="email" 
+                                value={email} 
+                                onChange={e => setEmail(e.target.value)} 
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-bold text-slate-900 outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                                placeholder="Email" 
+                            />
+                            <input 
+                                required 
+                                type="password" 
+                                value={password} 
+                                onChange={e => setPassword(e.target.value)} 
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-bold text-slate-900 outline-none focus:ring-4 ring-indigo-500/5 transition-all shadow-inner" 
+                                placeholder="Password" 
+                            />
+                            <button 
+                                type="submit" 
+                                disabled={loading || !agreedToTerms}
+                                className="w-full h-14 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors uppercase tracking-widest flex items-center justify-center gap-4 disabled:opacity-50"
+                            >
+                                {loading ? <i className="fa-solid fa-spinner animate-spin text-xl"></i> : 'Login'}
+                            </button>
+                        </form>
+                        </>
                     )}
 
                     {!isDemo && (

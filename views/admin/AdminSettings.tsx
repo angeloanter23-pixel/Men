@@ -13,6 +13,8 @@ interface AdminSettingsProps {
   restaurantId: string | null;
   userId: string | null;
   userEmail: string | null;
+  isDemo?: boolean;
+  onRestrict?: (title: string, message: string) => void;
 }
 
 const SettingRow: React.FC<{ icon: string; color: string; label: string; sub?: string; last?: boolean; onClick?: () => void; isDestructive?: boolean }> = ({ icon, color, label, sub, last, onClick, isDestructive }) => (
@@ -44,10 +46,14 @@ const SettingsModal: React.FC<{ title: string; onClose: () => void; children: Re
   </div>
 );
 
-const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, setAdminCreds, onThemeUpdate, onSubTabChange, restaurantId, userId, userEmail }) => {
+const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, setAdminCreds, onThemeUpdate, onSubTabChange, restaurantId, userId, userEmail, isDemo, onRestrict }) => {
   const [merchantData, setMerchantData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const handleUpdate = (action: () => void) => {
+    action();
+  };
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeNameError, setStoreNameError] = useState<string | null>(null);
@@ -69,30 +75,59 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   const isDemoAccount = restaurantId === 'aeec6204-496e-46c4-adfb-ba154fa92153';
 
   useEffect(() => {
-    if (restaurantId) fetchMerchantData();
-  }, [restaurantId]);
+    console.log("AdminSettings: restaurantId =", restaurantId, "userId =", userId);
+    if (restaurantId) {
+        fetchMerchantData();
+    } else if (userId) {
+        fetchRestaurantIdForUser(userId);
+    }
+  }, [restaurantId, userId]);
+
+  const fetchRestaurantIdForUser = async (uid: string) => {
+      setLoading(true);
+      try {
+          const restaurant = await MenuService.getRestaurantByOwnerId(uid);
+          if (restaurant) {
+              // We need a way to update the restaurantId in the parent or just fetch data here
+              // For now, let's just fetch data if we found the restaurant
+              fetchMerchantDataForId(restaurant.id);
+          }
+      } catch (e) {
+          console.error("Failed to fetch restaurant ID", e);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const fetchMerchantDataForId = async (rid: string) => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.from('restaurants').select('*').eq('id', rid).single();
+        if (!error && data) {
+          setMerchantData(data);
+          setStoreName(data.name || '');
+          setUrlSlug(data.slug || '');
+          if (data.theme) {
+              setThemeForm({
+                  primary_color: data.theme.primary_color || '#FF6B00',
+                  secondary_color: data.theme.secondary_color || '#FFF3E0',
+                  template: data.theme.template || 'classic',
+                  logo_url: data.theme.logo_url || ''
+              });
+          }
+        }
+      } catch (e) {} finally { setLoading(false); }
+  };
 
   const fetchMerchantData = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.from('restaurants').select('*').eq('id', restaurantId).single();
-      if (!error && data) {
-        setMerchantData(data);
-        setStoreName(data.name || '');
-        setUrlSlug(data.slug || '');
-        if (data.theme) {
-            setThemeForm({
-                primary_color: data.theme.primary_color || '#FF6B00',
-                secondary_color: data.theme.secondary_color || '#FFF3E0',
-                template: data.theme.template || 'classic',
-                logo_url: data.theme.logo_url || ''
-            });
-        }
-      }
-    } catch (e) {} finally { setLoading(false); }
+    fetchMerchantDataForId(restaurantId!);
   };
 
   const handleThemeChange = async (key: string, value: string) => {
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Edit Settings", "Demo mode is read-only. To manage your restaurant settings, please create your real account.");
+        return;
+    }
     const nextTheme = { ...themeForm, [key]: value };
     setThemeForm(nextTheme);
     try {
@@ -109,6 +144,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isDemo && onRestrict) {
+        onRestrict("Cannot Edit Settings", "Demo mode is read-only. To manage your restaurant settings, please create your real account.");
+        return;
+    }
     if (!e.target.files || e.target.files.length === 0 || !restaurantId) return;
     
     setLoading(true);
@@ -136,8 +175,8 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   };
 
   const handlePasswordChange = async () => {
-    if (isDemoAccount) {
-        setActiveModal('demo_block');
+    if (isDemo) {
+        onRestrict?.("Cannot Change Password", "Demo mode is read-only.");
         return;
     }
     if (passForm.new !== passForm.confirm) {
@@ -172,10 +211,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
   };
 
   const handleDeleteAccount = async () => {
-    if (isDemoAccount) {
-        setActiveModal('demo_block');
-        return;
-    }
     if (!userId || !restaurantId) {
         alert("Missing user or restaurant ID.");
         return;
@@ -205,10 +240,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         <section className="space-y-3">
           <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Visual identity</h3>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
-            <SettingRow icon="fa-palette" color="bg-rose-500" label="Primary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('primary_color')} />
-            <SettingRow icon="fa-fill-drip" color="bg-amber-400" label="Secondary accent" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('secondary_color')} />
-            <SettingRow icon="fa-wand-magic-sparkles" color="bg-purple-600" label="Menu template" onClick={() => setActiveModal('template')} />
-            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('logo')} />
+            <SettingRow icon="fa-palette" color="bg-rose-500" label="Primary accent" onClick={() => handleUpdate(() => setActiveModal('primary_color'))} />
+            <SettingRow icon="fa-fill-drip" color="bg-amber-400" label="Secondary accent" onClick={() => handleUpdate(() => setActiveModal('secondary_color'))} />
+            <SettingRow icon="fa-wand-magic-sparkles" color="bg-purple-600" label="Menu template" onClick={() => handleUpdate(() => setActiveModal('template'))} />
+            <SettingRow icon="fa-image" color="bg-blue-500" label="Brand logo" last onClick={() => handleUpdate(() => setActiveModal('logo'))} />
           </div>
         </section>
 
@@ -216,11 +251,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         <section className="space-y-3">
           <h3 className="px-4 text-[11px] font-bold text-slate-400 tracking-tight">Identity record</h3>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/50">
-            <SettingRow icon="fa-store" color="bg-slate-900" label="Store name" onClick={() => isDemoAccount ? setActiveModal('demo_block') : setActiveModal('store_name')} />
-            <SettingRow icon="fa-envelope" color="bg-sky-500" label="Owner contact" onClick={() => setActiveModal('owner_contact')} />
-            <SettingRow icon="fa-fingerprint" color="bg-indigo-400" label="Restaurant ID" onClick={() => setActiveModal('restaurant_id')} />
-            <SettingRow icon="fa-key" color="bg-slate-400" label="Change password" onClick={() => setActiveModal('change_password')} />
-            <SettingRow icon="fa-trash-can" color="bg-rose-100 text-rose-500" label="Delete account" last isDestructive onClick={() => isDemoAccount ? setActiveModal('demo_block') : handleDeleteAccount()} />
+            <SettingRow icon="fa-store" color="bg-slate-900" label="Store name" onClick={() => handleUpdate(() => setActiveModal('store_name'))} />
+            <SettingRow icon="fa-envelope" color="bg-sky-500" label="Owner contact" onClick={() => handleUpdate(() => setActiveModal('owner_contact'))} />
+            <SettingRow icon="fa-key" color="bg-slate-400" label="Change password" onClick={() => handleUpdate(() => setActiveModal('change_password'))} />
+            <SettingRow icon="fa-trash-can" color="bg-rose-100 text-rose-500" label="Delete account" last isDestructive onClick={() => handleUpdate(handleDeleteAccount)} />
           </div>
         </section>
 
@@ -371,6 +405,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                 </div>
                 <button 
                     onClick={async () => {
+                        if (isDemo && onRestrict) {
+                            onRestrict("Cannot Edit Settings", "Demo mode is read-only. To manage your restaurant settings, please create your real account.");
+                            return;
+                        }
                         if (!storeName.trim() || storeName === merchantData?.name) return;
                         setLoading(true);
                         try {
@@ -479,20 +517,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
         </SettingsModal>
       )}
 
-      {activeModal === 'restaurant_id' && (
-        <SettingsModal title="Restaurant ID" onClose={() => setActiveModal(null)}>
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 break-all font-mono text-sm text-slate-600">
-                {restaurantId}
-            </div>
-            <button 
-                onClick={() => { navigator.clipboard.writeText(restaurantId); setToast("ID Copied"); setTimeout(() => setToast(null), 2000); setActiveModal(null); }}
-                className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all"
-            >
-                Copy ID
-            </button>
-        </SettingsModal>
-      )}
-
       {activeModal === 'delete_account' && (
         <SettingsModal title="Delete Account" onClose={() => setActiveModal(null)}>
             <div className="space-y-6">
@@ -508,6 +532,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onLogout, adminCreds, set
                 <div className="space-y-3">
                     <button 
                         onClick={async () => {
+                            if (isDemo && onRestrict) {
+                                onRestrict("Cannot Edit Settings", "Demo mode is read-only. To manage your restaurant settings, please create your real account.");
+                                return;
+                            }
                             if (!userId || !restaurantId) return;
                             setLoading(true);
                             try {

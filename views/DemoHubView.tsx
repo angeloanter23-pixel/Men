@@ -31,7 +31,7 @@ const QRComponent: React.FC<{ code: string }> = ({ code }) => {
     );
 };
 
-const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) => void }> = ({ onBack, onSelectDemo }) => {
+const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) => void; onSignUp: () => void }> = ({ onBack, onSelectDemo, onSignUp }) => {
   const [loadingDemo, setLoadingDemo] = React.useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState<string>('');
   const [demoRestaurant, setDemoRestaurant] = useState<any>(null);
@@ -143,12 +143,18 @@ const DemoHubView: React.FC<{ onBack: () => void; onSelectDemo: (code: string) =
           )}
         </div>
 
-        <section className="bg-slate-50 rounded-[3rem] p-10 md:p-12 border border-slate-100 text-center">
+        <section className="bg-slate-50 rounded-[3rem] p-10 md:p-12 border border-slate-100 text-center space-y-6">
             <h4 className="text-lg font-bold text-slate-900 uppercase mb-4">Demo Restrictions</h4>
             <p className="text-[15px] text-slate-600 leading-relaxed max-w-2xl mx-auto">
                 Please note that in this demo environment, some features are restricted to prevent unauthorized modifications. 
                 While some items are editable, all changes made to the demo menu will be automatically erased every 24 hours.
             </p>
+            <button 
+                onClick={onSignUp}
+                className="px-8 py-4 bg-indigo-600 text-white rounded-full font-bold uppercase text-[12px] tracking-[0.2em] shadow-lg hover:bg-indigo-700 transition-all"
+            >
+                Create Your Own Restaurant
+            </button>
         </section>
 
         <LandingFooter 

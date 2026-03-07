@@ -52,7 +52,7 @@ const Reveal: React.FC<{ children: React.ReactNode; delay?: number }> = ({ child
   );
 };
 
-const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ restaurantId, onBack }) => {
+const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void; isDemo?: boolean; onRestrict?: (title: string, message: string) => void }> = ({ restaurantId, onBack, isDemo, onRestrict }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [data, setData] = useState<AboutData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
   const [valueForm, setValueForm] = useState<AboutValue>({ icon: 'fa-heart', label: '', description: '' });
   const [showDemoBlock, setShowDemoBlock] = useState(false);
 
-  const isDemoAccount = restaurantId === 'aeec6204-496e-46c4-adfb-ba154fa92153';
+  const isDemoAccount = restaurantId === 'aeec6204-496e-46c4-adfb-ba154fa92153' || isDemo;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -95,7 +95,11 @@ const AdminAbout: React.FC<{ restaurantId: string; onBack: () => void }> = ({ re
 
   const handleSave = async (newData?: AboutData) => {
     if (isDemoAccount) {
-        setShowDemoBlock(true);
+        if (onRestrict) {
+            onRestrict("Cannot Edit About Page", "Demo mode is read-only. Please create your real account to manage the about page.");
+        } else {
+            setShowDemoBlock(true);
+        }
         return;
     }
     setSaving(true);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import SignUpModal from '../components/SignUpModal';
 
-const AffiliateAuth: React.FC<{ onBack: () => void; onLogin: () => void }> = ({ onBack, onLogin }) => {
+const AffiliateAuth: React.FC<{ onBack: () => void; onLogin: () => void; onSignUp: () => void }> = ({ onBack, onLogin, onSignUp }) => {
   const [email, setEmail] = useState('partner@demo.com');
   const [pass, setPass] = useState('12345678');
   const [loading, setLoading] = useState(false);
@@ -82,6 +82,11 @@ const AffiliateAuth: React.FC<{ onBack: () => void; onLogin: () => void }> = ({ 
           <div className="block">
             <button onClick={onBack} className="text-slate-300 text-[10px] font-bold hover:text-slate-900 transition-colors uppercase tracking-[0.4em]">
               Return Home
+            </button>
+          </div>
+          <div className="block">
+            <button onClick={onSignUp} className="text-slate-500 text-[10px] font-bold hover:text-slate-900 transition-colors uppercase tracking-[0.4em]">
+              Sign Up
             </button>
           </div>
         </div>
