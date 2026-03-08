@@ -333,8 +333,6 @@ export default function App() {
       if (isRoot) {
           if (supabaseSession) {
               navigateTo('admin');
-          } else if (isPersistent) {
-              navigateTo('menu');
           }
       }
       setIsBooting(false);
