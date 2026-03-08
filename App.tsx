@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, CartItem, Category, ViewState, Feedback } from './types';
 import * as MenuService from './services/menuService';
+import { supabase } from './lib/supabase';
 import { DemoOrderModal } from './components/DemoOrderModal';
 
 import Sidebar from './components/Sidebar';
@@ -318,10 +319,23 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       setIsBooting(true);
+      const { data: { session: supabaseSession } } = await supabase.auth.getSession();
       const isPersistent = await checkSessionValid();
       await syncStateWithURL();
-      if (isPersistent && (window.location.hash === '#/landing' || !window.location.hash)) {
-          navigateTo('menu');
+      
+      const path = window.location.pathname.replace(/^\//, '');
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token') || (path.length === 6 ? path : null);
+      
+      const hash = window.location.hash;
+      const isRoot = (hash === '#/landing' || !hash || hash === '#/') && !token && !path;
+
+      if (isRoot) {
+          if (supabaseSession) {
+              navigateTo('admin');
+          } else if (isPersistent) {
+              navigateTo('menu');
+          }
       }
       setIsBooting(false);
     };
