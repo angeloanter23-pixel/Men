@@ -63,9 +63,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [trialEndDate, setTrialEndDate] = useState<Date | null>(null);
   const [trialTimeLeft, setTrialTimeLeft] = useState<string>('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showDemoNotice, setShowDemoNotice] = useState(false);
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
   const [upgradeStep, setUpgradeStep] = useState<'pricing' | 'payment' | 'contact'>('pricing');
   
+  useEffect(() => {
+    if (isTrialExpired) {
+        setShowUpgradeModal(true);
+    }
+  }, [isTrialExpired]);
+
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
     if (hash === 'menu' || hash === 'qr') {
@@ -191,10 +197,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [initialUserId, initialUserEmail]);
 
   useEffect(() => {
-    if (currentUserEmail === 'demo1@mymenu') setShowDemoNotice(true);
-  }, [currentUserEmail]);
-
-  useEffect(() => {
     if (!restaurantId || restaurantId === "undefined") return;
     refreshAllData();
     
@@ -299,6 +301,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }
 
   const renderContent = () => {
+    if (isTrialExpired && activeTab === 'menu') {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-white rounded-2xl shadow-sm border border-slate-100">
+                <i className="fa-solid fa-lock text-4xl text-rose-500 mb-4"></i>
+                <h2 className="text-2xl font-black text-slate-900 mb-2">Trial Expired</h2>
+                <p className="text-slate-500 mb-6">Your trial period has ended. Please purchase a Pro plan to continue managing your menu.</p>
+                <button 
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest"
+                >
+                    Purchase Pro Plan
+                </button>
+            </div>
+        );
+    }
     switch (activeTab) {
       case 'menu': return <AdminMenu onCreateMenu={onNavigateToCreateMenu} isDemo={isDemoUser} items={menuItems} setItems={setMenuItems} cats={categories} setCats={setCategories} menuId={menuId} restaurantId={restaurantId} onOpenFAQ={onOpenFAQ} />;
       case 'analytics': return <AdminAnalytics restaurantId={restaurantId} feedbacks={feedbacks} salesHistory={salesHistory} setSalesHistory={setSalesHistory} menuItems={menuItems} appTheme={appTheme} onThemeUpdate={onThemeUpdate} isDemo={isDemoUser} onRestrict={triggerRestrictModal} />;
@@ -426,24 +443,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onUnderstand={() => setShowRestrictModal(false)}
           onCreateMenu={onNavigateToCreateMenu}
         />
-      )}
-      {showDemoNotice && (
-        <div className="fixed inset-0 z-[2000] flex items-end justify-center">
-            <div onClick={() => setShowDemoNotice(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <div className="w-full max-w-lg bg-white rounded-t-[2rem] p-8 animate-slide-up relative">
-                <button onClick={() => setShowDemoNotice(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900"><i className="fa-solid fa-xmark"></i></button>
-                <div className="text-center space-y-4">
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Demo Mode</h3>
-                    <p className="text-slate-500 text-sm">For demo, admin features are restricted to view-only.</p>
-                    <button 
-                        onClick={() => setShowDemoNotice(false)}
-                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest"
-                    >
-                        Continue to demo admin
-                    </button>
-                </div>
-            </div>
-        </div>
       )}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-[2000] flex items-end md:items-center justify-center p-4">
