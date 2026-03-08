@@ -76,6 +76,28 @@ const AdminView: React.FC<AdminViewProps> = ({
 
 
 
+  const handleGoogleLogin = async () => {
+    try {
+      let redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
+        ? window.location.origin 
+        : 'https://ais-dev-vq36wkzk5myyzjspsrxtyg-10111269819.asia-east1.run.app';
+
+      if (window.location.hostname.includes('mymenu.asia')) {
+          redirectUrl = 'https://mymenu.asia';
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl
+        }
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      console.error("Login failed", e.message);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
@@ -179,16 +201,29 @@ const AdminView: React.FC<AdminViewProps> = ({
 
           <div className="space-y-6">
             <div className="space-y-4">
-                <p className="text-slate-500 font-medium text-sm text-center">
-                    Restaurant ID: <span className="font-mono font-bold text-slate-900">aeec6204-496e-46c4-adfb-ba154fa92153</span>
-                </p>
-                <button 
-                    onClick={() => { setIsAuthenticated(true); }}
-                    className="w-full h-14 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors uppercase tracking-widest flex items-center justify-center gap-4"
-                >
-                    <span>Continue to demo</span>
-                    <i className="fa-solid fa-arrow-right text-sm"></i>
-                </button>
+                {isDemo ? (
+                    <>
+                        <button 
+                            onClick={() => { 
+                                setUserId('0016aebe-a2fa-4914-b7c7-83bd5f0c84d0');
+                                setUserEmail('demo@mymenu.asia');
+                                setIsAuthenticated(true); 
+                            }}
+                            className="w-full h-14 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors uppercase tracking-widest flex items-center justify-center gap-4"
+                        >
+                            <span>Continue to demo</span>
+                            <i className="fa-solid fa-arrow-right text-sm"></i>
+                        </button>
+                    </>
+                ) : (
+                    <button 
+                        onClick={handleGoogleLogin}
+                        className="w-full h-14 bg-white border-2 border-slate-100 text-slate-900 font-bold text-sm hover:bg-slate-50 transition-colors uppercase tracking-widest flex items-center justify-center gap-4 rounded-xl"
+                    >
+                        <i className="fa-brands fa-google text-lg"></i>
+                        <span>Sign in with Google</span>
+                    </button>
+                )}
             </div>
           </div>
         </div>

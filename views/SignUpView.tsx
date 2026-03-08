@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { authSignUp } from '../services/menuService';
+import { supabase } from '../lib/supabase';
 
 const SignUpView: React.FC<{ onBack: () => void; onComplete: () => void }> = ({ onBack, onComplete }) => {
   const [restaurantName, setRestaurantName] = useState('');
@@ -19,6 +20,28 @@ const SignUpView: React.FC<{ onBack: () => void; onComplete: () => void }> = ({ 
       setError(err.message || 'Failed to sign up');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      let redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
+        ? window.location.origin 
+        : 'https://ais-dev-vq36wkzk5myyzjspsrxtyg-10111269819.asia-east1.run.app';
+
+      if (window.location.hostname.includes('mymenu.asia')) {
+          redirectUrl = 'https://mymenu.asia';
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl
+        }
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      setError(e.message || "Login failed");
     }
   };
 
@@ -44,6 +67,17 @@ const SignUpView: React.FC<{ onBack: () => void; onComplete: () => void }> = ({ 
           {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
           <button type="submit" disabled={loading} className="w-full h-[64px] bg-slate-900 text-white rounded-full font-bold text-[15px] shadow-2xl active:scale-[0.98] transition-all disabled:opacity-30 uppercase tracking-[0.2em]">
             {loading ? 'Creating...' : 'Create Account'}
+          </button>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-slate-200"></div>
+            <span className="flex-shrink-0 mx-4 text-slate-300 text-[10px] font-bold uppercase tracking-widest">Or</span>
+            <div className="flex-grow border-t border-slate-200"></div>
+          </div>
+          
+          <button type="button" onClick={handleGoogleLogin} className="w-full h-[64px] bg-white border-2 border-slate-100 text-slate-900 rounded-full font-bold text-[15px] hover:bg-slate-50 transition-all uppercase tracking-[0.2em] flex items-center justify-center gap-4">
+            <i className="fa-brands fa-google text-lg"></i>
+            <span>Sign up with Google</span>
           </button>
         </form>
         <button onClick={onBack} className="mt-8 text-slate-300 text-[10px] font-bold hover:text-slate-900 transition-colors uppercase tracking-[0.4em] text-center">
