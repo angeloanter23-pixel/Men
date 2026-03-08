@@ -30,7 +30,7 @@ const SignUpView: React.FC<{ onBack: () => void; onComplete: () => void }> = ({ 
         : 'https://ais-dev-vq36wkzk5myyzjspsrxtyg-10111269819.asia-east1.run.app';
 
       if (window.location.hostname.includes('mymenu.asia')) {
-          redirectUrl = 'https://mymenu.asia';
+          redirectUrl = 'https://www.mymenu.asia';
       }
 
       const { error } = await supabase.auth.signInWithOAuth({

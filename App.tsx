@@ -251,6 +251,11 @@ export default function App() {
 
     const knownRoutes = ['landing', 'menu', 'cart', 'qr-verify', 'orders', 'about', 'privacy', 'terms', 'feedback-data', 'feedback', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'careers', 'affiliate-auth', 'affiliate-dashboard', 'admin', 'demo', 'articles', 'article', 'sign-up'];
     
+    if (path && knownRoutes.includes(path)) {
+         setCurrentView(path as ViewState);
+         return;
+    }
+
     if (path && !knownRoutes.includes(path) && path.length > 0 && !token && !restaurantId && (!hasSession || (storedSession && storedSession.label !== 'Walk-in'))) {
         if (storedSession && storedSession.label !== 'Walk-in') {
             localStorage.removeItem('foodie_active_session');
