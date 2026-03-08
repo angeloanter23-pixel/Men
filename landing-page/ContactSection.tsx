@@ -26,7 +26,7 @@ export const ContactSection: React.FC = () => (
                 <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm"><i className="fa-solid fa-location-dot"></i></div>
                 <div>
                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Global HQ</p>
-                   <p className="text-lg font-bold text-slate-900">High Street South, BGC, PH</p>
+                   <p className="text-lg font-bold text-slate-900">Digos City, Philippines</p>
                 </div>
               </div>
             </div>

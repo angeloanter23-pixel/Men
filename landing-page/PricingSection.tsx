@@ -5,18 +5,21 @@ import { Reveal } from './Reveal';
 const PLANS = [
   {
     name: "Professional",
-    price: "₱1,299",
+    price: "₱499",
     desc: "Our most popular lifetime license for individual venues.",
-    features: ["Unlimited Table Nodes", "AI Concierge Access", "Priority Staff Messaging", "Sales Insights Hub"],
+    features: ["AI Concierge Access", "50 qr code for tables", "Priority Staff Messaging", "Sales Insights Hub"],
     cta: "Get Lifetime Access",
     highlight: true,
-    action: () => window.location.hash = '#/admin'
+    action: () => {
+      window.history.pushState(null, '', '/admin');
+      window.dispatchEvent(new Event('popstate'));
+    }
   },
   {
     name: "Enterprise",
     price: "Custom",
     desc: "For chains, franchises, and luxury hospitality groups.",
-    features: ["Custom Domain", "Custom Designer", "Multi-branch Management", "Dedicated Support Node", "Custom API Access"],
+    features: ["Custom Domain", "Custom Designer", "Dedicated Support Node"],
     cta: "Contact Us Now",
     highlight: false,
     action: () => {

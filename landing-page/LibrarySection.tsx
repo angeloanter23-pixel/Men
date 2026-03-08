@@ -116,7 +116,10 @@ export const LibrarySection: React.FC = () => {
                 <Reveal key={item.id} delay={idx * 100}>
                   <div 
                     onClick={() => {
-                      if (activeTab === 'article') window.location.hash = `#/article/${item.id}`;
+                      if (activeTab === 'article') {
+                        window.history.pushState(null, '', `/article/${item.id}`);
+                        window.dispatchEvent(new Event('popstate'));
+                      }
                       else alert("Coming Soon");
                     }}
                     className="flex-shrink-0 w-[260px] md:w-[320px] aspect-[3/4] rounded-[2.5rem] overflow-hidden shadow-2xl relative group cursor-pointer hover:-translate-y-2 transition-all duration-500 border border-slate-100 snap-center"
@@ -158,7 +161,10 @@ export const LibrarySection: React.FC = () => {
         <Reveal delay={400}>
           <div className="mt-16 text-center">
             <button 
-              onClick={() => window.location.hash = activeTab === 'video' ? '#/tutorials' : '#/articles'}
+              onClick={() => {
+                window.history.pushState(null, '', activeTab === 'video' ? '/tutorials' : '/articles');
+                window.dispatchEvent(new Event('popstate'));
+              }}
               className="text-[#007AFF] font-semibold text-[17px] flex items-center justify-center gap-2 mx-auto group hover:underline transition-all"
             >
               {activeTab === 'video' ? 'Explore tutorials' : 'Show more articles'}

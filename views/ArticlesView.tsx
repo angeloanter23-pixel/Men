@@ -93,7 +93,10 @@ const ArticlesView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           {ALL_ARTICLES.map((article, idx) => (
             <Reveal key={article.id} delay={idx * 100}>
               <div 
-                onClick={() => window.location.hash = `#/article/${article.id}`}
+                onClick={() => {
+                  window.history.pushState(null, '', `/article/${article.id}`);
+                  window.dispatchEvent(new Event('popstate'));
+                }}
                 className="group flex flex-col md:flex-row gap-8 items-start cursor-pointer hover:bg-slate-50 p-6 md:p-8 rounded-[3rem] transition-all border border-transparent hover:border-slate-100"
               >
                 <div className="w-full md:w-80 aspect-video md:aspect-square rounded-[2rem] overflow-hidden shrink-0 shadow-lg">

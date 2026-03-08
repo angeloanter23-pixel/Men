@@ -23,7 +23,6 @@ import OrdersView from './views/orders/OrdersView';
 import QRVerifyView from './views/QRVerifyView';
 import AdminView from './views/AdminView';
 import LandingView from './views/LandingView';
-import AboutView from './views/AboutView';
 import FeedbackDataView from './views/FeedbackDataView';
 import SuperAdminView from './views/SuperAdminView';
 import TestSupabaseView from './views/TestSupabaseView';
@@ -32,10 +31,8 @@ import AcceptInviteView from './views/AcceptInviteView';
 import AIAssistantView from './views/AIAssistantView';
 import DemoHubView from './views/DemoHubView';
 import MenuFAQ from './views/admin/menu/MenuFAQ';
-import LegalView from './views/LegalView';
 import ArticlesView from './views/ArticlesView';
 import ArticleViewer from './views/ArticleViewer';
-import CareersView from './views/CareersView';
 import AffiliateAuth from './views/AffiliateAuth';
 import AffiliateDashboard from './views/AffiliateDashboard';
 import SignUpView from './views/SignUpView';
@@ -160,18 +157,17 @@ export default function App() {
 
   const syncStateWithURL = async () => {
     const path = window.location.pathname.replace(/^\//, '');
-    const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
     const urlParams = new URLSearchParams(window.location.search);
     
     // Handle Supabase Auth Redirect
-    if (hash.startsWith('access_token') || hash.includes('access_token=') || urlParams.get('code')) {
+    if (path.startsWith('access_token') || urlParams.get('code')) {
         setCurrentView('admin');
         return;
     }
 
-    const hashParts = hash.split('/');
-    const route = (hashParts[0] || 'landing') as ViewState;
-    if (route === 'article' && hashParts[1]) setSelectedArticleId(hashParts[1]);
+    const pathParts = path.split('/');
+    const route = (pathParts[0] || 'landing') as ViewState;
+    if (route === 'article' && pathParts[1]) setSelectedArticleId(pathParts[1]);
     
     // Check for token in URL parameters or path
     const token = urlParams.get('token') || (path.length === 6 ? path : null);
@@ -192,9 +188,6 @@ export default function App() {
             const details = await MenuService.getQRCodeByCode(token);
             if (details) {
                 const existingSession = await MenuService.getActiveSessionByQR(details.id);
-                // If session exists and requires PIN, we don't force it immediately on load.
-                // We let them browse the menu. We only enforce PIN when they try to order.
-                // However, we need to store the context so we know which table they are at.
                 
                 const session = {
                     ...(existingSession || { id: `scan-${Date.now()}`, session_token: `scan-${Date.now()}` }),
@@ -204,21 +197,9 @@ export default function App() {
                     status: 'active',
                     qr_token: details.code,
                     theme: details.theme,
-                    pin_required: existingSession?.pin_required // Store this flag
+                    pin_required: existingSession?.pin_required 
                 };
 
-                // If PIN is required, we mark the session as 'pending_verification' locally?
-                // Or we just set it active but know that 'pin_required' means we need to verify before checkout.
-                // The prompt says "Show the pin required modal only when ordering".
-                
-                // So we set the session as active, but maybe add a flag 'is_verified: false' if pin is required?
-                // But existing logic in finalizeOrder checks for session validity.
-                
-                // Let's set it as active session, but if pin_required is true, we might need to handle it later.
-                // Actually, if we set it as active session, the UI assumes they are logged in.
-                // We need to ensure that when they click "Add to Order" or "Checkout", we check if verification is needed.
-                
-                // For now, let's just allow them to enter.
                 setActiveSession(session);
                 localStorage.setItem('foodie_active_session', JSON.stringify(session));
                 if (session.theme) applyTheme(session.theme);
@@ -226,31 +207,19 @@ export default function App() {
                 setShowWelcomeModal(true);
                 setCurrentView('menu');
                 
-                // PRESERVE TOKEN IN URL: Do not replace state with '/'
-                // We want the URL to remain https://mymenu.asia/TOKEN
-                // But our routing uses hash based routing for views (e.g. #/menu).
-                // The token is in the path or query param.
-                // If the user provided a path like /FC9568, we should keep it?
-                // The browser URL will be https://mymenu.asia/FC9568#/menu
-                
-                // If we use window.history.replaceState(null, '', '/'); it clears it.
-                // So we should REMOVE that line.
-                
                 return;
             }
         } catch (e) {
             console.error("QR Auto-resolve failed", e);
         }
         
-        // If resolution fails, we might still want to keep the token in URL for retry?
-        // Or redirect to verify view.
         setInitialTokenFromUrl(token);
         setCurrentView('qr-verify');
-        // window.history.replaceState(null, '', '/'); // Don't clear URL
         return;
     }
 
-    const knownRoutes = ['landing', 'menu', 'cart', 'qr-verify', 'orders', 'about', 'privacy', 'terms', 'feedback-data', 'feedback', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'careers', 'affiliate-auth', 'affiliate-dashboard', 'admin', 'demo', 'articles', 'article', 'sign-up'];
+    const landingOverlays = ['pricing', 'about', 'contact', 'terms', 'investment', 'shop', 'enterprise', 'careers', 'guides', 'case-studies', 'help-center', 'privacy', 'node-registry', 'compliance'];
+    const knownRoutes = ['landing', 'menu', 'cart', 'qr-verify', 'orders', 'feedback-data', 'feedback', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'affiliate-auth', 'affiliate-dashboard', 'admin', 'demo', 'articles', 'article', 'sign-up', ...landingOverlays];
     
     if (path && knownRoutes.includes(path)) {
          setCurrentView(path as ViewState);
@@ -327,8 +296,7 @@ export default function App() {
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token') || (path.length === 6 ? path : null);
       
-      const hash = window.location.hash;
-      const isRoot = (hash === '#/landing' || !hash || hash === '#/') && !token && !path;
+      const isRoot = (!path || path === '/') && !token;
 
       if (isRoot) {
           if (supabaseSession) {
@@ -338,8 +306,8 @@ export default function App() {
       setIsBooting(false);
     };
     init();
-    window.addEventListener('hashchange', syncStateWithURL);
-    return () => window.removeEventListener('hashchange', syncStateWithURL);
+    window.addEventListener('popstate', syncStateWithURL);
+    return () => window.removeEventListener('popstate', syncStateWithURL);
   }, []);
 
   const navigateTo = (view: ViewState, param?: string) => { 
@@ -355,9 +323,9 @@ export default function App() {
 
     if (view === 'article' && param) {
       setSelectedArticleId(param);
-      window.location.hash = `/${view}/${param}`;
+      window.history.pushState(null, '', `/${view}/${param}`);
     } else {
-      window.location.hash = `/${view}`; 
+      window.history.pushState(null, '', `/${view === 'landing' ? '' : view}`); 
     }
   };
 
@@ -482,7 +450,22 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'landing': return <LandingView onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('admin')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} onAdminAuth={() => navigateTo('admin')} />;
+      case 'landing': 
+      case 'pricing':
+      case 'about':
+      case 'contact':
+      case 'terms':
+      case 'investment':
+      case 'shop':
+      case 'enterprise':
+      case 'careers':
+      case 'guides':
+      case 'case-studies':
+      case 'help-center':
+      case 'privacy':
+      case 'node-registry':
+      case 'compliance':
+        return <LandingView initialOverlay={currentView === 'landing' ? null : currentView} onOverlayChange={(overlay) => navigateTo((overlay as ViewState) || 'landing')} onStart={() => navigateTo('demo')} onCreateMenu={() => navigateTo('admin')} onImportMenu={() => {}} onMenuClick={() => setIsSidebarOpen(true)} onAffiliateAuth={() => navigateTo('affiliate-auth')} onAdminAuth={() => navigateTo('admin')} />;
       case 'demo': return <DemoHubView onBack={() => navigateTo('landing')} onSelectDemo={handleDemoSelect} onSignUp={() => navigateTo('sign-up')} />;
       case 'articles': return <ArticlesView onBack={() => navigateTo('landing')} />;
       case 'article': return <ArticleViewer id={selectedArticleId} onBack={() => navigateTo('articles')} />;
@@ -493,9 +476,6 @@ export default function App() {
       case 'cart': return <CartView cart={cart} onUpdateQuantity={(idx, d) => setCart(p => p.map((it, i) => i === idx ? {...it, quantity: Math.max(1, it.quantity + d)} : it))} onRemove={(idx) => setCart(p => p.filter((_, i) => i !== idx))} onCheckout={() => activeSession ? finalizeOrder() : navigateTo('qr-verify')} onGoBack={() => navigateTo('menu')} />;
       case 'qr-verify': return <QRVerifyView initialToken={initialTokenFromUrl} onVerify={handleVerificationSuccess} onCancel={() => navigateTo('menu')} />;
       case 'orders': return <OrdersView restaurantId={activeSession?.restaurant_id} tableNumber={activeSession?.label} onIdentifyTable={() => navigateTo('qr-verify')} onPayNow={() => {}} onGoToMenu={() => navigateTo('menu')} />;
-      case 'about': return <AboutView />;
-      case 'privacy': return <LegalView title="Privacy Policy" />;
-      case 'terms': return <LegalView title="Terms and Agreement" />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} appTheme={appTheme} />;
       case 'feedback': return <FeedbackForm restaurantId={activeSession?.restaurant_id} onSubmit={() => { navigateTo('feedback-data'); }} onCancel={() => navigateTo('menu')} appTheme={appTheme} />;
       case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
@@ -504,7 +484,6 @@ export default function App() {
       case 'accept-invite': return <AcceptInviteView onComplete={() => navigateTo('admin')} onCancel={() => navigateTo('landing')} />;
       case 'ai-assistant': return <AIAssistantView menuItems={menuItems} onItemSelect={handleItemSelect} onGoBack={() => navigateTo('menu')} />;
       case 'admin-faq': return <MenuFAQ onBack={() => navigateTo('admin')} />;
-      case 'careers': return <CareersView onBack={() => navigateTo('landing')} onAffiliateAuth={() => navigateTo('affiliate-auth')} />;
       case 'affiliate-auth': return <AffiliateAuth onBack={() => navigateTo('landing')} onLogin={() => navigateTo('affiliate-dashboard')} onSignUp={() => navigateTo('sign-up')} />;
       case 'affiliate-dashboard': return <AffiliateDashboard onLogout={() => navigateTo('landing')} />;
       case 'sign-up': return <SignUpView onBack={() => navigateTo('affiliate-auth')} onComplete={() => navigateTo('admin')} />;
@@ -516,11 +495,11 @@ export default function App() {
   if (isBooting) return <div className="flex flex-col items-center justify-center min-h-screen bg-white"><div className="w-16 h-16 border-4 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
-    <div className={`min-h-screen relative overflow-x-hidden ${currentView === 'landing' ? '' : ['admin', 'super-admin', 'test-supabase', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'md:max-w-none md:mx-0 md:shadow-none max-w-xl mx-auto shadow-2xl bg-white'}`}>
+    <div className={`min-h-screen relative overflow-x-hidden ${['landing', 'pricing', 'about', 'contact', 'terms', 'investment', 'shop', 'enterprise', 'careers', 'guides', 'case-studies', 'help-center', 'privacy', 'node-registry', 'compliance'].includes(currentView) ? '' : ['admin', 'super-admin', 'test-supabase', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? 'w-full bg-[#F2F2F7]' : 'md:max-w-none md:mx-0 md:shadow-none max-w-xl mx-auto shadow-2xl bg-white'}`}>
       <style>{`.menu-theme-container { --brand-primary: ${appTheme.primary_color}; --brand-secondary: ${appTheme.secondary_color}; font-family: '${appTheme.font_family}', sans-serif !important; }`}</style>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onNavigate={navigateTo} currentView={currentView} isDemo={activeSession?.id?.startsWith('demo-')} />
-      <div className={!['admin', 'super-admin', 'test-supabase', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col bg-[#F8FAFC] relative overflow-hidden` : 'min-h-screen flex flex-col'}>
-        {!['admin', 'super-admin', 'test-supabase', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
+      <div className={!['admin', 'super-admin', 'test-supabase', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? `menu-theme-container min-h-screen flex flex-col bg-[#F8FAFC] relative overflow-hidden` : 'min-h-screen flex flex-col'}>
+        {!['admin', 'super-admin', 'test-supabase', 'admin-faq', 'demo', 'articles', 'article', 'verification-barcode', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
             
             {/* Top Middle - Right - Blue - Hidden on mobile */}
@@ -545,13 +524,13 @@ export default function App() {
         )}
         <VariationDrawer item={activeVariantSource} variants={menuItems.filter(i => i.parent_id === activeVariantSource?.id)} isOpen={!!activeVariantSource} onClose={() => setActiveVariantSource(null)} onSelect={(v) => { setActiveVariantSource(null); setSelectedItem(v); }} />
         <SupportHub isOpen={isSupportHubOpen} onClose={() => setIsSupportHubOpen(false)} menuItems={menuItems} restaurantId={activeSession?.restaurant_id || ''} tableNumber={activeSession?.label || 'Walk-in'} sessionId={activeSession?.id} qrToken={activeSession?.qr_token} onScanQR={() => { setIsSupportHubOpen(false); navigateTo('qr-verify'); }} onCreateMenu={() => { setIsSupportHubOpen(false); setActiveSession(null); navigateTo('admin'); }} />
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'demo', 'articles', 'article', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
+        {!['admin', 'landing', 'pricing', 'about', 'contact', 'terms', 'investment', 'shop', 'enterprise', 'careers', 'guides', 'case-studies', 'help-center', 'privacy', 'node-registry', 'compliance', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'demo', 'articles', 'article', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
           <Navbar logo={appTheme.logo_url || null} onMenuClick={() => setIsSidebarOpen(true)} onCartClick={() => navigateTo('cart')} onLogoClick={() => navigateTo('menu')} onImport={() => {}} currentView={currentView} cartCount={cart.length} />
         )}
-        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'demo', 'articles', 'article', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? 'pb-24' : ''}`}>
+        <main className={`animate-fade-in flex-1 ${!['admin', 'landing', 'pricing', 'about', 'contact', 'terms', 'investment', 'shop', 'enterprise', 'careers', 'guides', 'case-studies', 'help-center', 'privacy', 'node-registry', 'compliance', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'demo', 'articles', 'article', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) ? 'pb-24' : ''}`}>
           {renderView()}
         </main>
-        {!['admin', 'landing', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'demo', 'articles', 'article', 'careers', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
+        {!['admin', 'landing', 'pricing', 'about', 'contact', 'terms', 'investment', 'shop', 'enterprise', 'careers', 'guides', 'case-studies', 'help-center', 'privacy', 'node-registry', 'compliance', 'qr-verify', 'super-admin', 'test-supabase', 'accept-invite', 'ai-assistant', 'admin-faq', 'demo', 'articles', 'article', 'affiliate-auth', 'affiliate-dashboard'].includes(currentView) && (
           <BottomNav currentView={currentView} onNavigate={navigateTo} onSupportClick={() => setIsSupportHubOpen(true)} isSupportOpen={isSupportHubOpen} cartCount={cart.length} />
         )}
       </div>

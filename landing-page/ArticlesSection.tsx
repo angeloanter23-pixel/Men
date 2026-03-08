@@ -69,7 +69,10 @@ export const ArticlesSection: React.FC = () => {
                 {ARTICLES.map((article, idx) => (
                   <div 
                     key={idx}
-                    onClick={() => window.location.hash = `#/article/${article.id}`}
+                    onClick={() => {
+                      window.history.pushState(null, '', `/article/${article.id}`);
+                      window.dispatchEvent(new Event('popstate'));
+                    }}
                     className="flex-shrink-0 w-[240px] md:w-[300px] aspect-[3/4] rounded-[2.5rem] overflow-hidden shadow-2xl relative group cursor-pointer hover:-translate-y-2 transition-all duration-500 border border-slate-100 snap-center"
                   >
                     <img 
@@ -102,7 +105,10 @@ export const ArticlesSection: React.FC = () => {
         <Reveal delay={400}>
           <div className="mt-16 text-center">
             <button 
-              onClick={() => window.location.hash = '#/articles'}
+              onClick={() => {
+                window.history.pushState(null, '', '/articles');
+                window.dispatchEvent(new Event('popstate'));
+              }}
               className="text-[#007AFF] font-semibold text-[17px] flex items-center justify-center gap-2 mx-auto group hover:underline transition-all"
             >
               Show more articles

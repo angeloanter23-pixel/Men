@@ -29,6 +29,7 @@ export const LandingNav: React.FC<LandingNavProps> = ({ isScrolled, onOpenMenu }
             <button onClick={() => scrollTo('pricing')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Pricing</button>
             <button onClick={() => scrollTo('contact')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Contact</button>
             <button onClick={() => scrollTo('terms')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Terms</button>
+            <button onClick={() => scrollTo('privacy')} className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest">Privacy</button>
           </div>
         </div>
         

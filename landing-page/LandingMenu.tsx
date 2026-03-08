@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 interface LandingMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (view: 'pricing' | 'about' | 'contact' | 'terms') => void;
+  onSelect: (view: string) => void;
 }
 
 export const LandingMenu: React.FC<LandingMenuProps> = ({ isOpen, onClose, onSelect }) => {
@@ -25,7 +25,8 @@ export const LandingMenu: React.FC<LandingMenuProps> = ({ isOpen, onClose, onSel
     { id: 'about', label: 'About Us', icon: 'fa-circle-info' },
     { id: 'contact', label: 'Contact', icon: 'fa-envelope' },
     { id: 'merchant-access', label: 'Merchant Access', icon: 'fa-user-tie' },
-    { id: 'terms', label: 'Terms', icon: 'fa-file-contract' }
+    { id: 'terms', label: 'Terms', icon: 'fa-file-contract' },
+    { id: 'privacy', label: 'Privacy', icon: 'fa-shield-halved' }
   ];
 
   return (

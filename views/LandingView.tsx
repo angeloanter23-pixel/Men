@@ -26,6 +26,8 @@ import { NodeRegistrySection } from '../landing-page/NodeRegistrySection';
 import { ComplianceSection } from '../landing-page/ComplianceSection';
 
 interface LandingViewProps {
+  initialOverlay?: string | null;
+  onOverlayChange?: (overlay: string | null) => void;
   onStart: () => void;
   onCreateMenu: () => void;
   onImportMenu: (config: any) => void;
@@ -34,10 +36,21 @@ interface LandingViewProps {
   onAdminAuth: () => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffiliateAuth, onAdminAuth }) => {
+const LandingView: React.FC<LandingViewProps> = ({ initialOverlay, onOverlayChange, onStart, onCreateMenu, onAffiliateAuth, onAdminAuth }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeOverlay, setActiveOverlay] = useState<'pricing' | 'about' | 'contact' | 'terms' | 'investment' | 'shop' | 'enterprise' | 'careers' | 'guides' | 'caseStudies' | 'helpCenter' | 'privacy' | 'nodeRegistry' | 'compliance' | 'createMenu' | 'merchant-access' | null>(null);
+  const [activeOverlay, setActiveOverlay] = useState<string | null>(initialOverlay || null);
+
+  useEffect(() => {
+    setActiveOverlay(initialOverlay || null);
+  }, [initialOverlay]);
+
+  const handleOverlayChange = (overlay: string | null) => {
+    setActiveOverlay(overlay);
+    if (onOverlayChange) {
+      onOverlayChange(overlay);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -54,7 +67,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
         onClose={() => setIsMenuOpen(false)} 
         onSelect={(id) => {
           if (id === 'merchant-access') onAdminAuth();
-          else setActiveOverlay(id as any);
+          else handleOverlayChange(id);
         }}
       />
 
@@ -66,112 +79,112 @@ const LandingView: React.FC<LandingViewProps> = ({ onStart, onCreateMenu, onAffi
 
       <LibrarySection />
       
-      <LandingFaq onContactClick={() => setActiveOverlay('contact')} />
+      <LandingFaq onContactClick={() => handleOverlayChange('contact')} />
       
       <LandingFooter 
         onStart={onStart} 
         onCreateMenu={onCreateMenu} 
-        onInvestmentClick={() => setActiveOverlay('investment')}
-        onCareerClick={() => setActiveOverlay('careers')}
-        onShopClick={() => setActiveOverlay('shop')}
-        onEnterpriseClick={() => setActiveOverlay('enterprise')}
-        onGuidesClick={() => setActiveOverlay('guides')}
-        onCaseStudiesClick={() => setActiveOverlay('caseStudies')}
-        onHelpCenterClick={() => setActiveOverlay('helpCenter')}
-        onPrivacyClick={() => setActiveOverlay('privacy')}
-        onTermsClick={() => setActiveOverlay('terms')}
-        onNodeRegistryClick={() => setActiveOverlay('nodeRegistry')}
-        onComplianceClick={() => setActiveOverlay('compliance')}
+        onInvestmentClick={() => handleOverlayChange('investment')}
+        onCareerClick={() => handleOverlayChange('careers')}
+        onShopClick={() => handleOverlayChange('shop')}
+        onEnterpriseClick={() => handleOverlayChange('enterprise')}
+        onGuidesClick={() => handleOverlayChange('guides')}
+        onCaseStudiesClick={() => handleOverlayChange('case-studies')}
+        onHelpCenterClick={() => handleOverlayChange('help-center')}
+        onPrivacyClick={() => handleOverlayChange('privacy')}
+        onTermsClick={() => handleOverlayChange('terms')}
+        onNodeRegistryClick={() => handleOverlayChange('node-registry')}
+        onComplianceClick={() => handleOverlayChange('compliance')}
       />
 
       {/* Detail Overlays */}
       <LandingOverlay 
         isOpen={activeOverlay === 'pricing'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <PricingSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'shop'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <ShopSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'about'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <AboutSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'contact'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <ContactSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'terms'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <TermsSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'investment'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <InvestmentSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'enterprise'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <EnterpriseSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'careers'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <CareersSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'guides'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <GuidesSection />
       </LandingOverlay>
 
       <LandingOverlay 
-        isOpen={activeOverlay === 'caseStudies'} 
-        onClose={() => setActiveOverlay(null)} 
+        isOpen={activeOverlay === 'case-studies'} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <CaseStudiesSection />
       </LandingOverlay>
 
       <LandingOverlay 
-        isOpen={activeOverlay === 'helpCenter'} 
-        onClose={() => setActiveOverlay(null)} 
+        isOpen={activeOverlay === 'help-center'} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <HelpCenterSection />
       </LandingOverlay>
 
       <LandingOverlay 
         isOpen={activeOverlay === 'privacy'} 
-        onClose={() => setActiveOverlay(null)} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <PrivacySection />
       </LandingOverlay>
 
       <LandingOverlay 
-        isOpen={activeOverlay === 'nodeRegistry'} 
-        onClose={() => setActiveOverlay(null)} 
+        isOpen={activeOverlay === 'node-registry'} 
+        onClose={() => handleOverlayChange(null)} 
       >
         <NodeRegistrySection />
       </LandingOverlay>

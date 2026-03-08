@@ -114,7 +114,10 @@ export const GuidesSection: React.FC = () => {
                   <Reveal key={item.id} delay={idx * 100}>
                     <div 
                       onClick={() => {
-                        if (activeTab === 'article') window.location.hash = `#/article/${item.id}`;
+                        if (activeTab === 'article') {
+                          window.history.pushState(null, '', `/article/${item.id}`);
+                          window.dispatchEvent(new Event('popstate'));
+                        }
                         else alert("Coming Soon");
                       }}
                       className="flex-shrink-0 w-[260px] md:w-[320px] aspect-[3/4] rounded-[2.5rem] overflow-hidden shadow-2xl relative group cursor-pointer hover:-translate-y-2 transition-all duration-500 border border-slate-100 snap-center"

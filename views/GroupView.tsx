@@ -229,7 +229,10 @@ const GroupView: React.FC = () => {
 
                   <div className="pt-6">
                      <button 
-                      onClick={() => window.location.hash = '#/menu'}
+                      onClick={() => {
+                        window.history.pushState(null, '', '/menu');
+                        window.dispatchEvent(new Event('popstate'));
+                      }}
                       className="w-full bg-[#1D1D1F] text-white py-6 rounded-full font-bold text-[17px] transition-all hover:bg-black active:scale-95 shadow-lg"
                      >
                        Return to Menu

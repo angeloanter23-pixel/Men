@@ -20,7 +20,7 @@ const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ onComplete, onCance
 
   useEffect(() => {
     // URL format: /#/accept-invite/[token]
-    const hashPart = window.location.hash.replace(/^#\/?/, '');
+    const hashPart = window.location.pathname.replace(/^\//, '');
     const parts = hashPart.split('/');
     const urlToken = parts[1]; // Parts[0] is 'accept-invite', Parts[1] is the token
 
