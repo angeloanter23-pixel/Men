@@ -17,8 +17,8 @@ export const LandingNav: React.FC<LandingNavProps> = ({ isScrolled, onOpenMenu }
       <div className="max-w-[1200px] mx-auto flex justify-between items-center px-6">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white transition-all group-hover:scale-95 group-hover:rotate-3 shadow-md">
-               <span className="text-[10px] font-bold">M</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all group-hover:scale-95 group-hover:rotate-3 shadow-md overflow-hidden bg-white">
+               <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
             </div>
             <span className="font-black text-[18px] tracking-tight text-slate-900">mymenu.asia</span>
           </div>

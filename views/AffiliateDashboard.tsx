@@ -19,8 +19,8 @@ const AffiliateDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) =>
       {/* Dashboard Nav */}
       <header className="bg-white/80 backdrop-blur-2xl sticky top-0 z-50 border-b border-slate-200/50 px-6 h-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
-            <span className="text-xs font-bold">M</span>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-white shadow-sm">
+            <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-lg font-bold tracking-tight text-slate-900 uppercase">Partner Hub</h2>
         </div>

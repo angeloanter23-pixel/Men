@@ -42,8 +42,8 @@ export const RestaurantNameEditor: React.FC<RestaurantNameEditorProps> = ({ user
   return (
     <div className="fixed inset-0 bg-white z-[200] flex flex-col font-jakarta selection:bg-slate-100">
       <header className="flex items-center justify-between p-6">
-        <div className="w-10 h-10 bg-slate-900 flex items-center justify-center text-white">
-           <span className="text-xl font-black">M</span>
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white shadow-sm">
+           <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
         </div>
       </header>
       

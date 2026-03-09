@@ -65,8 +65,8 @@ const ArticlesView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <i className="fa-solid fa-chevron-left text-xs"></i>
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white">
-                  <span className="text-[10px] font-bold">M</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-white shadow-sm">
+                  <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
                 </div>
                 <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none uppercase">Academy Library</h1>
               </div>

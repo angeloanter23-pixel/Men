@@ -21,8 +21,8 @@ const AffiliateAuth: React.FC<{ onBack: () => void; onLogin: () => void; onSignU
       <div className="w-full max-w-[400px] flex flex-col">
         <header className="mb-14 text-center">
           <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl">
-              <span className="text-xl font-bold">M</span>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden bg-white">
+              <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
             </div>
           </div>
           <h1 className="text-[32px] font-bold text-slate-900 tracking-tight leading-none mb-4 uppercase">
