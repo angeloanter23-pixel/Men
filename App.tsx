@@ -226,15 +226,19 @@ export default function App() {
          return;
     }
 
-    if (path && !knownRoutes.includes(path) && path.length > 0 && !token && !restaurantId && (!hasSession || (storedSession && storedSession.label !== 'Walk-in'))) {
-        if (storedSession && storedSession.label !== 'Walk-in') {
-            localStorage.removeItem('foodie_active_session');
-            setActiveSession(null);
-            setCart([]);
-        }
+    if (path && !knownRoutes.includes(path) && path.length > 0 && !token && !restaurantId) {
         try {
              const restaurant = await MenuService.getRestaurantBySlug(path);
              if (restaurant) {
+                 if (hasSession && storedSession && storedSession.restaurant_id === restaurant.id && storedSession.label === 'Walk-in') {
+                     setCurrentView('menu');
+                     return;
+                 }
+                 
+                 localStorage.removeItem('foodie_active_session');
+                 setActiveSession(null);
+                 setCart([]);
+                 
                  const dummySession = {
                     id: `walkin-${Date.now()}`,
                     restaurant_id: restaurant.id,
@@ -250,7 +254,6 @@ export default function App() {
                 await syncDatabaseData(restaurant.id);
                 setShowWelcomeModal(true);
                 setCurrentView('menu');
-                window.history.replaceState(null, '', '/');
                 return;
              }
         } catch (e) {
@@ -258,12 +261,17 @@ export default function App() {
         }
     }
 
-    if (restaurantId && (!hasSession || (storedSession && storedSession.restaurant_id !== restaurantId))) {
-        if (storedSession && storedSession.restaurant_id !== restaurantId) {
-            localStorage.removeItem('foodie_active_session');
-            setActiveSession(null);
-            setCart([]);
+    if (restaurantId) {
+        if (hasSession && storedSession && storedSession.restaurant_id === restaurantId) {
+            setCurrentView('menu');
+            window.history.replaceState(null, '', '/menu');
+            return;
         }
+        
+        localStorage.removeItem('foodie_active_session');
+        setActiveSession(null);
+        setCart([]);
+        
         const dummySession = {
             id: `walkin-${Date.now()}`,
             restaurant_id: restaurantId,
@@ -278,7 +286,7 @@ export default function App() {
         await syncDatabaseData(restaurantId);
         setShowWelcomeModal(true);
         setCurrentView('menu');
-        window.history.replaceState(null, '', '/');
+        window.history.replaceState(null, '', '/menu');
         return;
     }
 
@@ -298,11 +306,6 @@ export default function App() {
       
       const isRoot = (!path || path === '/') && !token;
 
-      if (isRoot) {
-          if (supabaseSession) {
-              navigateTo('admin');
-          }
-      }
       setIsBooting(false);
     };
     init();
