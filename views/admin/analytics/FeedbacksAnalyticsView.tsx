@@ -3,6 +3,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Feedback } from '../../../types';
 import * as MenuService from '../../../services/menuService';
 
+// ...
+
 interface FeedbacksAnalyticsViewProps {
   feedbacks: Feedback[];
   chartRef: React.RefObject<HTMLCanvasElement | null>;
@@ -137,6 +139,12 @@ const FeedbacksAnalyticsView: React.FC<FeedbacksAnalyticsViewProps> = ({ feedbac
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Feedback overview</p>
           <h3 className="text-3xl font-black text-slate-900 tracking-tighter leading-none uppercase">Rating graph</h3>
         </header>
+
+        <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center justify-center text-center mb-8">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Average Score</p>
+            <h2 className="text-6xl font-black text-[#FF6B00] tracking-tighter leading-none">{getGlobalAvg()}</h2>
+            <div className="mt-4 flex gap-0.5 text-amber-400">{'★'.repeat(Math.round(Number(getGlobalAvg()))).padEnd(5, '☆')}</div>
+        </div>
 
         <div className="h-[320px] w-full relative">
           <canvas ref={chartRef}></canvas>

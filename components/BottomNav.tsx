@@ -13,7 +13,7 @@ interface BottomNavProps {
 const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, onSupportClick, isSupportOpen, cartCount }) => {
   const tabs = [
     { id: 'menu', icon: 'fa-house', label: 'Menu' },
-    { id: 'about', icon: 'fa-circle-info', label: 'About' },
+    { id: 'restaurant-about', icon: 'fa-circle-info', label: 'About' },
     { id: 'support', icon: 'fa-comment-dots', label: 'Message', action: onSupportClick },
     { id: 'orders', icon: 'fa-receipt', label: 'Orders' },
   ];

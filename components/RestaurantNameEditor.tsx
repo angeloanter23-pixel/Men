@@ -42,9 +42,7 @@ export const RestaurantNameEditor: React.FC<RestaurantNameEditorProps> = ({ user
   return (
     <div className="fixed inset-0 bg-white z-[200] flex flex-col font-jakarta selection:bg-slate-100">
       <header className="flex items-center justify-between p-6">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white shadow-sm">
-           <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
-        </div>
+        <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-10 h-10 rounded-lg object-cover" />
       </header>
       
       <div className="flex-1 flex flex-col items-center justify-center p-6">

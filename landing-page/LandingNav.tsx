@@ -16,11 +16,9 @@ export const LandingNav: React.FC<LandingNavProps> = ({ isScrolled, onOpenMenu }
     <nav className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/50 py-2 shadow-sm' : 'bg-transparent py-4'}`}>
       <div className="max-w-[1200px] mx-auto flex justify-between items-center px-6">
         <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all group-hover:scale-95 group-hover:rotate-3 shadow-md overflow-hidden bg-white">
-               <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
-            </div>
-            <span className="font-black text-[18px] tracking-tight text-slate-900">mymenu.asia</span>
+          <div className="flex items-center gap-1 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+            <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-9 h-9 rounded-lg transition-all group-hover:scale-95 group-hover:rotate-3 object-cover" />
+            <span className="font-bold text-[20px] tracking-tight text-slate-900 h-9 flex items-center">mymenu.asia</span>
           </div>
 
           {/* New Menu Bar Items */}

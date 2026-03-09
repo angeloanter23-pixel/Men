@@ -37,11 +37,9 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({
           
           {/* Brand Identity */}
           <div className="col-span-2 md:col-span-1 space-y-6">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-slate-200 overflow-hidden bg-white">
-                 <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
-              </div>
-              <span className="font-bold text-xl tracking-tight text-slate-900">mymenu.asia</span>
+            <div className="flex items-center gap-1 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+              <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-9 h-9 rounded-lg object-cover" />
+              <span className="font-bold text-[20px] tracking-tight text-slate-900 h-9 flex items-center">mymenu.asia</span>
             </div>
             <p className="text-[14px] text-slate-400 font-medium leading-relaxed pr-4">
               Building intelligent digital infrastructure for modern hospitality across Asia and beyond.

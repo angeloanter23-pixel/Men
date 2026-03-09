@@ -44,9 +44,7 @@ export const LandingMenu: React.FC<LandingMenuProps> = ({ isOpen, onClose, onSel
         >
           <header className="flex justify-between items-center mb-4 px-2 max-w-5xl mx-auto w-full">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg overflow-hidden bg-white">
-                <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
-              </div>
+                <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-8 h-8 rounded-xl object-cover" />
               <span className="text-sm font-black tracking-tight text-slate-900 uppercase">
                 Navigation <span className="text-[10px] text-slate-400 ml-1">v2.3</span>
               </span>

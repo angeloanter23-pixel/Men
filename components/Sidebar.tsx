@@ -30,11 +30,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNavigate, currentV
         className={`fixed inset-y-0 left-0 z-[2001] w-72 bg-white shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] flex flex-col font-jakarta ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-white shadow-sm">
-              <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
-            </div>
-            <h2 className="text-lg font-black tracking-tighter uppercase text-slate-900">mymenu</h2>
+          <div className="flex items-center gap-1">
+            <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-9 h-9 rounded-lg object-cover" />
+            <h2 className="font-bold text-[20px] tracking-tight text-slate-900 h-9 flex items-center">mymenu</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-slate-900 transition-colors">
             <i className="fa-solid fa-xmark"></i>

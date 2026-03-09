@@ -35,6 +35,7 @@ import ArticlesView from './views/ArticlesView';
 import ArticleViewer from './views/ArticleViewer';
 import AffiliateAuth from './views/AffiliateAuth';
 import AffiliateDashboard from './views/AffiliateDashboard';
+import RestaurantAboutView from './views/RestaurantAboutView';
 import SignUpView from './views/SignUpView';
 
 import { defaultMenu } from './src/data/defaultMenu';
@@ -481,6 +482,7 @@ export default function App() {
       case 'orders': return <OrdersView restaurantId={activeSession?.restaurant_id} tableNumber={activeSession?.label} onIdentifyTable={() => navigateTo('qr-verify')} onPayNow={() => {}} onGoToMenu={() => navigateTo('menu')} />;
       case 'feedback-data': return <FeedbackDataView feedbacks={feedbacks} onAddFeedback={() => navigateTo('feedback')} appTheme={appTheme} />;
       case 'feedback': return <FeedbackForm restaurantId={activeSession?.restaurant_id} onSubmit={() => { navigateTo('feedback-data'); }} onCancel={() => navigateTo('menu')} appTheme={appTheme} />;
+      case 'restaurant-about': return <RestaurantAboutView />;
       case 'super-admin': return <SuperAdminView onBack={() => navigateTo('menu')} />;
       case 'test-supabase': return <TestSupabaseView onLoginSuccess={() => navigateTo('debug-account')} />;
       case 'debug-account': return <DebugAccountView onContinue={() => navigateTo('admin')} />;

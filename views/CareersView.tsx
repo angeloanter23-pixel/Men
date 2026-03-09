@@ -24,9 +24,7 @@ const CareersView: React.FC<{ onBack: () => void; onAffiliateAuth: () => void }>
             <i className="fa-solid fa-chevron-left text-xs"></i>
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-white shadow-sm">
-              <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/Platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-full h-full object-cover" />
-            </div>
+            <img src="https://tjfqlutqsxhdraoraoyb.supabase.co/storage/v1/object/public/Menu-images/platform/logo/logo.png" alt="MyMenu.asia Logo" className="w-8 h-8 rounded-lg object-cover" />
             <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none uppercase">Partner Program</h1>
           </div>
           <button onClick={onAffiliateAuth} className="text-indigo-600 font-bold uppercase text-[11px] tracking-widest hover:underline">Partner Login</button>
