@@ -24,12 +24,13 @@ interface AdminViewProps {
   onOpenFAQ?: () => void;
   onBackToMenu?: () => void;
   onNavigateToCreateMenu: () => void;
+  onNavigateToCreateRestaurant: (userId: string, email: string) => void;
   onLoginSuccess: (restaurantId: string, restaurantName: string) => void;
   isDemo?: boolean;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ 
-  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu, onNavigateToCreateMenu, onLoginSuccess, isDemo
+  menuItems, setMenuItems, categories, setCategories, feedbacks, setFeedbacks, salesHistory, setSalesHistory, adminCreds, setAdminCreds, onExit, onLogoUpdate, onThemeUpdate, appTheme, onOpenFAQ, onBackToMenu, onNavigateToCreateMenu, onNavigateToCreateRestaurant, onLoginSuccess, isDemo
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(isDemo || false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -119,10 +120,7 @@ const AdminView: React.FC<AdminViewProps> = ({
   if (isAuthenticated && !hasConfirmedAccount && !isDemo) {
     return (
       <div className="fixed inset-0 bg-white z-[200] flex flex-col font-jakarta selection:bg-slate-100">
-        <header className="flex items-center justify-between p-6">
-          <div className="w-10 h-10 bg-slate-900 flex items-center justify-center text-white">
-             <span className="text-xl font-black">M</span>
-          </div>
+        <header className="flex items-center justify-end p-6">
           {onBackToMenu && (
             <button 
               onClick={onBackToMenu}
@@ -192,7 +190,8 @@ const AdminView: React.FC<AdminViewProps> = ({
           email={userEmail || ''}
           onComplete={() => {
             setHasRestaurant(true);
-            window.location.reload();
+            setHasConfirmedAccount(true);
+            window.history.pushState(null, '', '/admin');
           }} 
         />
       );

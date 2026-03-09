@@ -55,7 +55,7 @@ export interface MenuItem {
 
 export type OrderMode = 'Dine-in' | 'Takeout' | 'Delivery';
 
-export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'payment' | 'qr-verify' | 'about' | 'test-supabase' | 'super-admin' | 'accept-invite' | 'ai-assistant' | 'admin-faq' | 'demo' | 'articles' | 'article' | 'verification-barcode' | 'careers' | 'affiliate-auth' | 'affiliate-dashboard' | 'debug-account' | 'setup-wizard' | 'sign-up';
+export type ViewState = 'landing' | 'menu' | 'cart' | 'orders' | 'favorites' | 'feedback' | 'feedback-data' | 'privacy' | 'terms' | 'admin' | 'payment' | 'qr-verify' | 'about' | 'test-supabase' | 'super-admin' | 'accept-invite' | 'ai-assistant' | 'admin-faq' | 'demo' | 'articles' | 'article' | 'verification-barcode' | 'careers' | 'affiliate-auth' | 'affiliate-dashboard' | 'debug-account' | 'setup-wizard' | 'sign-up' | 'create-restaurant';
 
 export interface CartItem extends MenuItem {
   quantity: number;

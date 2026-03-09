@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as MenuService from '../services/menuService';
 
 interface RestaurantNameEditorProps {
@@ -11,6 +11,10 @@ export const RestaurantNameEditor: React.FC<RestaurantNameEditorProps> = ({ user
   const [restaurantName, setRestaurantName] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    window.history.pushState(null, '', '/create-restaurant');
+  }, []);
 
   const handleCreate = async () => {
     if (!restaurantName.trim()) {
@@ -26,7 +30,11 @@ export const RestaurantNameEditor: React.FC<RestaurantNameEditorProps> = ({ user
       onComplete();
     } catch (err: any) {
       console.error('Error creating restaurant:', err);
-      setError(err.message || 'Failed to create restaurant. Please try again.');
+      let errorMessage = err.message || 'Failed to create restaurant. Please try again.';
+      if (errorMessage.includes('restaurants_name_key')) {
+        errorMessage = 'This restaurant name already exists. Please choose a different name.';
+      }
+      setError(errorMessage);
       setIsVerifying(false);
     }
   };
