@@ -36,10 +36,10 @@ const AdminView: React.FC<AdminViewProps> = ({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [hasRestaurant, setHasRestaurant] = useState<boolean | null>(null);
-  const [hasConfirmedAccount, setHasConfirmedAccount] = useState(false);
+  const [hasConfirmedAccount, setHasConfirmedAccount] = useState(() => {
+    return sessionStorage.getItem('hasConfirmedAccount') === 'true';
+  });
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
-
-
 
   useEffect(() => {
     const checkSession = async () => {
@@ -75,8 +75,6 @@ const AdminView: React.FC<AdminViewProps> = ({
     return () => subscription.unsubscribe();
   }, []);
 
-
-
   const handleGoogleLogin = async () => {
     try {
       let redirectUrl = typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null' 
@@ -99,9 +97,15 @@ const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
+  const handleConfirmAccount = () => {
+    setHasConfirmedAccount(true);
+    sessionStorage.setItem('hasConfirmedAccount', 'true');
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
+    sessionStorage.removeItem('hasConfirmedAccount');
     window.location.href = '/';
   };
 
@@ -152,7 +156,7 @@ const AdminView: React.FC<AdminViewProps> = ({
 
             <div className="space-y-4 pt-6">
               <button 
-                onClick={() => setHasConfirmedAccount(true)}
+                onClick={handleConfirmAccount}
                 className="w-full h-14 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all uppercase tracking-widest flex items-center justify-center gap-4 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
               >
                 <span>Continue as {userEmail?.split('@')[0]}</span>
