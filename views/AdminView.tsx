@@ -116,6 +116,74 @@ const AdminView: React.FC<AdminViewProps> = ({
     );
   }
 
+  if (isAuthenticated && !hasConfirmedAccount && !isDemo) {
+    return (
+      <div className="fixed inset-0 bg-white z-[200] flex flex-col font-jakarta selection:bg-slate-100">
+        <header className="flex items-center justify-between p-6">
+          <div className="w-10 h-10 bg-slate-900 flex items-center justify-center text-white">
+             <span className="text-xl font-black">M</span>
+          </div>
+          {onBackToMenu && (
+            <button 
+              onClick={onBackToMenu}
+              className="flex items-center gap-3 text-slate-400 hover:text-slate-900 transition-colors group"
+            >
+              <span className="text-sm font-bold uppercase tracking-widest">Close</span>
+              <div className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </div>
+            </button>
+          )}
+        </header>
+
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="w-full max-w-md space-y-8 text-center">
+            <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner border border-slate-100">
+              <i className="fa-solid fa-user-tie text-4xl text-slate-300"></i>
+            </div>
+            
+            <div className="space-y-3">
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+                Welcome back
+              </h2>
+              <p className="text-slate-500 font-medium text-base">
+                You are currently logged in as <br/>
+                <span className="font-bold text-slate-900">{userEmail}</span>
+              </p>
+            </div>
+
+            <div className="space-y-4 pt-6">
+              <button 
+                onClick={() => setHasConfirmedAccount(true)}
+                className="w-full h-14 bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all uppercase tracking-widest flex items-center justify-center gap-4 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <span>Continue as {userEmail?.split('@')[0]}</span>
+                <i className="fa-solid fa-arrow-right text-sm"></i>
+              </button>
+              
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-4 text-xs font-bold text-slate-300 uppercase tracking-widest">Or</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleLogout}
+                className="w-full h-14 bg-white text-slate-900 border-2 border-slate-200 font-bold text-sm hover:border-slate-900 hover:bg-slate-50 transition-colors uppercase tracking-widest flex items-center justify-center gap-4"
+              >
+                <i className="fa-brands fa-google text-lg"></i>
+                <span>Login with another account</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isAuthenticated) {
     if (hasRestaurant === false) {
       return (
